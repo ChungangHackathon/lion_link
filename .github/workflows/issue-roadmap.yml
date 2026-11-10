@@ -1,0 +1,160 @@
+
+name: Issue Roadmap Automation
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roadmap-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update actual dates
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const action = context.payload.action;
+
+            const org = "ChungangHackathon";
+            const projectTitle = "@lion_link";
+
+            const dateInKorea = (timestamp) => {
+              return new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+              }).format(new Date(timestamp));
+            };
+
+            // 1. 프로젝트 및 날짜 필드 조회
+            const result = await github.graphql(`
+              query($org: String!) {
+                organization(login: $org) {
+                  projectsV2(first: 100, query: "lion_link") {
+                    nodes {
+                      id
+                      title
+                      start: field(name: "Actual Start") {
+                        ... on ProjectV2Field { id }
+                      }
+                      end: field(name: "Actual End") {
+                        ... on ProjectV2Field { id }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { org });
+
+            const projects =
+              result.organization?.projectsV2?.nodes ?? [];
+
+            const project = projects.find(
+              p => p.title === projectTitle
+            );
+
+            if (!project) {
+              throw new Error("Project not found");
+            }
+
+            if (!project.start?.id || !project.end?.id) {
+              throw new Error("Actual date fields not found");
+            }
+
+            // 2. 이슈를 프로젝트에 등록
+            const added = await github.graphql(`
+              mutation($project: ID!, $issue: ID!) {
+                addProjectV2ItemById(input: {
+                  projectId: $project
+                  contentId: $issue
+                }) {
+                  item { id }
+                }
+              }
+            `, {
+              project: project.id,
+              issue: issue.node_id
+            });
+
+            const itemId =
+              added.addProjectV2ItemById.item.id;
+
+            // 3. 날짜 입력 함수
+            const setDate = async (fieldId, date) => {
+              await github.graphql(`
+                mutation(
+                  $project: ID!,
+                  $item: ID!,
+                  $field: ID!,
+                  $date: Date!
+                ) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: $item
+                    fieldId: $field
+                    value: { date: $date }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }
+              `, {
+                project: project.id,
+                item: itemId,
+                field: fieldId,
+                date
+              });
+            };
+
+            // 4. 종료일 초기화 함수
+            const clearEnd = async () => {
+              await github.graphql(`
+                mutation(
+                  $project: ID!,
+                  $item: ID!,
+                  $field: ID!
+                ) {
+                  clearProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: $item
+                    fieldId: $field
+                  }) {
+                    projectV2Item { id }
+                  }
+                }
+              `, {
+                project: project.id,
+                item: itemId,
+                field: project.end.id
+              });
+            };
+
+            // 실제 시작일은 이슈 최초 생성일
+            await setDate(
+              project.start.id,
+              dateInKorea(issue.created_at)
+            );
+
+            if (action === "closed") {
+              await setDate(
+                project.end.id,
+                dateInKorea(issue.closed_at)
+              );
+            }
+
+            if (action === "opened" ||
+                action === "reopened") {
+              await clearEnd();
+            }
+
+            core.info(`Roadmap updated: #${issue.number}`);
