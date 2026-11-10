@@ -1,0 +1,10 @@
+package com.lionlink.backend.global.error;
+
+import org.springframework.validation.FieldError;
+
+public record FieldErrorResponse(String field, String reason) {
+
+	public static FieldErrorResponse from(FieldError fieldError) {
+		return new FieldErrorResponse(fieldError.getField(), fieldError.getDefaultMessage());
+	}
+}
