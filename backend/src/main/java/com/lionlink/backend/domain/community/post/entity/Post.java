@@ -8,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,8 +39,7 @@ public class Post extends BaseCreatedEntity {
 	@Column(nullable = false, length = 50)
 	private String title;
 
-	@Lob
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "TEXT")
 	private String content;
 
 	@JdbcTypeCode(SqlTypes.JSON)
