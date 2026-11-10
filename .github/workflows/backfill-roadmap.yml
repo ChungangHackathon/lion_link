@@ -19,8 +19,7 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            const { getOctokit } = require("@actions/github");
-            const repoApi = getOctokit(process.env.REPO_TOKEN);
+            const repoApi = github;
             const org = "ChungangHackathon";
 
             const data = await github.graphql(`
