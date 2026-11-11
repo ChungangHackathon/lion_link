@@ -32,8 +32,19 @@ public class GlobalExceptionHandler {
 		return toResponse(errorCode, ErrorResponse.of(errorCode, fieldErrors));
 	}
 
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ErrorResponse> handleInvalidParameter(HandlerMethodValidationException e) {
+		List<FieldErrorResponse> fieldErrors = e.getParameterValidationResults().stream()
+				.flatMap(result -> result.getResolvableErrors().stream()
+						.map(error -> new FieldErrorResponse(
+								result.getMethodParameter().getParameterName(),
+								error.getDefaultMessage())))
+				.toList();
+		ErrorCode errorCode = CommonErrorCode.VALIDATION_ERROR;
+		return toResponse(errorCode, ErrorResponse.of(errorCode, fieldErrors));
+	}
+
 	@ExceptionHandler({
-			HandlerMethodValidationException.class,
 			MissingServletRequestParameterException.class,
 			MethodArgumentTypeMismatchException.class,
 			HttpMessageNotReadableException.class
