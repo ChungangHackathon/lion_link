@@ -1,5 +1,6 @@
 package com.lionlink.backend.domain.alumni.controller;
 
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -88,7 +89,7 @@ class BookmarkControllerTest {
 				.andExpect(jsonPath("$.items[0].userId").value(target))
 				.andExpect(jsonPath("$.items[0].name").value("김사자"))
 				.andExpect(jsonPath("$.items[0].isDeleted").value(false))
-				.andExpect(jsonPath("$.items[0].bookmarkedAt").exists())
+				.andExpect(jsonPath("$.items[0].bookmarkedAt").value(endsWith("+09:00")))
 				.andExpect(jsonPath("$.page").value(0))
 				.andExpect(jsonPath("$.size").value(20))
 				.andExpect(jsonPath("$.hasNext").value(false))
