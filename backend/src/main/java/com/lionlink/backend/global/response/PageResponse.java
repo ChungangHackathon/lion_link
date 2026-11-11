@@ -1,14 +1,14 @@
 package com.lionlink.backend.global.response;
 
 import java.util.List;
+import java.util.function.Function;
 import org.springframework.data.domain.Page;
 
 public record PageResponse<T>(
-		List<T> content,
+		List<T> items,
 		int page,
 		int size,
 		long totalElements,
-		int totalPages,
 		boolean hasNext
 ) {
 
@@ -18,8 +18,11 @@ public record PageResponse<T>(
 				page.getNumber(),
 				page.getSize(),
 				page.getTotalElements(),
-				page.getTotalPages(),
 				page.hasNext()
 		);
+	}
+
+	public static <E, T> PageResponse<T> from(Page<E> page, Function<E, T> mapper) {
+		return from(page.map(mapper));
 	}
 }
