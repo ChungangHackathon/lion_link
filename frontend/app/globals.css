@@ -1,26 +1,138 @@
 @import "tailwindcss";
 
+/* Design tokens from Figma "먼크강 멋사동네" (05 Desktop v2) */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* Brand */
+  --color-primary: #2155a4; /* CAU BLUE */
+  --color-primary-hover: #1b4a90;
+  --color-navy: #00245e; /* blue/navy – GNB nav text */
+  --color-navy-2: #002e71;
+  --color-orange: #ff6000; /* LION ORANGE – count badge, danger, error */
+  --color-orange-over: #e85600;
+  --color-orange-back: #fff4f0;
+  --color-green: #22a45d; /* green/main – availability */
+  --color-red: #ef4444;
+
+  /* Grays (R5) */
+  --color-ink-900: #111827;
+  --color-ink-700: #374151;
+  --color-ink-600: #4b5563;
+  --color-ink-500: #6b7280;
+  --color-ink-400: #9ca3af;
+  --color-line-300: #d1d5db;
+  --color-line-200: #e5e7eb;
+  --color-bg-100: #f3f4f6;
+  --color-bg-50: #f8f9fa;
+
+  /* light/* */
+  --color-light-layout: #e3e7ed;
+  --color-light-card: #eef1f5;
+  --color-light-text: #c3d0e3;
+
+  /* Part colours */
+  --color-part-fe-bg: #e1f3f8;
+  --color-part-fe-text: #0b6e8c;
+  --color-part-fe-line: #c5e8f1;
+  --color-part-be-bg: #eaf2ff;
+  --color-part-be-text: #2155a4;
+  --color-part-be-line: #d3e2f7;
+  --color-part-design-bg: #fcebf3;
+  --color-part-design-text: #a8326a;
+  --color-part-plan-bg: #eeebfb;
+  --color-part-plan-text: #5b4bb7;
+
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-logo: var(--font-nanum), "Nanum Gothic", sans-serif;
+
+  --radius-card: 12px;
+  --shadow-dropdown: 0 8px 24px rgba(17, 24, 39, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography presets (Figma text styles) */
+@utility t-display {
+  font-size: 36px;
+  line-height: 46px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+@utility t-title {
+  font-size: 30px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+@utility t-title3 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 700;
+}
+@utility t-body-bold {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility t-body2 {
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+@utility t-label1 {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+@utility t-label2 {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+@utility t-caption1 {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@utility t-caption2 {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+/* Page container: 1440 frame with 120px gutters → 1200 content */
+@utility container-page {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+/* Hide scrollbar for horizontal chip rows */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
