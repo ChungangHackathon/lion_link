@@ -5,8 +5,11 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
-  cacheComponents: true,
-  partialPrefetching: true,
+  // The UI currently runs on client-side mock data + localStorage session, so
+  // static prerendering/cache components are turned off. Re-enable once pages
+  // fetch from the backend.
+  cacheComponents: false,
+  partialPrefetching: false,
   turbopack: {
     rules: {
       "*.css": {
