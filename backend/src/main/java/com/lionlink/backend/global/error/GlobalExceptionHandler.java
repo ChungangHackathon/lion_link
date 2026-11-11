@@ -1,6 +1,5 @@
 package com.lionlink.backend.global.error;
 
-import com.lionlink.backend.global.response.ApiResponse;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,18 +19,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler(BusinessException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {
-		return toResponse(e.getErrorCode(), e.getMessage());
+	public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
+		return toResponse(e.getErrorCode(), ErrorResponse.of(e.getErrorCode(), e.getMessage()));
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiResponse<List<FieldErrorResponse>>> handleInvalidBody(MethodArgumentNotValidException e) {
-		List<FieldErrorResponse> errors = e.getBindingResult().getFieldErrors().stream()
+	public ResponseEntity<ErrorResponse> handleInvalidBody(MethodArgumentNotValidException e) {
+		List<FieldErrorResponse> fieldErrors = e.getBindingResult().getFieldErrors().stream()
 				.map(FieldErrorResponse::from)
 				.toList();
-		ErrorCode errorCode = CommonErrorCode.INVALID_INPUT;
-		return ResponseEntity.status(errorCode.getStatus())
-				.body(ApiResponse.fail(errorCode.getCode(), errorCode.getMessage(), errors));
+		ErrorCode errorCode = CommonErrorCode.VALIDATION_ERROR;
+		return toResponse(errorCode, ErrorResponse.of(errorCode, fieldErrors));
 	}
 
 	@ExceptionHandler({
@@ -40,38 +38,37 @@ public class GlobalExceptionHandler {
 			MethodArgumentTypeMismatchException.class,
 			HttpMessageNotReadableException.class
 	})
-	public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception e) {
-		return toResponse(CommonErrorCode.INVALID_INPUT);
+	public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception e) {
+		return toResponse(CommonErrorCode.VALIDATION_ERROR);
 	}
 
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public ResponseEntity<ApiResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+	public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
 		return toResponse(CommonErrorCode.METHOD_NOT_ALLOWED);
 	}
 
 	@ExceptionHandler(NoResourceFoundException.class)
-	public ResponseEntity<ApiResponse<Void>> handleNoResource(NoResourceFoundException e) {
+	public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e) {
 		return toResponse(CommonErrorCode.NOT_FOUND);
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
-	public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException e) {
+	public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException e) {
 		log.warn("Data integrity violation: {}", e.getMostSpecificCause().getMessage());
 		return toResponse(CommonErrorCode.CONFLICT);
 	}
 
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
+	public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
 		log.error("Unexpected error", e);
 		return toResponse(CommonErrorCode.INTERNAL_SERVER_ERROR);
 	}
 
-	private ResponseEntity<ApiResponse<Void>> toResponse(ErrorCode errorCode) {
-		return toResponse(errorCode, errorCode.getMessage());
+	private ResponseEntity<ErrorResponse> toResponse(ErrorCode errorCode) {
+		return toResponse(errorCode, ErrorResponse.of(errorCode));
 	}
 
-	private ResponseEntity<ApiResponse<Void>> toResponse(ErrorCode errorCode, String message) {
-		return ResponseEntity.status(errorCode.getStatus())
-				.body(ApiResponse.fail(errorCode.getCode(), message));
+	private ResponseEntity<ErrorResponse> toResponse(ErrorCode errorCode, ErrorResponse body) {
+		return ResponseEntity.status(errorCode.getStatus()).body(body);
 	}
 }

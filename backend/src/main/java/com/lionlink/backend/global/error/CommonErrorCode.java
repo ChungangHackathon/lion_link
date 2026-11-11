@@ -8,15 +8,16 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum CommonErrorCode implements ErrorCode {
 
-	INVALID_INPUT(HttpStatus.BAD_REQUEST, "COMMON_400", "입력값이 올바르지 않습니다."),
-	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_401", "로그인이 필요합니다."),
-	FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_403", "접근 권한이 없습니다."),
-	NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_404", "요청한 대상을 찾을 수 없습니다."),
-	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_405", "지원하지 않는 요청 방식입니다."),
-	CONFLICT(HttpStatus.CONFLICT, "COMMON_409", "이미 존재하거나 다른 데이터와 충돌합니다."),
-	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 오류가 발생했습니다.");
+	VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "입력값을 확인해 주세요."),
+	UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "로그인이 필요해요."),
+	FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없어요."),
+	NOT_APPROVED(HttpStatus.FORBIDDEN, "가입 승인 후 이용할 수 있어요."),
+	PROFILE_NOT_COMPLETED(HttpStatus.FORBIDDEN, "기본 프로필을 먼저 입력해 주세요."),
+	NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 대상을 찾을 수 없어요."),
+	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식이에요."),
+	CONFLICT(HttpStatus.CONFLICT, "이미 존재하거나 다른 데이터와 충돌해요."),
+	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했어요.");
 
 	private final HttpStatus status;
-	private final String code;
 	private final String message;
 }
