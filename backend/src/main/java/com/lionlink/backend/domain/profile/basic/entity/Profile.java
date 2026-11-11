@@ -10,6 +10,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -117,5 +119,11 @@ public class Profile extends BaseTimeEntity {
 		this.phoneVisibility = Visibility.CONNECTED;
 		this.linksVisibility = Visibility.PUBLIC;
 		this.companyVisibility = Visibility.PUBLIC;
+	}
+
+	public List<LionPart> getLionParts() {
+		return Stream.of(lionPart1, lionPart2)
+				.filter(Objects::nonNull)
+				.toList();
 	}
 }
