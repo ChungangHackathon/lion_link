@@ -53,4 +53,9 @@ public class LionActivity extends ProfileSectionItem {
 		this.part2 = part2;
 		this.isDefault = isDefault;
 	}
+
+	/** 가입 기수가 바뀌면(AUTH-06·07, ADMIN-06) 자동 생성 항목의 기수도 같이 바꾼다. 회원이 직접 기수를 바꾸는 데 쓰지 않는다. */
+	public void changeGeneration(Integer generation) {
+		this.generation = generation;
+	}
 }
