@@ -80,4 +80,10 @@ public class User extends BaseTimeEntity {
 		this.role = UserRole.MEMBER;
 		this.status = UserStatus.PENDING;
 	}
+
+	public void dismissGuide() {
+		if (guideDismissedAt == null) {
+			this.guideDismissedAt = LocalDateTime.now();
+		}
+	}
 }
