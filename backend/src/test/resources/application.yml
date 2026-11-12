@@ -7,3 +7,16 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: openid, profile, email
+
+app:
+  auth:
+    jwt-secret: test-only-secret-for-jwt-0123456789-abcdefghij
+    frontend-url: http://localhost:3000
