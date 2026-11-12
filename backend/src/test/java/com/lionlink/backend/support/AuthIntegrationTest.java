@@ -108,6 +108,12 @@ public abstract class AuthIntegrationTest {
 		update("update users set role = :value where id = :id", userId, role);
 	}
 
+	/** 관리자 반려(ADMIN-04) 결과를 재현한다. */
+	protected void reject(Long userId, String reason) {
+		setStatus(userId, "REJECTED");
+		update("update users set reject_reason = :value where id = :id", userId, reason);
+	}
+
 	private void update(String sql, Long userId, String value) {
 		entityManager.flush();
 		entityManager.createNativeQuery(sql)
