@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.alumni.controller;
 
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
+import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition.AlumniSort;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniDetailResponse;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniResponse;
 import com.lionlink.backend.domain.alumni.service.AlumniService;
@@ -36,7 +37,7 @@ public class AlumniController {
 	private final AlumniService alumniService;
 
 	@Operation(summary = "동문 목록 조회 및 검색",
-			description = "같은 필터 안의 값은 OR, 서로 다른 필터는 AND로 묶는다. 최근 가입한 순서로 반환한다.")
+			description = "같은 필터 안의 값은 OR, 서로 다른 필터는 AND로 묶는다. 나 자신은 목록에서 뺀다.")
 	@ApiResponse(responseCode = "200")
 	@ApiResponse(responseCode = "400", description = "잘못된 검색 조건 (VALIDATION_ERROR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -52,6 +53,9 @@ public class AlumniController {
 			@Parameter(description = "파트") @RequestParam(required = false) List<LionPart> parts,
 			@Parameter(description = "현재 상태") @RequestParam(required = false) List<ProfileStatus> statuses,
 			@Parameter(description = "관심 분야 (예: BACKEND,DATA_AI)") @RequestParam(required = false) List<String> interests,
+			@Parameter(description = "true면 오늘 커피챗을 받는 동문만") @RequestParam(defaultValue = "false") boolean available,
+			@Parameter(description = "정렬 (RECOMMEND: 받는 중·같은 파트 먼저, GENERATION: 기수 오름차순, LATEST: 최근 가입순)")
+			@RequestParam(defaultValue = "RECOMMEND") AlumniSort sort,
 			@Parameter(description = "페이지 번호 (0부터)")
 			@RequestParam(defaultValue = "0")
 			@Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") int page,
@@ -60,7 +64,7 @@ public class AlumniController {
 			@Min(value = 1, message = "페이지 크기는 1~100이어야 합니다.")
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
-		AlumniSearchCondition condition = new AlumniSearchCondition(q, generations, parts, statuses, interests);
+		AlumniSearchCondition condition = new AlumniSearchCondition(q, generations, parts, statuses, interests, available, sort);
 		return alumniService.search(userId, condition, PageRequest.of(page, size));
 	}
 

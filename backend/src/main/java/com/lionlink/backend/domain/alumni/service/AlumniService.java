@@ -3,14 +3,15 @@ package com.lionlink.backend.domain.alumni.service;
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniDetailResponse;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniResponse;
+import com.lionlink.backend.domain.alumni.dto.response.BookmarkedAlumniResponse;
 import com.lionlink.backend.domain.alumni.entity.BookmarkId;
 import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
 import com.lionlink.backend.domain.alumni.repository.AlumniSearchRepository;
 import com.lionlink.backend.domain.alumni.repository.BookmarkRepository;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
-import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
-import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
+import com.lionlink.backend.domain.profile.CoffeeAvailability;
+import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
@@ -53,11 +54,23 @@ public class AlumniService {
 	private final ProjectRepository projectRepository;
 	private final LionActivityRepository lionActivityRepository;
 	private final CoffeeChatRepository coffeeChatRepository;
-	private final CoffeeSettingRepository coffeeSettingRepository;
+	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 
 	public PageResponse<AlumniResponse> search(Long userId, AlumniSearchCondition condition, Pageable pageable) {
-		Page<AlumniSearchRepository.Row> rows = alumniSearchRepository.search(condition, pageable);
+		List<LionPart> userParts = profileRepository.findById(userId).map(Profile::getLionParts).orElse(List.of());
+		Page<AlumniSearchRepository.Row> rows = alumniSearchRepository.search(userId, userParts, condition, pageable);
 		return PageResponse.from(rows, toResponse(userId, rows.getContent()));
+	}
+
+	public PageResponse<BookmarkedAlumniResponse> getBookmarks(Long userId, Pageable pageable) {
+		Page<AlumniSearchRepository.BookmarkedRow> rows = alumniSearchRepository.findBookmarked(userId, pageable);
+		Function<AlumniSearchRepository.Row, AlumniResponse> toResponse =
+				toResponse(userId, rows.map(AlumniSearchRepository.BookmarkedRow::row).getContent());
+		return PageResponse.from(rows, row -> new BookmarkedAlumniResponse(toResponse.apply(row.row()), row.bookmarkedAt()));
+	}
+
+	public long countBookmarks(Long userId) {
+		return alumniSearchRepository.countBookmarked(userId);
 	}
 
 	public List<AlumniResponse> recommendSeniors(Long userId, int limit) {
@@ -71,17 +84,19 @@ public class AlumniService {
 	private Function<AlumniSearchRepository.Row, AlumniResponse> toResponse(Long userId, List<AlumniSearchRepository.Row> rows) {
 		List<Long> userIds = rows.stream().map(AlumniSearchRepository.Row::id).toList();
 		if (userIds.isEmpty()) {
-			return row -> AlumniResponse.of(row, null, false);
+			return row -> AlumniResponse.of(row, null, false, CoffeeAvailability.NOT_ACCEPTING);
 		}
 
 		Set<Long> bookmarkedIds = bookmarkRepository.findTargetUserIds(userId, userIds);
 		Set<Long> connectedIds = coffeeChatRepository.findPartnerIds(userId, userIds, CONNECTED_STATUSES);
 		Map<Long, String> companies = currentCompanies(userIds);
+		Map<Long, CoffeeAvailability> availabilities = coffeeAvailabilityReader.getAvailabilities(userIds);
 
 		return row -> {
 			boolean companyVisible = row.profile().getCompanyVisibility()
 					.isVisibleTo(row.id().equals(userId), connectedIds.contains(row.id()));
-			return AlumniResponse.of(row, companyVisible ? companies.get(row.id()) : null, bookmarkedIds.contains(row.id()));
+			return AlumniResponse.of(row, companyVisible ? companies.get(row.id()) : null, bookmarkedIds.contains(row.id()),
+					availabilities.get(row.id()));
 		};
 	}
 
@@ -120,9 +135,7 @@ public class AlumniService {
 	}
 
 	private boolean isCoffeeChatAvailable(Long userId, Long targetUserId) {
-		boolean receiving = coffeeSettingRepository.findById(targetUserId)
-				.map(setting -> setting.getDefaultMode() == ReceiveMode.ON)
-				.orElse(false);
-		return receiving && !coffeeChatRepository.existsOpenChat(userId, targetUserId);
+		return coffeeAvailabilityReader.getAvailability(targetUserId).available()
+				&& !coffeeChatRepository.existsOpenChat(userId, targetUserId);
 	}
 }

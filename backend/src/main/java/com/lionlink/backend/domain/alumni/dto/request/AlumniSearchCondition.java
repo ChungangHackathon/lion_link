@@ -9,6 +9,14 @@ public record AlumniSearchCondition(
 		List<Integer> generations,
 		List<LionPart> parts,
 		List<ProfileStatus> statuses,
-		List<String> interests
+		List<String> interests,
+		boolean available,
+		AlumniSort sort
 ) {
+
+	public enum AlumniSort {
+		RECOMMEND,
+		GENERATION,
+		LATEST
+	}
 }

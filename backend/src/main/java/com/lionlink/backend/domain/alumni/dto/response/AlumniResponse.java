@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.alumni.dto.response;
 
 import com.lionlink.backend.domain.alumni.repository.AlumniSearchRepository;
+import com.lionlink.backend.domain.profile.CoffeeAvailability;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.ProfileStatus;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
@@ -14,14 +15,17 @@ public record AlumniResponse(
 		List<LionPart> lionParts,
 		ProfileStatus status,
 		String headline,
+		String bio,
 		String photoUrl,
 		String company,
 		List<String> interests,
 		List<String> skills,
-		boolean bookmarked
+		boolean bookmarked,
+		CoffeeAvailability coffeeChat
 ) {
 
-	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, boolean bookmarked) {
+	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, boolean bookmarked,
+			CoffeeAvailability coffeeChat) {
 		Profile profile = row.profile();
 		return new AlumniResponse(
 				row.id(),
@@ -30,11 +34,13 @@ public record AlumniResponse(
 				profile.getLionParts(),
 				profile.getStatus(),
 				profile.getHeadline(),
+				profile.getBio(),
 				profile.getPhotoUrl(),
 				company,
 				profile.getInterests(),
 				Objects.requireNonNullElse(profile.getSkills(), List.of()),
-				bookmarked
+				bookmarked,
+				coffeeChat
 		);
 	}
 }

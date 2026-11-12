@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.alumni.repository;
 
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
+import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition.AlumniSort;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
@@ -9,6 +10,8 @@ import com.lionlink.backend.domain.user.entity.UserStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.TypedQuery;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,16 +29,29 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AlumniSearchRepository {
 
+	private static final String SELECT = "select u.id as id, u.name as name, u.generation as generation, p as profile";
 	private static final String FROM = " from User u join Profile p on p.userId = u.id";
+	private static final String ACTIVE = " u.status = :approved and u.deletedAt is null";
+	private static final String IN_PERIOD = """
+			exists (select 1 from CoffeePeriod cp
+			        where cp.userId = u.id and cp.startDate <= :today and cp.endDate >= :today)""";
+	private static final String RECEIVING = """
+			exists (select 1 from CoffeeSetting s
+			        where s.userId = u.id
+			          and ((s.defaultMode = :modeOn and not %s) or (s.defaultMode = :modeOff and %s)))"""
+			.formatted(IN_PERIOD, IN_PERIOD);
+	private static final String BOOKMARKED_FROM = " from Bookmark b join User u on u.id = b.targetUserId"
+			+ " join Profile p on p.userId = u.id where b.userId = :userId and" + ACTIVE;
 
 	private final EntityManager entityManager;
 
-	public Page<Row> search(AlumniSearchCondition condition, Pageable pageable) {
+	public Page<Row> search(Long userId, List<LionPart> userParts, AlumniSearchCondition condition, Pageable pageable) {
 		Map<String, Object> params = new HashMap<>();
-		String where = where(condition, params);
+		String where = where(userId, condition, params);
+		Map<String, Object> selectParams = new HashMap<>(params);
+		String orderBy = orderBy(condition.sort(), userParts, selectParams);
 
-		List<Row> rows = query("select u.id as id, u.name as name, u.generation as generation, p as profile"
-				+ FROM + where + " order by u.id desc", Tuple.class, params)
+		List<Row> rows = query(SELECT + FROM + where + orderBy, Tuple.class, selectParams)
 				.setFirstResult((int) pageable.getOffset())
 				.setMaxResults(pageable.getPageSize())
 				.getResultStream()
@@ -47,26 +63,40 @@ public class AlumniSearchRepository {
 	}
 
 	public List<Row> findSeniors(Long userId, Integer generation, LionPart part, int limit) {
-		String jpql = "select u.id as id, u.name as name, u.generation as generation, p as profile" + FROM + """
-				 where u.status = :approved and u.deletedAt is null and u.id <> :userId and u.generation < :generation
-				   and exists (select 1 from CoffeeSetting s where s.userId = u.id and s.defaultMode = :receiving)
-				 order by case when p.lionPart1 = :part or p.lionPart2 = :part then 0 else 1 end, u.generation desc, u.id desc
-				""";
-		return entityManager.createQuery(jpql, Tuple.class)
-				.setParameter("approved", UserStatus.APPROVED)
-				.setParameter("userId", userId)
-				.setParameter("generation", generation)
-				.setParameter("receiving", ReceiveMode.ON)
-				.setParameter("part", part)
+		Map<String, Object> params = new HashMap<>(Map.of(
+				"approved", UserStatus.APPROVED, "userId", userId, "generation", generation));
+		putReceivingParams(params);
+		String jpql = SELECT + FROM + " where" + ACTIVE + " and u.id <> :userId and u.generation < :generation and " + RECEIVING
+				+ " order by case when p.lionPart1 = :part or p.lionPart2 = :part then 0 else 1 end, u.generation desc, u.id desc";
+		params.put("part", part);
+
+		return query(jpql, Tuple.class, params)
 				.setMaxResults(limit)
 				.getResultStream()
 				.map(Row::from)
 				.toList();
 	}
 
-	private String where(AlumniSearchCondition condition, Map<String, Object> params) {
-		StringBuilder where = new StringBuilder(" where u.status = :approved and u.deletedAt is null");
+	public Page<BookmarkedRow> findBookmarked(Long userId, Pageable pageable) {
+		List<BookmarkedRow> rows = query(SELECT + ", b.createdAt as bookmarkedAt" + BOOKMARKED_FROM
+				+ " order by b.createdAt desc, b.targetUserId desc", Tuple.class, bookmarkedParams(userId))
+				.setFirstResult((int) pageable.getOffset())
+				.setMaxResults(pageable.getPageSize())
+				.getResultStream()
+				.map(BookmarkedRow::from)
+				.toList();
+
+		return PageableExecutionUtils.getPage(rows, pageable, () -> countBookmarked(userId));
+	}
+
+	public long countBookmarked(Long userId) {
+		return query("select count(b)" + BOOKMARKED_FROM, Long.class, bookmarkedParams(userId)).getSingleResult();
+	}
+
+	private String where(Long userId, AlumniSearchCondition condition, Map<String, Object> params) {
+		StringBuilder where = new StringBuilder(" where" + ACTIVE + " and u.id <> :userId");
 		params.put("approved", UserStatus.APPROVED);
+		params.put("userId", userId);
 
 		if (StringUtils.hasText(condition.q())) {
 			where.append("""
@@ -101,7 +131,37 @@ public class AlumniSearchRepository {
 			}
 			where.append(" and (").append(String.join(" or ", interestConditions)).append(")");
 		}
+		if (condition.available()) {
+			where.append(" and ").append(RECEIVING);
+			putReceivingParams(params);
+		}
 		return where.toString();
+	}
+
+	private String orderBy(AlumniSort sort, List<LionPart> userParts, Map<String, Object> params) {
+		return switch (sort) {
+			case LATEST -> " order by u.id desc";
+			case GENERATION -> " order by u.generation asc, u.id desc";
+			case RECOMMEND -> {
+				putReceivingParams(params);
+				String samePart = "";
+				if (!userParts.isEmpty()) {
+					samePart = " case when p.lionPart1 in :userParts or p.lionPart2 in :userParts then 0 else 1 end,";
+					params.put("userParts", userParts);
+				}
+				yield " order by case when " + RECEIVING + " then 0 else 1 end," + samePart + " u.id desc";
+			}
+		};
+	}
+
+	private void putReceivingParams(Map<String, Object> params) {
+		params.put("today", LocalDate.now());
+		params.put("modeOn", ReceiveMode.ON);
+		params.put("modeOff", ReceiveMode.OFF);
+	}
+
+	private Map<String, Object> bookmarkedParams(Long userId) {
+		return Map.of("userId", userId, "approved", UserStatus.APPROVED);
 	}
 
 	private <T> TypedQuery<T> query(String jpql, Class<T> type, Map<String, Object> params) {
@@ -123,6 +183,13 @@ public class AlumniSearchRepository {
 					tuple.get("generation", Integer.class),
 					tuple.get("profile", Profile.class)
 			);
+		}
+	}
+
+	public record BookmarkedRow(Row row, LocalDateTime bookmarkedAt) {
+
+		private static BookmarkedRow from(Tuple tuple) {
+			return new BookmarkedRow(Row.from(tuple), tuple.get("bookmarkedAt", LocalDateTime.class));
 		}
 	}
 }

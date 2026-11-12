@@ -1,6 +1,5 @@
 package com.lionlink.backend.domain.home.service;
 
-import com.lionlink.backend.domain.alumni.repository.BookmarkRepository;
 import com.lionlink.backend.domain.alumni.service.AlumniService;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
 import com.lionlink.backend.domain.community.post.entity.Post;
@@ -35,7 +34,6 @@ public class HomeService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final BookmarkRepository bookmarkRepository;
 	private final PostRepository postRepository;
 	private final PostFileRepository postFileRepository;
 	private final HomeQueryRepository homeQueryRepository;
@@ -52,7 +50,7 @@ public class HomeService {
 						homeQueryRepository.countActiveCoffeeChats(userId),
 						homeQueryRepository.countUnreadMessages(userId),
 						homeQueryRepository.countMessageRequests(userId),
-						bookmarkRepository.countByUserId(userId)
+						alumniService.countBookmarks(userId)
 				),
 				homeQueryRepository.findUpcomingCoffeeChat(userId, LocalDateTime.now())
 						.map(coffeeChat -> upcoming(coffeeChat, userId))

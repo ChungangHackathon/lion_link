@@ -2,9 +2,10 @@ package com.lionlink.backend.domain.alumni.controller;
 
 import com.lionlink.backend.domain.alumni.dto.response.BookmarkResponse;
 import com.lionlink.backend.domain.alumni.dto.response.BookmarkedAlumniResponse;
+import com.lionlink.backend.domain.alumni.service.AlumniService;
 import com.lionlink.backend.domain.alumni.service.BookmarkService;
 import com.lionlink.backend.global.error.ErrorResponse;
-import com.lionlink.backend.global.response.SliceResponse;
+import com.lionlink.backend.global.response.PageResponse;
 import com.lionlink.backend.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,15 +33,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookmarkController {
 
 	private final BookmarkService bookmarkService;
+	private final AlumniService alumniService;
 
-	@Operation(summary = "관심 동문 목록 조회", description = "최근 저장한 순서로 반환하고, 탈퇴한 동문은 isDeleted=true로 표시한다.")
+	@Operation(summary = "관심 동문 목록 조회", description = "최근 저장한 순서로 반환하고, 탈퇴한 동문은 뺀다. 항목은 동문 목록과 같은 형식에 bookmarkedAt이 붙는다.")
 	@ApiResponse(responseCode = "200")
 	@ApiResponse(responseCode = "400", description = "잘못된 조회 조건 (VALIDATION_ERROR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "401", description = "미인증 (UNAUTHENTICATED)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@GetMapping("/me/bookmarks")
-	public SliceResponse<BookmarkedAlumniResponse> getBookmarks(
+	public PageResponse<BookmarkedAlumniResponse> getBookmarks(
 			@CurrentUser Long userId,
 			@Parameter(description = "페이지 번호 (0부터)")
 			@RequestParam(defaultValue = "0")
@@ -50,7 +52,7 @@ public class BookmarkController {
 			@Min(value = 1, message = "페이지 크기는 1~100이어야 합니다.")
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
-		return bookmarkService.getBookmarks(userId, PageRequest.of(page, size));
+		return alumniService.getBookmarks(userId, PageRequest.of(page, size));
 	}
 
 	@Operation(summary = "관심 동문 저장", description = "이미 저장한 동문이면 그대로 성공한다.")
