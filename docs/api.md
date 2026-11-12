@@ -263,6 +263,8 @@ Authorization Code 방식이야. FE는 API를 부르지 않고 브라우저를 �
 | --- | --- | --- |
 | 401 | `UNAUTHENTICATED` | 쿠키가 없거나 만료·폐기됨, 탈퇴한 회원. FE는 로그인 화면으로 이동 |
 
+이미 회전돼 폐기된 Refresh Token이 다시 오면 탈취로 보고 그 회원의 Refresh Token을 모두 폐기해(모든 기기 로그아웃). 그래서 FE는 재발급을 동시에 여러 번 부르지 말고, 진행 중인 재발급 요청 하나를 같이 기다려야 해.
+
 ### AUTH-04 로그아웃
 
 `POST /auth/logout` · 인증 불필요
