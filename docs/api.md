@@ -319,6 +319,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 400 | `VALIDATION_ERROR` | 글자 수·범위 오류 |
 | 409 | `NOT_PENDING` | 반려된 회원. 이름·기수는 다시 신청(AUTH-07)으로 고쳐야 해 |
 | 409 | `ALREADY_APPROVED` | 고치는 사이 승인됨. 메시지 '이미 승인됐어요. 이름·기수는 운영진에게 고쳐달라고 해주세요' |
+| 409 | `DUPLICATE_ITEM` | 기수를 바꿨는데 바뀔 기수에 이미 다른 멋사 활동(운영진 등)이 있음. 자동 생성 항목(`isDefault`)의 기수도 같이 바뀌기 때문이야(확정이 필요한 것들 3) |
 
 ### AUTH-07 다시 신청
 
@@ -337,6 +338,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | 글자 수·범위 오류 |
 | 409 | `NOT_REJECTED` | 반려 상태가 아님(이미 다시 신청했거나 승인됨) |
+| 409 | `DUPLICATE_ITEM` | AUTH-06과 같음. 바뀔 기수에 이미 다른 멋사 활동이 있음 |
 
 ### AUTH-08 회원 탈퇴
 
