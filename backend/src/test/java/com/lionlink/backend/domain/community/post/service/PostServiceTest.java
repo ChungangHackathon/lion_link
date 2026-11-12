@@ -8,13 +8,19 @@ import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
+import com.lionlink.backend.domain.community.meetup.dto.request.MeetupInviteRequest;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupRepository;
+import com.lionlink.backend.domain.community.meetup.service.MeetupService;
 import com.lionlink.backend.domain.community.post.dto.request.PostCreateRequest;
 import com.lionlink.backend.domain.community.post.dto.request.PostUpdateRequest;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
+import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
+import com.lionlink.backend.domain.community.recruit.service.RecruitService;
+import com.lionlink.backend.domain.notification.entity.Notification;
+import com.lionlink.backend.domain.notification.repository.NotificationRepository;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.ErrorCode;
@@ -50,6 +56,18 @@ class PostServiceTest {
 
 	@Autowired
 	private RecruitMemberRepository recruitMemberRepository;
+
+	@Autowired
+	private CoffeeChatRecruitRepository coffeeChatRecruitRepository;
+
+	@Autowired
+	private MeetupService meetupService;
+
+	@Autowired
+	private RecruitService recruitService;
+
+	@Autowired
+	private NotificationRepository notificationRepository;
 
 	@Autowired
 	private EntityManager entityManager;
@@ -173,7 +191,7 @@ class PostServiceTest {
 	}
 
 	@Test
-	void 일반_카테고리끼리만_바꿀_수_있고_마감일은_공모전_채용에만_남는다() {
+	void 일반_카테고리끼리_바꿀_수_있고_마감일은_공모전_채용에만_남는다() {
 		Long postId = postService.create(me, new PostCreateRequest(PostCategory.CONTEST, "공모전", "본문입니다.",
 				null, false, LocalDate.now().plusDays(3), null, null)).id();
 		Long anonymousId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명", "본문입니다.",
@@ -185,7 +203,7 @@ class PostServiceTest {
 		assertThat(postRepository.findById(postId).orElseThrow().getDeadline()).isNull();
 
 		assertError(() -> postService.update(me, postId, new PostUpdateRequest(PostCategory.MEETUP, null, null, null, null, null, null)),
-				CommunityErrorCode.CATEGORY_CHANGE_NOT_ALLOWED);
+				CommunityErrorCode.INVALID_CATEGORY_DETAIL);
 		assertError(() -> postService.update(me, anonymousId, new PostUpdateRequest(PostCategory.CONTEST, null, null, null, null, null, null)),
 				CommunityErrorCode.ANONYMOUS_NOT_ALLOWED);
 	}
@@ -267,6 +285,105 @@ class PostServiceTest {
 		TestPosts.update(entityManager, "update coffeechat_recruits set status = 'APPLIED' where post_id = :id", postId);
 
 		assertError(() -> postService.delete(me, postId), CommunityErrorCode.RECRUIT_CLOSED);
+	}
+
+	@Test
+	void 일반_글을_번개나_커피챗_모집으로_바꾸면_모집_정보를_새로_만든다() {
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long toMeetup = postService.create(me, TestPosts.general(PostCategory.FREE, "번개로 바꿀 글")).id();
+		Long toRecruit = postService.create(me, TestPosts.general(PostCategory.NOW, "모집으로 바꿀 글")).id();
+		LocalDateTime meetAt = LocalDateTime.now().plusDays(2);
+
+		postService.update(me, toMeetup, new PostUpdateRequest(PostCategory.MEETUP, null, null, null, null,
+				new PostUpdateRequest.MeetupRequest(meetAt, "정문", 4), null));
+		postService.update(me, toRecruit, new PostUpdateRequest(PostCategory.RECRUIT, null, null, null, null, null,
+				new PostUpdateRequest.RecruitRequest(senior, 3, LocalDate.now().plusDays(3))));
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThat(postRepository.findById(toMeetup).orElseThrow().getCategory()).isEqualTo(PostCategory.MEETUP);
+		assertThat(meetupRepository.findById(toMeetup).orElseThrow().getCapacity()).isEqualTo(4);
+		assertThat(meetupMemberRepository.countByMeetupPostId(toMeetup)).isEqualTo(1);
+		assertThat(postRepository.findById(toRecruit).orElseThrow().getCategory()).isEqualTo(PostCategory.RECRUIT);
+		assertThat(coffeeChatRecruitRepository.findById(toRecruit).orElseThrow().getSeniorId()).isEqualTo(senior);
+		assertThat(recruitMemberRepository.countByRecruitPostId(toRecruit)).isEqualTo(1);
+
+		Long noInfo = postService.create(me, TestPosts.general(PostCategory.FREE, "정보 없는 글")).id();
+		assertError(() -> postService.update(me, noInfo, new PostUpdateRequest(PostCategory.RECRUIT, null, null, null, null, null,
+				new PostUpdateRequest.RecruitRequest(senior, null, null))), CommunityErrorCode.INVALID_CATEGORY_DETAIL);
+		Long oneOnOne = TestUsers.approved(entityManager, "일대일사자");
+		assertError(() -> postService.update(me, noInfo, new PostUpdateRequest(PostCategory.RECRUIT, null, null, null, null, null,
+				new PostUpdateRequest.RecruitRequest(oneOnOne, 3, LocalDate.now().plusDays(3)))), CommunityErrorCode.GROUP_COFFEE_CHAT_NOT_ALLOWED);
+	}
+
+	@Test
+	void 작성자_말고_참여자가_없으면_번개와_모집의_카테고리를_바꿀_수_있다() {
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long meetupId = postService.create(me, TestPosts.meetup("혼자 연 번개", 4, List.of())).id();
+		meetupService.invite(me, meetupId, new MeetupInviteRequest(List.of(kim)));
+		Long recruitId = postService.create(me, TestPosts.recruit("혼자 연 모집", senior, 3)).id();
+
+		postService.update(me, meetupId, new PostUpdateRequest(PostCategory.FREE, null, null, null, null, null, null));
+		postService.update(me, recruitId, new PostUpdateRequest(PostCategory.MEETUP, null, null, null, null,
+				new PostUpdateRequest.MeetupRequest(LocalDateTime.now().plusDays(3), "후문", 5), null));
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThat(postRepository.findById(meetupId).orElseThrow().getCategory()).isEqualTo(PostCategory.FREE);
+		assertThat(meetupRepository.findById(meetupId)).isEmpty();
+		assertThat(meetupMemberRepository.countByMeetupPostId(meetupId)).isZero();
+		assertThat(postRepository.findById(recruitId).orElseThrow().getCategory()).isEqualTo(PostCategory.MEETUP);
+		assertThat(coffeeChatRecruitRepository.findById(recruitId)).isEmpty();
+		assertThat(recruitMemberRepository.countByRecruitPostId(recruitId)).isZero();
+		assertThat(meetupRepository.findById(recruitId).orElseThrow().getPlace()).isEqualTo("후문");
+	}
+
+	@Test
+	void 참여자가_있거나_끝난_번개_모집은_카테고리를_바꿀_수_없다() {
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long meetupId = postService.create(me, TestPosts.meetup("함께하는 번개", 4, List.of(kim))).id();
+		Long recruitId = postService.create(me, TestPosts.recruit("참여자 있는 모집", senior, 3)).id();
+		recruitService.join(kim, recruitId);
+		Long appliedId = postService.create(me, TestPosts.recruit("신청한 모집", senior, 3)).id();
+		TestPosts.update(entityManager, "update coffeechat_recruits set status = 'APPLIED' where post_id = :id", appliedId);
+		Long endedId = postService.create(me, TestPosts.meetup("끝난 번개", 4, List.of())).id();
+		TestPosts.update(entityManager, "update meetups set meet_at = dateadd('HOUR', -1, current_timestamp) where post_id = :id", endedId);
+		PostUpdateRequest toFree = new PostUpdateRequest(PostCategory.FREE, null, null, null, null, null, null);
+
+		assertError(() -> postService.update(me, meetupId, toFree), CommunityErrorCode.CATEGORY_CHANGE_NOT_ALLOWED);
+		assertError(() -> postService.update(me, recruitId, toFree), CommunityErrorCode.CATEGORY_CHANGE_NOT_ALLOWED);
+		assertError(() -> postService.update(me, appliedId, toFree), CommunityErrorCode.RECRUIT_CLOSED);
+		assertError(() -> postService.update(me, endedId, toFree), CommunityErrorCode.MEETUP_CLOSED);
+	}
+
+	@Test
+	void 커피챗_모집을_취소하면_참여자에게_알림이_간다() {
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		Long lee = TestUsers.approved(entityManager, "이사자");
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long postId = postService.create(me, TestPosts.recruit("같이 신청해요", senior, 4)).id();
+		recruitService.join(kim, postId);
+		recruitService.join(lee, postId);
+		Long expiredId = postService.create(me, TestPosts.recruit("마감 지난 모집", senior, 4)).id();
+		recruitService.join(kim, expiredId);
+		TestPosts.update(entityManager,
+				"update coffeechat_recruits set deadline = dateadd('DAY', -1, current_date) where post_id = :id", expiredId);
+
+		postService.delete(me, postId);
+		postService.delete(me, expiredId);
+
+		List<Notification> notifications = notificationRepository.findAll().stream()
+				.filter(notification -> notification.getType().equals("RECRUIT_CANCELED"))
+				.toList();
+		assertThat(notifications).extracting(Notification::getUserId).containsExactlyInAnyOrder(kim, lee);
+		assertThat(notifications).extracting(Notification::getTargetId).containsOnly(postId);
+		assertThat(notifications.get(0).getMessage()).isEqualTo("참여한 커피챗 모집이 취소됐어요. 같이 신청해요");
 	}
 
 	private PostUpdateRequest meetupUpdate(LocalDateTime meetAt, Integer capacity) {
