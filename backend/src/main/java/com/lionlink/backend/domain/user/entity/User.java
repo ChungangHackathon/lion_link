@@ -81,6 +81,26 @@ public class User extends BaseTimeEntity {
 		this.status = UserStatus.PENDING;
 	}
 
+	/** AUTH-06: 승인 대기 중에만 이름·기수를 고칠 수 있다. */
+	public void updateSignupInfo(String name, Integer generation) {
+		if (status != UserStatus.PENDING) {
+			throw new IllegalStateException("승인 대기 상태에서만 가입 정보를 고칠 수 있다. status=" + status);
+		}
+		this.name = name;
+		this.generation = generation;
+	}
+
+	/** AUTH-07: 반려된 회원이 이름·기수를 고쳐 다시 신청한다. 이전 반려 사유는 관리자 확인용으로 남긴다. */
+	public void reapply(String name, Integer generation) {
+		if (status != UserStatus.REJECTED) {
+			throw new IllegalStateException("반려 상태에서만 다시 신청할 수 있다. status=" + status);
+		}
+		this.name = name;
+		this.generation = generation;
+		this.status = UserStatus.PENDING;
+		this.reappliedAt = LocalDateTime.now();
+	}
+
 	public void dismissGuide() {
 		if (guideDismissedAt == null) {
 			this.guideDismissedAt = LocalDateTime.now();
