@@ -1,8 +1,6 @@
 package com.lionlink.backend.domain.community.post.service;
 
 import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
-import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
-import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
 import com.lionlink.backend.domain.community.event.MeetupCanceledEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
@@ -20,6 +18,7 @@ import com.lionlink.backend.domain.community.recruit.entity.CoffeeChatRecruit;
 import com.lionlink.backend.domain.community.recruit.entity.RecruitMember;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
+import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.user.entity.UserRole;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserRepository;
@@ -45,7 +44,7 @@ public class PostService {
 	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
 	private final RecruitMemberRepository recruitMemberRepository;
 	private final UserRepository userRepository;
-	private final CoffeeSettingRepository coffeeSettingRepository;
+	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public PostCreateResponse create(Long userId, PostCreateRequest request) {
@@ -257,10 +256,7 @@ public class PostService {
 		if (!userRepository.existsByIdAndStatusAndDeletedAtIsNull(seniorId, UserStatus.APPROVED)) {
 			throw new BusinessException(AlumniErrorCode.USER_NOT_FOUND);
 		}
-		boolean acceptGroup = coffeeSettingRepository.findById(seniorId)
-				.map(setting -> setting.getDefaultMode() == ReceiveMode.ON && setting.isAcceptGroup())
-				.orElse(false);
-		if (!acceptGroup) {
+		if (!coffeeAvailabilityReader.getAvailability(seniorId).groupAvailable()) {
 			throw new BusinessException(CommunityErrorCode.GROUP_COFFEE_CHAT_NOT_ALLOWED);
 		}
 	}
