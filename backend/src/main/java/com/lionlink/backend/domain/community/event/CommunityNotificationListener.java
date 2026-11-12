@@ -11,23 +11,30 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class MeetupNotificationListener {
+public class CommunityNotificationListener {
 
-	static final String INVITED = "MEETUP_INVITED";
-	static final String CANCELED = "MEETUP_CANCELED";
+	static final String MEETUP_INVITED = "MEETUP_INVITED";
+	static final String MEETUP_CANCELED = "MEETUP_CANCELED";
+	static final String RECRUIT_JOINED = "RECRUIT_JOINED";
 
 	private final NotificationRepository notificationRepository;
 
 	@EventListener
-	public void onInvited(MeetupInvitedEvent event) {
+	public void onMeetupInvited(MeetupInvitedEvent event) {
 		String message = event.hostName() + "님이 번개에 초대했어요. " + event.title();
-		save(event.inviteeIds(), INVITED, event.postId(), message);
+		save(event.inviteeIds(), MEETUP_INVITED, event.postId(), message);
 	}
 
 	@EventListener
-	public void onCanceled(MeetupCanceledEvent event) {
+	public void onMeetupCanceled(MeetupCanceledEvent event) {
 		String message = "참여한 번개가 취소됐어요. " + event.title();
-		save(event.memberIds(), CANCELED, event.postId(), message);
+		save(event.memberIds(), MEETUP_CANCELED, event.postId(), message);
+	}
+
+	@EventListener
+	public void onRecruitJoined(RecruitJoinedEvent event) {
+		String message = event.memberName() + "님이 내 모집글에 참여했어요. " + event.title();
+		save(List.of(event.authorId()), RECRUIT_JOINED, event.postId(), message);
 	}
 
 	private void save(List<Long> userIds, String type, Long postId, String message) {
