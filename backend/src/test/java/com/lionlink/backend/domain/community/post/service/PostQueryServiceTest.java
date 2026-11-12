@@ -77,7 +77,7 @@ class PostQueryServiceTest {
 		TestPosts.update(entityManager, "update posts set view_count = 10 where id = :id", body);
 
 		assertThat(ids(search(new PostSearchCondition(null, "SPRING", PostSort.LATEST, false, null)))).containsExactly(body, spring);
-		assertThat(ids(search(new PostSearchCondition(PostCategory.CONTEST, null, PostSort.LATEST, false, null)))).containsExactly(contest);
+		assertThat(ids(search(new PostSearchCondition(List.of(PostCategory.CONTEST), null, PostSort.LATEST, false, null)))).containsExactly(contest);
 		assertThat(ids(search(new PostSearchCondition(null, null, PostSort.VIEWS, false, null)))).first().isEqualTo(body);
 		assertThat(ids(search(new PostSearchCondition(null, "100%", PostSort.LATEST, false, null)))).isEmpty();
 	}

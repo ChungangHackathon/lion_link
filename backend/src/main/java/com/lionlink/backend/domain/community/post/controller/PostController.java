@@ -26,6 +26,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -57,7 +58,8 @@ public class PostController {
 	@GetMapping
 	public PageResponse<PostSummaryResponse> search(
 			@CurrentUser Long userId,
-			@Parameter(description = "카테고리. 없으면 전체") @RequestParam(required = false) PostCategory category,
+			@Parameter(description = "카테고리 (여러 개는 쉼표로, 예: CONTEST,JOB). 없으면 전체")
+			@RequestParam(name = "category", required = false) List<PostCategory> categories,
 			@Parameter(description = "제목·본문 검색어")
 			@RequestParam(required = false)
 			@Size(max = 50, message = "검색어는 50자 이하여야 합니다.") String q,
@@ -72,7 +74,7 @@ public class PostController {
 			@Min(value = 1, message = "페이지 크기는 1~100이어야 합니다.")
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
-		PostSearchCondition condition = new PostSearchCondition(category, q, sort, recruiting, period);
+		PostSearchCondition condition = new PostSearchCondition(categories, q, sort, recruiting, period);
 		return postQueryService.search(condition, PageRequest.of(page, size));
 	}
 
