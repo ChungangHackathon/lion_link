@@ -1,6 +1,8 @@
 package com.lionlink.backend.domain.alumni.repository;
 
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
+import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
+import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.Visibility;
 import com.lionlink.backend.domain.user.entity.UserStatus;
@@ -42,6 +44,24 @@ public class AlumniSearchRepository {
 
 		return PageableExecutionUtils.getPage(rows, pageable,
 				() -> query("select count(u)" + FROM + where, Long.class, params).getSingleResult());
+	}
+
+	public List<Row> findSeniors(Long userId, Integer generation, LionPart part, int limit) {
+		String jpql = "select u.id as id, u.name as name, u.generation as generation, p as profile" + FROM + """
+				 where u.status = :approved and u.deletedAt is null and u.id <> :userId and u.generation < :generation
+				   and exists (select 1 from CoffeeSetting s where s.userId = u.id and s.defaultMode = :receiving)
+				 order by case when p.lionPart1 = :part or p.lionPart2 = :part then 0 else 1 end, u.generation desc, u.id desc
+				""";
+		return entityManager.createQuery(jpql, Tuple.class)
+				.setParameter("approved", UserStatus.APPROVED)
+				.setParameter("userId", userId)
+				.setParameter("generation", generation)
+				.setParameter("receiving", ReceiveMode.ON)
+				.setParameter("part", part)
+				.setMaxResults(limit)
+				.getResultStream()
+				.map(Row::from)
+				.toList();
 	}
 
 	private String where(AlumniSearchCondition condition, Map<String, Object> params) {
