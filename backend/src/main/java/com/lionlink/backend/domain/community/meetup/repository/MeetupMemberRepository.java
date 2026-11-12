@@ -5,6 +5,7 @@ import com.lionlink.backend.domain.community.meetup.entity.MeetupMemberId;
 import com.lionlink.backend.global.jpa.IdCount;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -21,4 +22,7 @@ public interface MeetupMemberRepository extends JpaRepository<MeetupMember, Meet
 	List<MeetupMember> findByMeetupPostIdOrderByJoinedAtAscUserIdAsc(Long postId);
 
 	long countByMeetupPostId(Long postId);
+
+	@Query("select m.userId from MeetupMember m where m.meetup.postId = :postId and m.userId in :userIds")
+	Set<Long> findMemberIds(Long postId, Collection<Long> userIds);
 }
