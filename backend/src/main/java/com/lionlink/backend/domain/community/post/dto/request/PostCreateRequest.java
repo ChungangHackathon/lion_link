@@ -63,7 +63,7 @@ public record PostCreateRequest(
 	}
 
 	public record RecruitRequest(
-			@NotNull(message = "신청할 선배를 선택해 주세요.")
+			@NotNull(message = "신청할 사자를 선택해 주세요.")
 			Long seniorId,
 
 			@NotNull(message = "모집 인원을 입력해 주세요.")
