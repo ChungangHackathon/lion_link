@@ -57,7 +57,7 @@ public final class TestProfiles {
 		entityManager.clear();
 	}
 
-	public static void coffeeChat(EntityManager entityManager, Long requesterId, Long receiverId, CoffeeChatStatus status) {
+	public static Long coffeeChat(EntityManager entityManager, Long requesterId, Long receiverId, CoffeeChatStatus status) {
 		CoffeeChat coffeeChat = CoffeeChat.builder()
 				.requesterId(requesterId)
 				.receiverId(receiverId)
@@ -71,12 +71,17 @@ public final class TestProfiles {
 		entityManager.flush();
 		boolean open = status == CoffeeChatStatus.PENDING || status == CoffeeChatStatus.ACCEPTED
 				|| status == CoffeeChatStatus.SCHEDULED;
-		entityManager.createNativeQuery("update coffee_chats set status = :status, open_flag = :openFlag where id = :id")
+		boolean accepted = status == CoffeeChatStatus.ACCEPTED || status == CoffeeChatStatus.SCHEDULED
+				|| status == CoffeeChatStatus.COMPLETED;
+		entityManager.createNativeQuery(
+						"update coffee_chats set status = :status, open_flag = :openFlag, accepted_at = :acceptedAt where id = :id")
 				.setParameter("status", status.name())
 				.setParameter("openFlag", open ? 1 : null)
+				.setParameter("acceptedAt", accepted ? LocalDateTime.now() : null)
 				.setParameter("id", coffeeChat.getId())
 				.executeUpdate();
 		entityManager.clear();
+		return coffeeChat.getId();
 	}
 
 	public static void coffeeSetting(EntityManager entityManager, Long userId, ReceiveMode mode, boolean acceptGroup) {
