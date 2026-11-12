@@ -29,6 +29,10 @@ public class AuthCookies {
 		return build(SIGNUP_TOKEN, "", Duration.ZERO);
 	}
 
+	public String expireRefreshToken() {
+		return build(REFRESH_TOKEN, "", Duration.ZERO);
+	}
+
 	private String build(String name, String value, Duration maxAge) {
 		return ResponseCookie.from(name, value)
 				.httpOnly(true)
