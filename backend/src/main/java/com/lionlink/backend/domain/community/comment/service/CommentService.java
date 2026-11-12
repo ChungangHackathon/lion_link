@@ -4,6 +4,7 @@ import com.lionlink.backend.domain.community.comment.dto.request.CommentCreateRe
 import com.lionlink.backend.domain.community.comment.dto.response.CommentResponse;
 import com.lionlink.backend.domain.community.comment.entity.Comment;
 import com.lionlink.backend.domain.community.comment.repository.CommentRepository;
+import com.lionlink.backend.domain.community.event.CommentCreatedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
@@ -15,6 +16,7 @@ import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.response.SliceResponse;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class CommentService {
 	private final PostRepository postRepository;
 	private final UserRepository userRepository;
 	private final UserSummaryReader userSummaryReader;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional(readOnly = true)
 	public SliceResponse<CommentResponse> getComments(Long userId, Long postId, Pageable pageable) {
@@ -51,6 +54,10 @@ public class CommentService {
 				.isAnonymous(post.isAnonymous() && post.isWrittenBy(userId))
 				.build());
 		UserSummary author = userSummaryReader.getSummary(userId).orElse(UserSummary.withdrawn(userId));
+		if (!post.isWrittenBy(userId)) {
+			String commenterName = comment.isAnonymous() ? "익명" : author.name();
+			eventPublisher.publishEvent(new CommentCreatedEvent(postId, post.getTitle(), post.getAuthorId(), commenterName));
+		}
 		return CommentResponse.of(comment, postId, author, userId);
 	}
 

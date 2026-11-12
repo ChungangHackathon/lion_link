@@ -16,6 +16,7 @@ public class CommunityNotificationListener {
 	static final String MEETUP_INVITED = "MEETUP_INVITED";
 	static final String MEETUP_CANCELED = "MEETUP_CANCELED";
 	static final String RECRUIT_JOINED = "RECRUIT_JOINED";
+	static final String COMMENT_CREATED = "COMMENT_CREATED";
 
 	private final NotificationRepository notificationRepository;
 
@@ -35,6 +36,12 @@ public class CommunityNotificationListener {
 	public void onRecruitJoined(RecruitJoinedEvent event) {
 		String message = event.memberName() + "님이 내 모집글에 참여했어요. " + event.title();
 		save(List.of(event.authorId()), RECRUIT_JOINED, event.postId(), message);
+	}
+
+	@EventListener
+	public void onCommentCreated(CommentCreatedEvent event) {
+		String message = event.commenterName() + "님이 내 글에 댓글을 남겼어요. " + event.title();
+		save(List.of(event.postAuthorId()), COMMENT_CREATED, event.postId(), message);
 	}
 
 	private void save(List<Long> userIds, String type, Long postId, String message) {
