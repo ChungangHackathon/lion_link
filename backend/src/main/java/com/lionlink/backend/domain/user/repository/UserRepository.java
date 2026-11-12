@@ -12,6 +12,8 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
+	boolean existsByIdAndDeletedAtIsNull(Long id);
+
 	boolean existsByIdAndStatusAndDeletedAtIsNull(Long id, UserStatus status);
 
 	long countByIdInAndStatusAndDeletedAtIsNull(Collection<Long> ids, UserStatus status);

@@ -3,6 +3,7 @@ package com.lionlink.backend.domain.auth.controller;
 import com.lionlink.backend.domain.auth.dto.request.SignupRequest;
 import com.lionlink.backend.domain.auth.dto.response.GoogleInfoResponse;
 import com.lionlink.backend.domain.auth.dto.response.SessionResponse;
+import com.lionlink.backend.domain.auth.dto.response.TokenResponse;
 import com.lionlink.backend.domain.auth.service.AuthService;
 import com.lionlink.backend.domain.auth.service.Issued;
 import com.lionlink.backend.global.error.ErrorResponse;
@@ -68,5 +69,32 @@ public class AuthController {
 						authCookies.refreshToken(issued.refreshToken()),
 						authCookies.expireSignupToken())
 				.body(issued.body());
+	}
+
+	@Operation(summary = "토큰 재발급 (AUTH-03)",
+			description = "refreshToken 쿠키로 새 accessToken을 발급한다. 요청 본문 없음. "
+					+ "리프레시 토큰도 새로 발급해 쿠키를 교체한다(회전). 이미 쓴 토큰을 다시 보내면 그 회원의 토큰이 모두 폐기된다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "401", description = "쿠키 없음·만료·폐기, 탈퇴한 회원 (UNAUTHENTICATED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@PostMapping("/refresh")
+	public ResponseEntity<TokenResponse> refresh(
+			@Parameter(hidden = true) @CookieValue(name = AuthCookies.REFRESH_TOKEN, required = false) String refreshToken) {
+		Issued<TokenResponse> issued = authService.refresh(refreshToken);
+		return ResponseEntity.ok()
+				.header(HttpHeaders.SET_COOKIE, authCookies.refreshToken(issued.refreshToken()))
+				.body(issued.body());
+	}
+
+	@Operation(summary = "로그아웃 (AUTH-04)",
+			description = "refreshToken을 폐기하고 쿠키를 지운다. 토큰이 없거나 이미 만료·폐기돼 있어도 항상 204.")
+	@ApiResponse(responseCode = "204")
+	@PostMapping("/logout")
+	public ResponseEntity<Void> logout(
+			@Parameter(hidden = true) @CookieValue(name = AuthCookies.REFRESH_TOKEN, required = false) String refreshToken) {
+		authService.logout(refreshToken);
+		return ResponseEntity.noContent()
+				.header(HttpHeaders.SET_COOKIE, authCookies.expireRefreshToken())
+				.build();
 	}
 }
