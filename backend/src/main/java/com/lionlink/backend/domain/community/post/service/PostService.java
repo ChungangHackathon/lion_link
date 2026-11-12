@@ -3,6 +3,7 @@ package com.lionlink.backend.domain.community.post.service;
 import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
+import com.lionlink.backend.domain.community.event.MeetupCanceledEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupMember;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class PostService {
 	private final RecruitMemberRepository recruitMemberRepository;
 	private final UserRepository userRepository;
 	private final CoffeeSettingRepository coffeeSettingRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public PostCreateResponse create(Long userId, PostCreateRequest request) {
 		PostCategory category = request.category();
@@ -135,6 +138,9 @@ public class PostService {
 			if (!admin && !meetup.isCanceled() && meetup.isEnded(LocalDateTime.now())) {
 				throw new BusinessException(CommunityErrorCode.MEETUP_CLOSED, "종료된 번개는 취소할 수 없어요.");
 			}
+			if (!meetup.isCanceled() && !meetup.isEnded(LocalDateTime.now())) {
+				notifyCanceled(post);
+			}
 			meetup.cancel();
 		}
 		if (post.getCategory() == PostCategory.RECRUIT) {
@@ -144,6 +150,16 @@ public class PostService {
 			}
 		}
 		post.delete();
+	}
+
+	private void notifyCanceled(Post post) {
+		List<Long> memberIds = meetupMemberRepository.findByMeetupPostIdOrderByJoinedAtAscUserIdAsc(post.getId()).stream()
+				.map(MeetupMember::getUserId)
+				.filter(memberId -> !post.isWrittenBy(memberId))
+				.toList();
+		if (!memberIds.isEmpty()) {
+			eventPublisher.publishEvent(new MeetupCanceledEvent(post.getId(), post.getTitle(), memberIds));
+		}
 	}
 
 	private void createMeetup(Post post, Long userId, PostCreateRequest.MeetupRequest request, List<Long> companionIds) {
