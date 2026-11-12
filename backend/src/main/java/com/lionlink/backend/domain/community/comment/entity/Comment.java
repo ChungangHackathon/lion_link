@@ -56,4 +56,16 @@ public class Comment extends BaseCreatedEntity {
 		this.isAnonymous = isAnonymous;
 		this.anonNo = anonNo;
 	}
+
+	public void delete() {
+		this.deletedAt = LocalDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return deletedAt != null;
+	}
+
+	public boolean isWrittenBy(Long userId) {
+		return authorId.equals(userId);
+	}
 }
