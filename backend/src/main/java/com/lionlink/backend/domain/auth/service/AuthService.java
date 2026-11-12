@@ -2,13 +2,10 @@ package com.lionlink.backend.domain.auth.service;
 
 import com.lionlink.backend.domain.auth.dto.request.SignupRequest;
 import com.lionlink.backend.domain.auth.dto.response.GoogleInfoResponse;
-import com.lionlink.backend.domain.auth.dto.response.MeResponse;
 import com.lionlink.backend.domain.auth.dto.response.SessionResponse;
 import com.lionlink.backend.domain.auth.dto.response.TokenResponse;
 import com.lionlink.backend.domain.auth.event.SignupRequestedEvent;
 import com.lionlink.backend.domain.auth.exception.AuthErrorCode;
-import com.lionlink.backend.domain.profile.basic.entity.Profile;
-import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
@@ -27,7 +24,7 @@ public class AuthService {
 	private final JwtProvider jwtProvider;
 	private final RefreshTokenService refreshTokenService;
 	private final UserRepository userRepository;
-	private final ProfileRepository profileRepository;
+	private final MeService meService;
 	private final ApplicationEventPublisher eventPublisher;
 
 	/** AUTH-01: 구글 로그인 성공 후 호출된다. 가입된 계정이면 리프레시 토큰, 아니면 가입용 토큰을 만든다. */
@@ -70,7 +67,7 @@ public class AuthService {
 				new SessionResponse(
 						jwtProvider.createAccessToken(user.getId()),
 						jwtProvider.accessTokenExpiresInSeconds(),
-						toMe(user)),
+						meService.toResponse(user)),
 				refreshTokenService.issue(user.getId()));
 	}
 
@@ -94,10 +91,5 @@ public class AuthService {
 	@Transactional
 	public void logout(String refreshToken) {
 		refreshTokenService.revoke(refreshToken);
-	}
-
-	private MeResponse toMe(User user) {
-		String photoUrl = profileRepository.findById(user.getId()).map(Profile::getPhotoUrl).orElse(null);
-		return MeResponse.of(user, photoUrl);
 	}
 }
