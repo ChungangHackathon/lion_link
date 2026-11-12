@@ -47,4 +47,24 @@ public class Meetup {
 		this.place = place;
 		this.capacity = capacity;
 	}
+
+	public void update(LocalDateTime meetAt, String place, Integer capacity) {
+		this.meetAt = meetAt;
+		this.place = place;
+		this.capacity = capacity;
+	}
+
+	public void cancel() {
+		if (canceledAt == null) {
+			this.canceledAt = LocalDateTime.now();
+		}
+	}
+
+	public boolean isCanceled() {
+		return canceledAt != null;
+	}
+
+	public boolean isEnded(LocalDateTime now) {
+		return !meetAt.isAfter(now);
+	}
 }

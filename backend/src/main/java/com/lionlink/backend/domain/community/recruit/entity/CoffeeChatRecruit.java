@@ -57,4 +57,14 @@ public class CoffeeChatRecruit {
 		this.deadline = deadline;
 		this.status = RecruitStatus.OPEN;
 	}
+
+	public void update(Long seniorId, Integer capacity, LocalDate deadline) {
+		this.seniorId = seniorId;
+		this.capacity = capacity;
+		this.deadline = deadline;
+	}
+
+	public boolean isOpen() {
+		return status == RecruitStatus.OPEN;
+	}
 }

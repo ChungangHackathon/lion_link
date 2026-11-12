@@ -8,5 +8,17 @@ public enum PostCategory {
 	NOW,
 	FREE,
 	MEETUP,
-	RECRUIT
+	RECRUIT;
+
+	public boolean isGeneral() {
+		return this != MEETUP && this != RECRUIT;
+	}
+
+	public boolean allowsDeadline() {
+		return this == CONTEST || this == JOB;
+	}
+
+	public boolean allowsAnonymous() {
+		return this == FREE;
+	}
 }
