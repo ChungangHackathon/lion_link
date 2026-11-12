@@ -67,4 +67,8 @@ public class CoffeeChatRecruit {
 	public boolean isOpen() {
 		return status == RecruitStatus.OPEN;
 	}
+
+	public RecruitStatus statusOn(LocalDate today) {
+		return isOpen() && deadline.isBefore(today) ? RecruitStatus.ENDED : status;
+	}
 }
