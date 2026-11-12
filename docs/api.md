@@ -1173,7 +1173,9 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 보낸 필드만 바꿔. 필드는 POST-03과 같고 규칙도 같아(`isAnonymous`, `meetup.companionIds`는 없음).
 
-- 카테고리는 일반 카테고리(`CONTEST` `JOB` `MATERIAL` `EVENT` `NOW` `FREE`)끼리만 바꿀 수 있어. 익명 글은 `FREE`에서 못 바꿔
+- 일반 카테고리(`CONTEST` `JOB` `MATERIAL` `EVENT` `NOW` `FREE`)끼리는 자유롭게 바꿀 수 있어. 익명 글은 `FREE`에서 못 바꿔
+- 번개·커피챗 모집 글은 작성자 말고 참여자가 없을 때만 다른 카테고리로 바꿀 수 있어. 바꾸면 모집 정보(번개는 초대 기록까지)는 지워져
+- 일반 글을 번개·커피챗 모집으로 바꿀 때는 `meetup`(`meetAt` `place` `capacity`) 또는 `recruit`(`seniorId` `capacity` `deadline`)를 모두 보내야 해. POST-03처럼 검증하고 작성자가 첫 참여자가 돼
 - 마감일을 쓸 수 없는 카테고리로 바꾸면 `deadline`은 지워져
 - 번개: 시작되거나 취소된 번개는 수정할 수 없고, 정원은 지금 참여 인원보다 줄일 수 없어
 - 커피챗 모집: 커피챗을 신청한 뒤(`APPLIED`)에는 모집 정보를 못 바꾸고, 참여자가 있으면 신청받을 사자를 못 바꿔
@@ -1182,13 +1184,13 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `CATEGORY_CHANGE_NOT_ALLOWED` | 번개·커피챗 모집 글의 카테고리를 바꾸거나 일반 글을 번개·모집으로 바꿈 |
 | 400 | `ANONYMOUS_NOT_ALLOWED` | 익명 글을 `FREE` 밖으로 옮김 |
 | 400 | `INVALID_CATEGORY_DETAIL`, `INVALID_MEETUP_TIME` | POST-03과 같음 |
 | 400 | `INVALID_RECRUIT_SENIOR` | 신청받을 사자를 본인으로 바꿈 |
 | 403 | `NOT_OWNER` | 작성자가 아님 |
 | 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
 | 404 | `USER_NOT_FOUND` | 바꾸려는 신청받을 사자가 없거나 승인 전·탈퇴 |
+| 409 | `CATEGORY_CHANGE_NOT_ALLOWED` | 참여자가 있는 번개·커피챗 모집 글의 카테고리를 바꿈('참여자가 있어 카테고리를 바꿀 수 없어요.') |
 | 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
 | 409 | `GROUP_COFFEE_CHAT_NOT_ALLOWED` | 바꾸려는 사자가 커피챗을 안 받거나 1:1만 받음 |
 | 409 | `RECRUIT_CLOSED` | 신청 완료된 모집의 모집 정보를 바꿈 |
@@ -1202,7 +1204,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 소프트 삭제(`deleted_at`)이고 `204`야. 댓글도 화면에서 같이 사라져.
 
 - 번개 글이면 번개도 취소(`meetups.canceled_at`)하고 작성자를 뺀 참여자에게 취소 알림을 저장해. 프론트의 [번개 취소]가 이 API야
-- 커피챗 모집 글은 신청 전(`OPEN`)에만 지울 수 있어. 프론트의 [모집 취소]가 이 API야
+- 커피챗 모집 글은 신청 전(`OPEN`)에만 지울 수 있어. 프론트의 [모집 취소]가 이 API야. 마감 전이면 작성자를 뺀 참여자에게 취소 알림을 저장해
 - 관리자는 위 상태 제한 없이 지울 수 있어
 
 | 상태 | code | 언제 |
@@ -1345,6 +1347,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
 | `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `{댓글 작성자}님이 내 글에 댓글을 남겼어요. {제목}` |
 | `RECRUIT_JOINED` | 커피챗 모집 작성자 | `{참여자}님이 내 모집글에 참여했어요. {제목}` |
+| `RECRUIT_CANCELED` | 작성자를 뺀 모집 참여자 | `참여한 커피챗 모집이 취소됐어요. {제목}` |
 
 익명 댓글이면 문구의 이름 자리에 '익명'을 넣어(지금 규칙에선 익명 댓글은 익명 글 작성자만 쓰므로 알림이 가지 않아). 프론트 알림 목록은 보낸 사람의 아바타·이름(`actorId`)을 따로 보여주는데, `notifications`에 보낸 사람 칼럼이 없어서 지금은 문구에 이름을 넣고 있어. 칼럼을 추가할지는 알림 담당과 정한다.
 
