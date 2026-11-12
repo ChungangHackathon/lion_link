@@ -6,12 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
 import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,8 +49,12 @@ class AlumniControllerTest {
 		Long kim = TestUsers.approved(entityManager, "김사자");
 		TestProfiles.save(entityManager, TestProfiles.profile(kim)
 				.lionPart2(LionPart.FRONTEND)
-				.skills(List.of("Spring", "MySQL")));
+				.skills(List.of("Spring", "MySQL"))
+				.bio("서버 개발 이야기를 좋아해요"));
 		TestProfiles.currentCareer(entityManager, kim, "예시회사", "백엔드 개발자");
+		TestProfiles.coffeeSetting(entityManager, kim, ReceiveMode.ON, true);
+		LocalDate today = LocalDate.now();
+		TestProfiles.coffeePeriod(entityManager, kim, today, today.plusDays(3));
 
 		mockMvc.perform(get("/api/v1/users")
 						.param("q", "mysql")
@@ -66,10 +72,42 @@ class AlumniControllerTest {
 				.andExpect(jsonPath("$.items[0].interests[0]").value("BACKEND"))
 				.andExpect(jsonPath("$.items[0].skills[1]").value("MySQL"))
 				.andExpect(jsonPath("$.items[0].bookmarked").value(false))
+				.andExpect(jsonPath("$.items[0].bio").value("서버 개발 이야기를 좋아해요"))
+				.andExpect(jsonPath("$.items[0].coffeeChat.availability").value("RESTING"))
+				.andExpect(jsonPath("$.items[0].coffeeChat.nextAvailableDate").value(today.plusDays(4).toString()))
+				.andExpect(jsonPath("$.items[0].coffeeChat.acceptGroup").value(true))
 				.andExpect(jsonPath("$.page").value(0))
 				.andExpect(jsonPath("$.size").value(20))
 				.andExpect(jsonPath("$.totalElements").value(1))
 				.andExpect(jsonPath("$.hasNext").value(false));
+	}
+
+	@Test
+	void 오늘_커피챗을_받는_동문만_조회한다() throws Exception {
+		Long receiving = TestUsers.approved(entityManager, "받는사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(receiving));
+		TestProfiles.coffeeSetting(entityManager, receiving, ReceiveMode.ON, true);
+		Long other = TestUsers.approved(entityManager, "안받는사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(other));
+
+		mockMvc.perform(get("/api/v1/users")
+						.param("available", "true")
+						.param("sort", "RECOMMEND")
+						.header(USER_HEADER, me))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items", hasSize(1)))
+				.andExpect(jsonPath("$.items[0].id").value(receiving))
+				.andExpect(jsonPath("$.items[0].coffeeChat.availability").value("AVAILABLE"))
+				.andExpect(jsonPath("$.items[0].coffeeChat.nextAvailableDate").value(nullValue()))
+				.andExpect(jsonPath("$.totalElements").value(1));
+	}
+
+	@Test
+	void 없는_정렬이면_400() throws Exception {
+		mockMvc.perform(get("/api/v1/users").param("sort", "POPULAR").header(USER_HEADER, me))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("sort"));
 	}
 
 	@Test

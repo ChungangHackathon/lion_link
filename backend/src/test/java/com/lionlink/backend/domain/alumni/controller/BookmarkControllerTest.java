@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
+import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,21 +80,25 @@ class BookmarkControllerTest {
 	}
 
 	@Test
-	void 관심_동문_목록을_조회한다() throws Exception {
+	void 관심_동문_목록을_동문_카드_형식으로_조회한다() throws Exception {
 		Long target = TestUsers.approved(entityManager, "김사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(target).bio("서버 개발 이야기를 좋아해요"));
 		mockMvc.perform(put("/api/v1/users/{userId}/bookmark", target).header(USER_HEADER, me));
 
 		mockMvc.perform(get("/api/v1/users/me/bookmarks").header(USER_HEADER, me))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].userId").value(target))
+				.andExpect(jsonPath("$.items[0].id").value(target))
 				.andExpect(jsonPath("$.items[0].name").value("김사자"))
-				.andExpect(jsonPath("$.items[0].isDeleted").value(false))
+				.andExpect(jsonPath("$.items[0].bio").value("서버 개발 이야기를 좋아해요"))
+				.andExpect(jsonPath("$.items[0].bookmarked").value(true))
+				.andExpect(jsonPath("$.items[0].coffeeChat.availability").value("NOT_ACCEPTING"))
 				.andExpect(jsonPath("$.items[0].bookmarkedAt").value(endsWith("+09:00")))
+				.andExpect(jsonPath("$.items[0].alumni").doesNotExist())
 				.andExpect(jsonPath("$.page").value(0))
 				.andExpect(jsonPath("$.size").value(20))
-				.andExpect(jsonPath("$.hasNext").value(false))
-				.andExpect(jsonPath("$.totalElements").doesNotExist());
+				.andExpect(jsonPath("$.totalElements").value(1))
+				.andExpect(jsonPath("$.hasNext").value(false));
 	}
 
 	@Test

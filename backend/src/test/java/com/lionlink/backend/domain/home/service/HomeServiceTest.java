@@ -25,6 +25,7 @@ import com.lionlink.backend.support.TestPosts;
 import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -104,7 +105,12 @@ class HomeServiceTest {
 				.userId(me)
 				.role(CoffeeChatMemberRole.MEMBER)
 				.build());
+		TestProfiles.save(entityManager, TestProfiles.profile(a));
 		bookmarkService.bookmark(me, a);
+		Long gone = user("탈퇴사자", 14);
+		TestProfiles.save(entityManager, TestProfiles.profile(gone));
+		bookmarkService.bookmark(me, gone);
+		TestUsers.withdraw(entityManager, gone);
 		entityManager.flush();
 
 		HomeResponse.Counts counts = homeService.getHome(me).counts();
@@ -159,11 +165,13 @@ class HomeServiceTest {
 	}
 
 	@Test
-	void 선배_추천은_커피챗을_받는_선배를_같은_파트부터_두_명_보여준다() {
+	void 선배_추천은_오늘_커피챗을_받는_선배를_같은_파트부터_두_명_보여준다() {
 		Long designSenior = senior("디자인선배", 12, LionPart.DESIGN, true);
 		Long backendSenior = senior("백엔드선배", 11, LionPart.BACKEND, true);
 		Long closestSenior = senior("가까운선배", 13, LionPart.FRONTEND, true);
 		senior("안받는선배", 12, LionPart.BACKEND, false);
+		Long restingSenior = senior("쉬는선배", 12, LionPart.BACKEND, true);
+		TestProfiles.coffeePeriod(entityManager, restingSenior, LocalDate.now(), LocalDate.now().plusDays(2));
 		senior("후배", 15, LionPart.BACKEND, true);
 		Long noSetting = user("설정없는선배", 12);
 		TestProfiles.save(entityManager, TestProfiles.profile(noSetting));

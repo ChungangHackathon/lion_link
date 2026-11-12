@@ -22,6 +22,7 @@ import com.lionlink.backend.support.TestPosts;
 import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class PostQueryServiceTest {
 	@BeforeEach
 	void setUp() {
 		me = TestUsers.approved(entityManager, "나사자");
-		TestProfiles.save(entityManager, TestProfiles.profile(me));
+		TestProfiles.save(entityManager, TestProfiles.profile(me).bio("백엔드 개발을 공부해요"));
 	}
 
 	@Test
@@ -162,6 +163,7 @@ class PostQueryServiceTest {
 		assertThat(mine.isMine()).isTrue();
 		assertThat(mine.author().name()).isEqualTo("나사자");
 		assertThat(mine.author().status()).isNotNull();
+		assertThat(mine.author().bio()).isEqualTo("백엔드 개발을 공부해요");
 		assertThat(mine.links()).containsExactly("https://a.com");
 		assertThat(mine.likeCount()).isEqualTo(1);
 		assertThat(mine.likedByMe()).isFalse();
@@ -208,6 +210,9 @@ class PostQueryServiceTest {
 		assertThat(forSenior.isSenior()).isTrue();
 		assertThat(forSenior.hasOpenCoffeeChatWithSenior()).isFalse();
 		assertThat(postQueryService.getDetail(me, postId).recruit().joinedByMe()).isTrue();
+
+		TestProfiles.coffeePeriod(entityManager, senior, LocalDate.now(), LocalDate.now());
+		assertThat(postQueryService.getDetail(kim, postId).recruit().senior().acceptGroup()).isFalse();
 	}
 
 	@Test
