@@ -166,7 +166,7 @@
 | 3 | 커뮤니티가 `POST /files`(업로드 URL 발급, 설계 제안 단계)를 쓴다 | 프로필 사진(PROFILE-05)도 같은 저장소·발급 방식을 쓸지 커뮤니티 담당과 맞춘다 (확정 필요 5번) |
 | 4 | 커피챗·채팅·알림 상세 명세가 비어 있다 | 커피챗 신청(4.1)·수락은 프로필의 커피챗 설정(PROFILE-12~15)과 맞물린다. 담당자에게 작성 일정 확인 |
 | 5 | 실시간 채팅(5.3)의 WebSocket 연결·구독 경로, 커피챗 함께 신청 모집(4.11) API가 목록에 없다 | 채팅 담당 확인. 커피챗 함께 신청 모집은 모집 참여를 커뮤니티가, 모인 인원으로 신청을 커피챗 신청(`fromRecruitId`)이 맡는다 ('커뮤니티 확정 필요' 2번) |
-| 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | 동문 찾기 담당이 PROFILE-03 기준으로 맞춘다 (ALUMNI-02 참고) |
+| 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | **반영(2026-11-12)**: PROFILE-03 형식으로 맞췄다. `COOLDOWN`만 재신청 제한 규칙이 정해진 뒤 추가 (ALUMNI-02 참고) |
 
 ## 1. 계정·인증
 
@@ -949,16 +949,42 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /users/{userId}` · 승인 회원
 
-> **맞출 예정:** PROFILE-03에 적힌 응답 형식(`userId`, `contact`, 9개 섹션, 가려진 키 빼기, `companyHidden`, `coffeeChat`, `chat`, `commonalities`, `mutualCount`)이 최종 형식이야. 지금 구현은 아래와 같고, 동문 찾기 담당이 PROFILE-03 기준으로 맞춘다.
+응답은 PROFILE-03 형식이야. 구현하면서 정한 세부 사항과, 프론트 상세 화면 때문에 더한 필드를 적어 둘게.
 
-지금 응답은 `id, name, generation, lionParts, status, headline, bio, photoUrl, major, region, interests, skills, links, careers, educations, projects, lionActivities, contactEmail, phone, bookmarked, coffeeChatAvailable`이야. 공개 범위로 가려진 값은 `null`이고, 본인 프로필이면 모두 보여.
+```json
+{
+  "userId": 12, "name": "김사자", "generation": 13, "photoUrl": null, "headline": "풀스택 개발자",
+  "bio": "...", "major": null, "minor": null, "region": "서울", "status": "EMPLOYED",
+  "lionParts": ["BACKEND", "FRONTEND"], "interests": ["DATA_AI"], "skills": ["Spring"],
+  "links": [{ "type": "GITHUB", "url": "https://github.com/kim" }],
+  "contact": { "email": "kim@test.com" },
+  "careers": [{ "id": 31, "company": "라이온컴퍼니", "companyHidden": false, "jobTitle": "백엔드 개발자", "employmentType": "FULL_TIME", "startYm": "2024-03", "endYm": null, "isCurrent": true, "description": null }],
+  "educations": [], "lionActivities": [], "lionProjects": [], "projects": [],
+  "certifications": [], "awards": [], "activities": [], "languages": [],
+  "isStaff": false,
+  "coffeeChat": { "availability": "AVAILABLE", "nextAvailableDate": null, "acceptGroup": true, "topics": ["CAREER"], "modes": ["ONLINE"], "availableSlots": [], "preferredArea": "강남", "pendingCoffeeChatId": null },
+  "chat": { "status": "NONE", "requestAvailableDate": null },
+  "commonalities": [{ "type": "SAME_GENERATION", "label": "13기" }],
+  "mutualCount": 0,
+  "bookmarked": false
+}
+```
 
-PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있어 (구현 예정).
+| 항목 | 정한 내용 |
+| --- | --- |
+| 가려진 값 | `contact.email`, `contact.phone`, `links`는 키째 빠져. 둘 다 가려지면 `contact`는 `{}` |
+| `careers[].companyHidden` | 회사명이 비공개면 경력마다 `company` 키가 빠지고 `companyHidden: true`. 직무(`jobTitle`)는 그대로 |
+| 섹션 항목 필드 | PROFILE-11 이름을 써. 자격증 `issuer`·`acquiredYm`, 수상 `host`·`awardedYm` |
+| 섹션 순서 | 경력·학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |
+| `isStaff` (추가) | 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`. 이름 옆 '운영진' 태그 |
+| `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. `COOLDOWN`은 재신청 제한 규칙이 정해지면 추가 (구현 예정) |
+| `coffeeChat.pendingCoffeeChatId` (추가) | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
+| `chat` | 둘 사이의 1:1 방 기준. `REQUESTED`는 누가 보냈든 대기 중인 요청이 있을 때야. 내가 보낸 요청이 거절된 지 7일 안이면 `status: NONE`과 `requestAvailableDate`(거절 시각 + 7일의 날짜) |
+| `commonalities` | `SAME_LION_PROJECT` 같은 기수에 이름이 같은 멋사 프로젝트(`13기 라이언링크`), `SAME_COMPANY` 둘 다 지금 다니는 회사(`라이온컴퍼니`), `SAME_GENERATION`(`13기`), `SAME_PART`(`백엔드 파트`), `SHARED_INTEREST`(`데이터·AI`) 순서야. 한 종류가 여러 개면 각각 들어가 |
+| `mutualCount` | 나와 연결된 동문 중 이 사자와도 연결된 사람 수. 탈퇴 회원은 빼 |
+| 내 프로필을 볼 때 | 공개 범위 없이 모두 보이고 `commonalities: []`, `mutualCount: 0`, `chat.status: NONE`, `pendingCoffeeChatId: null` |
 
-| 추가 필드 | 타입 | 설명 |
-| --- | --- | --- |
-| `isStaff` | boolean | 멋사 활동 중 `STAFF` 역할이 있으면 `true`. 이름 옆 '운영진' 태그 |
-| `coffeeChat.pendingCoffeeChatId` | number / null | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
+'연결된 동문'은 PROFILE-03 정의 그대로야. 커피챗은 수락 시각(`accepted_at`)이 있는지로 보고, 여러 명 커피챗은 수락 뒤에 빠진 함께 신청자도 연결로 쳐. 동문 목록(ALUMNI-01)의 회사 공개 판단도 같은 기준을 써.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
