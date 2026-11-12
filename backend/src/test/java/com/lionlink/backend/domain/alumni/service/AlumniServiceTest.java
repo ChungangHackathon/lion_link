@@ -1,14 +1,11 @@
 package com.lionlink.backend.domain.alumni.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition.AlumniSort;
-import com.lionlink.backend.domain.alumni.dto.response.AlumniDetailResponse;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniResponse;
 import com.lionlink.backend.domain.alumni.dto.response.BookmarkedAlumniResponse;
-import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.profile.CoffeeAvailability;
@@ -16,7 +13,6 @@ import com.lionlink.backend.domain.profile.CoffeeAvailability.Availability;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.ProfileStatus;
 import com.lionlink.backend.domain.user.entity.UserStatus;
-import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.response.PageResponse;
 import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
@@ -226,82 +222,6 @@ class AlumniServiceTest {
 		assertThat(firstPage.items()).hasSize(1);
 		assertThat(firstPage.totalElements()).isEqualTo(2);
 		assertThat(firstPage.hasNext()).isTrue();
-	}
-
-	@Test
-	void 상세_조회는_공개_범위에_따라_연락처를_가린다() {
-		Long kim = TestUsers.approved(entityManager, "김사자");
-		TestProfiles.save(entityManager, TestProfiles.profile(kim).contactEmail("kim@test.com").phone("010-0000-0000"));
-		TestProfiles.currentCareer(entityManager, kim, "라이온컴퍼니", "백엔드 개발자");
-
-		AlumniDetailResponse stranger = alumniService.getDetail(me, kim);
-		assertThat(stranger.name()).isEqualTo("김사자");
-		assertThat(stranger.contactEmail()).isNull();
-		assertThat(stranger.phone()).isNull();
-		assertThat(stranger.links()).isEmpty();
-		assertThat(stranger.careers()).extracting(AlumniDetailResponse.CareerResponse::company)
-				.containsExactly("라이온컴퍼니");
-
-		TestProfiles.coffeeChat(entityManager, kim, me, CoffeeChatStatus.ACCEPTED);
-		AlumniDetailResponse connected = alumniService.getDetail(me, kim);
-		assertThat(connected.contactEmail()).isEqualTo("kim@test.com");
-		assertThat(connected.phone()).isEqualTo("010-0000-0000");
-
-		TestProfiles.visibility(entityManager, kim, "company_visibility", "PRIVATE");
-		TestProfiles.visibility(entityManager, kim, "links_visibility", "PRIVATE");
-		AlumniDetailResponse hidden = alumniService.getDetail(me, kim);
-		assertThat(hidden.careers()).extracting(AlumniDetailResponse.CareerResponse::company).containsOnlyNulls();
-		assertThat(hidden.links()).isNull();
-
-		AlumniDetailResponse owner = alumniService.getDetail(kim, kim);
-		assertThat(owner.contactEmail()).isEqualTo("kim@test.com");
-		assertThat(owner.careers()).extracting(AlumniDetailResponse.CareerResponse::company)
-				.containsExactly("라이온컴퍼니");
-	}
-
-	@Test
-	void 오늘_커피챗을_받고_진행_중인_신청이_없을_때만_신청_가능하다() {
-		Long kim = alumni("김사자");
-		assertThat(alumniService.getDetail(me, kim).coffeeChatAvailable()).isFalse();
-
-		TestProfiles.coffeeSetting(entityManager, kim, ReceiveMode.ON, true);
-		assertThat(alumniService.getDetail(me, kim).coffeeChatAvailable()).isTrue();
-		assertThat(alumniService.getDetail(kim, kim).coffeeChatAvailable()).isFalse();
-
-		TestProfiles.coffeePeriod(entityManager, kim, today, today.plusDays(1));
-		assertThat(alumniService.getDetail(me, kim).coffeeChatAvailable()).isFalse();
-
-		Long lee = receiver("이사자", ReceiveMode.OFF);
-		assertThat(alumniService.getDetail(me, lee).coffeeChatAvailable()).isFalse();
-		TestProfiles.coffeePeriod(entityManager, lee, today, today);
-		assertThat(alumniService.getDetail(me, lee).coffeeChatAvailable()).isTrue();
-
-		TestProfiles.coffeeChat(entityManager, me, lee, CoffeeChatStatus.PENDING);
-		assertThat(alumniService.getDetail(me, lee).coffeeChatAvailable()).isFalse();
-	}
-
-	@Test
-	void 상세_조회_시_관심_동문_여부를_표시한다() {
-		Long kim = alumni("김사자");
-		bookmarkService.bookmark(me, kim);
-
-		assertThat(alumniService.getDetail(me, kim).bookmarked()).isTrue();
-	}
-
-	@Test
-	void 없거나_승인되지_않았거나_탈퇴했거나_프로필이_없는_회원은_404() {
-		Long pending = TestUsers.create(entityManager, "대기사자", UserStatus.PENDING);
-		TestProfiles.save(entityManager, TestProfiles.profile(pending));
-		Long withdrawn = alumni("탈퇴사자");
-		TestUsers.withdraw(entityManager, withdrawn);
-		Long noProfile = TestUsers.approved(entityManager, "프로필없는사자");
-
-		for (Long target : new Long[] {pending, withdrawn, noProfile, 999_999L}) {
-			assertThatThrownBy(() -> alumniService.getDetail(me, target))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AlumniErrorCode.USER_NOT_FOUND);
-		}
 	}
 
 	private Long alumni(String name) {

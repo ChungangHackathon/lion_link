@@ -152,18 +152,44 @@ class AlumniControllerTest {
 
 		mockMvc.perform(get("/api/v1/users/{userId}", kim).header(USER_HEADER, me))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.id").value(kim))
+				.andExpect(jsonPath("$.userId").value(kim))
 				.andExpect(jsonPath("$.bio").value("서버 개발에 관심이 있습니다."))
 				.andExpect(jsonPath("$.careers[0].company").value("예시회사"))
+				.andExpect(jsonPath("$.careers[0].companyHidden").value(false))
+				.andExpect(jsonPath("$.careers[0].jobTitle").value("백엔드 개발자"))
 				.andExpect(jsonPath("$.careers[0].isCurrent").value(true))
 				.andExpect(jsonPath("$.careers[0].startYm").value("2024-03"))
 				.andExpect(jsonPath("$.educations", hasSize(0)))
-				.andExpect(jsonPath("$.projects", hasSize(0)))
-				.andExpect(jsonPath("$.lionActivities", hasSize(0)))
-				.andExpect(jsonPath("$.contactEmail").value(nullValue()))
-				.andExpect(jsonPath("$.phone").value(nullValue()))
-				.andExpect(jsonPath("$.bookmarked").value(false))
-				.andExpect(jsonPath("$.coffeeChatAvailable").value(false));
+				.andExpect(jsonPath("$.lionProjects", hasSize(0)))
+				.andExpect(jsonPath("$.languages", hasSize(0)))
+				.andExpect(jsonPath("$.links", hasSize(0)))
+				.andExpect(jsonPath("$.contact").isMap())
+				.andExpect(jsonPath("$.contact.email").doesNotExist())
+				.andExpect(jsonPath("$.contact.phone").doesNotExist())
+				.andExpect(jsonPath("$.isStaff").value(false))
+				.andExpect(jsonPath("$.coffeeChat.availability").value("NOT_ACCEPTING"))
+				.andExpect(jsonPath("$.coffeeChat.pendingCoffeeChatId").value(nullValue()))
+				.andExpect(jsonPath("$.chat.status").value("NONE"))
+				.andExpect(jsonPath("$.commonalities[0].type").value("SAME_GENERATION"))
+				.andExpect(jsonPath("$.commonalities[0].label").value("13기"))
+				.andExpect(jsonPath("$.mutualCount").value(0))
+				.andExpect(jsonPath("$.bookmarked").value(false));
+	}
+
+	@Test
+	void 비공개_회사와_링크는_응답에서_키째_빠진다() throws Exception {
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(kim));
+		TestProfiles.currentCareer(entityManager, kim, "비밀회사", "백엔드 개발자");
+		TestProfiles.visibility(entityManager, kim, "company_visibility", "PRIVATE");
+		TestProfiles.visibility(entityManager, kim, "links_visibility", "PRIVATE");
+
+		mockMvc.perform(get("/api/v1/users/{userId}", kim).header(USER_HEADER, me))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.links").doesNotExist())
+				.andExpect(jsonPath("$.careers[0].company").doesNotExist())
+				.andExpect(jsonPath("$.careers[0].companyHidden").value(true))
+				.andExpect(jsonPath("$.careers[0].jobTitle").value("백엔드 개발자"));
 	}
 
 	@Test
