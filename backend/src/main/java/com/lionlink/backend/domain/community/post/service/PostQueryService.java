@@ -129,7 +129,7 @@ public class PostQueryService {
 				postLikeRepository.countByPostId(postId),
 				postLikeRepository.existsById(new PostLikeId(postId, userId)),
 				meetup == null ? null : meetupDetail(post, meetup, meetupMemberIds, summaries, userId, now),
-				recruit == null ? null : recruitDetail(post, recruit, recruitMemberIds, summaries, userId),
+				recruit == null ? null : recruitDetail(post, recruit, recruitMemberIds, summaries, userId, now),
 				post.getCreatedAt(),
 				post.getUpdatedAt()
 		);
@@ -202,7 +202,7 @@ public class PostQueryService {
 	}
 
 	private PostDetailResponse.RecruitDetail recruitDetail(Post post, CoffeeChatRecruit recruit, List<Long> memberIds,
-			Map<Long, UserSummary> summaries, Long userId) {
+			Map<Long, UserSummary> summaries, Long userId, LocalDateTime now) {
 		UserSummary senior = summary(summaries, recruit.getSeniorId());
 		boolean acceptGroup = coffeeAvailabilityReader.getAvailability(recruit.getSeniorId()).groupAvailable();
 		boolean isSenior = recruit.getSeniorId().equals(userId);
@@ -212,7 +212,7 @@ public class PostQueryService {
 				recruit.getCapacity(),
 				memberIds.size(),
 				recruit.getDeadline(),
-				recruit.getStatus(),
+				recruit.statusOn(now.toLocalDate()),
 				memberIds.contains(userId),
 				isSenior,
 				!isSenior && coffeeChatRepository.existsOpenChat(userId, recruit.getSeniorId()),
@@ -301,7 +301,7 @@ public class PostQueryService {
 				recruit.getCapacity(),
 				context.recruitMemberCounts().getOrDefault(post.getId(), 0L),
 				recruit.getDeadline(),
-				recruit.getStatus()
+				recruit.statusOn(context.now().toLocalDate())
 		);
 	}
 }
