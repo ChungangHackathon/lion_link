@@ -209,7 +209,7 @@ public class PostService {
 	private void updateRecruit(Long userId, Post post, PostUpdateRequest.RecruitRequest request) {
 		CoffeeChatRecruit recruit = findRecruit(post.getId());
 		if (!recruit.isOpen()) {
-			throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED);
+			throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED, "커피챗을 신청한 뒤에는 모집 정보를 바꿀 수 없어요.");
 		}
 		long memberCount = recruitMemberRepository.countByRecruitPostId(post.getId());
 		Long seniorId = Objects.requireNonNullElse(request.seniorId(), recruit.getSeniorId());
