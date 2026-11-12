@@ -13,7 +13,7 @@ public enum CommunityErrorCode implements ErrorCode {
 	NOT_OWNER(HttpStatus.FORBIDDEN, "본인이 작성한 글만 수정·삭제할 수 있어요."),
 	ANONYMOUS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "익명 글은 자유 게시판에서만 쓸 수 있어요."),
 	INVALID_CATEGORY_DETAIL(HttpStatus.BAD_REQUEST, "카테고리에 맞는 정보를 입력해 주세요."),
-	CATEGORY_CHANGE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "번개·커피챗 모집 글은 카테고리를 바꿀 수 없어요."),
+	CATEGORY_CHANGE_NOT_ALLOWED(HttpStatus.CONFLICT, "참여자가 있어 카테고리를 바꿀 수 없어요."),
 	INVALID_MEETUP_TIME(HttpStatus.BAD_REQUEST, "번개 일정은 1시간 뒤부터 14일 이내로 정해 주세요."),
 	INVALID_COMPANIONS(HttpStatus.BAD_REQUEST, "함께하는 동문을 다시 확인해 주세요."),
 	INVALID_RECRUIT_SENIOR(HttpStatus.BAD_REQUEST, "본인은 신청할 사자로 고를 수 없어요."),

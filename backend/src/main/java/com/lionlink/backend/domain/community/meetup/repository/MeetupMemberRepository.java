@@ -23,6 +23,8 @@ public interface MeetupMemberRepository extends JpaRepository<MeetupMember, Meet
 
 	long countByMeetupPostId(Long postId);
 
+	void deleteByMeetupPostId(Long postId);
+
 	@Query("select m.userId from MeetupMember m where m.meetup.postId = :postId and m.userId in :userIds")
 	Set<Long> findMemberIds(Long postId, Collection<Long> userIds);
 }

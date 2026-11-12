@@ -10,4 +10,6 @@ public interface MeetupInviteRepository extends JpaRepository<MeetupInvite, Long
 
 	@Query("select i.inviteeId from MeetupInvite i where i.meetup.postId = :postId and i.inviteeId in :userIds")
 	Set<Long> findInviteeIds(Long postId, Collection<Long> userIds);
+
+	void deleteByMeetupPostId(Long postId);
 }
