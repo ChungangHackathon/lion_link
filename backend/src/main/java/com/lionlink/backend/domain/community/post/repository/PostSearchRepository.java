@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 @Repository
@@ -54,9 +55,9 @@ public class PostSearchRepository {
 
 	private String where(PostSearchCondition condition, Map<String, Object> params) {
 		StringBuilder where = new StringBuilder(" where p.deletedAt is null");
-		if (condition.category() != null) {
-			where.append(" and p.category = :category");
-			params.put("category", condition.category());
+		if (!CollectionUtils.isEmpty(condition.categories())) {
+			where.append(" and p.category in :categories");
+			params.put("categories", condition.categories());
 		}
 		if (StringUtils.hasText(condition.q())) {
 			where.append(" and (lower(p.title) like :q escape '!' or lower(p.content) like :q escape '!')");

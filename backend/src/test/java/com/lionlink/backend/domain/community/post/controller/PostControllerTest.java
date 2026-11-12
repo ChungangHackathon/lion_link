@@ -118,6 +118,19 @@ class PostControllerTest {
 	}
 
 	@Test
+	void 카테고리를_여러_개_골라_조회한다() throws Exception {
+		Long contest = postService.create(me, TestPosts.general(PostCategory.CONTEST, "공모전")).id();
+		Long job = postService.create(me, TestPosts.general(PostCategory.JOB, "채용")).id();
+		postService.create(me, TestPosts.general(PostCategory.FREE, "자유"));
+
+		mockMvc.perform(get("/api/v1/posts").param("category", "CONTEST,JOB").header(USER_HEADER, me))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.totalElements").value(2))
+				.andExpect(jsonPath("$.items[0].id").value(job))
+				.andExpect(jsonPath("$.items[1].id").value(contest));
+	}
+
+	@Test
 	void 없는_카테고리로_조회하면_400과_fieldErrors() throws Exception {
 		mockMvc.perform(get("/api/v1/posts").param("category", "COFFEE_CHAT").header(USER_HEADER, me))
 				.andExpect(status().isBadRequest())

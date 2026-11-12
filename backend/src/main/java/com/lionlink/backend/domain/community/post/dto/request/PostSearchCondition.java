@@ -1,9 +1,10 @@
 package com.lionlink.backend.domain.community.post.dto.request;
 
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
+import java.util.List;
 
 public record PostSearchCondition(
-		PostCategory category,
+		List<PostCategory> categories,
 		String q,
 		PostSort sort,
 		boolean recruiting,
