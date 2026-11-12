@@ -20,6 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
 
 	private static final List<String> UNAPPROVED_ALLOWED_PATHS = List.of(
 			API_PREFIX + "/auth/**",
+			API_PREFIX + "/me",
 			API_PREFIX + "/me/signup-info",
 			API_PREFIX + "/me/reapply",
 			API_PREFIX + "/email-notifications/unsubscribe"
