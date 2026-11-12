@@ -2,6 +2,7 @@ package com.lionlink.backend.domain.community.comment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.lionlink.backend.domain.community.comment.dto.request.CommentCreateRequest;
 import com.lionlink.backend.domain.community.comment.dto.response.CommentResponse;
@@ -10,12 +11,17 @@ import com.lionlink.backend.domain.community.post.dto.request.PostCreateRequest;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
 import com.lionlink.backend.domain.community.post.service.PostQueryService;
 import com.lionlink.backend.domain.community.post.service.PostService;
+import com.lionlink.backend.domain.notification.entity.Notification;
+import com.lionlink.backend.domain.notification.entity.NotificationTab;
+import com.lionlink.backend.domain.notification.entity.NotificationTargetType;
+import com.lionlink.backend.domain.notification.repository.NotificationRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.ErrorCode;
 import com.lionlink.backend.global.response.SliceResponse;
 import com.lionlink.backend.support.TestPosts;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +42,9 @@ class CommentServiceTest {
 
 	@Autowired
 	private PostQueryService postQueryService;
+
+	@Autowired
+	private NotificationRepository notificationRepository;
 
 	@Autowired
 	private EntityManager entityManager;
@@ -61,6 +70,41 @@ class CommentServiceTest {
 		assertThat(response.author().name()).isEqualTo("김사자");
 		assertThat(response.isMine()).isTrue();
 		assertThat(response.deleted()).isFalse();
+	}
+
+	@Test
+	void 댓글을_작성하면_글_작성자에게_알림이_간다() {
+		commentService.create(kim, postId, request("좋은 글이에요"));
+
+		List<Notification> notifications = commentNotifications();
+		assertThat(notifications).hasSize(1);
+		Notification notification = notifications.get(0);
+		assertThat(notification.getUserId()).isEqualTo(me);
+		assertThat(notification.getTab()).isEqualTo(NotificationTab.COMMUNITY);
+		assertThat(notification.getTargetType()).isEqualTo(NotificationTargetType.POST);
+		assertThat(notification.getTargetId()).isEqualTo(postId);
+		assertThat(notification.getMessage()).isEqualTo("김사자님이 내 글에 댓글을 남겼어요. 자유 글");
+	}
+
+	@Test
+	void 내_글에_내가_쓴_댓글은_알림을_보내지_않는다() {
+		commentService.create(me, postId, request("보충 설명이에요"));
+		Long anonymousPostId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명 고민", "고민이 있어요.",
+				null, true, null, null, null)).id();
+		commentService.create(me, anonymousPostId, request("작성자 답변이에요"));
+
+		assertThat(commentNotifications()).isEmpty();
+	}
+
+	@Test
+	void 익명_글에_달린_댓글도_글_작성자에게_알림이_간다() {
+		Long anonymousPostId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명 고민", "고민이 있어요.",
+				null, true, null, null, null)).id();
+
+		commentService.create(kim, anonymousPostId, request("힘내세요"));
+
+		assertThat(commentNotifications()).extracting(Notification::getUserId, Notification::getMessage)
+				.containsExactly(tuple(me, "김사자님이 내 글에 댓글을 남겼어요. 익명 고민"));
 	}
 
 	@Test
@@ -158,5 +202,11 @@ class CommentServiceTest {
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
 				.isEqualTo(errorCode);
+	}
+
+	private List<Notification> commentNotifications() {
+		return notificationRepository.findAll().stream()
+				.filter(notification -> notification.getType().equals("COMMENT_CREATED"))
+				.toList();
 	}
 }
