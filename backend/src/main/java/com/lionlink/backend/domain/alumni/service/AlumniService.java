@@ -11,6 +11,7 @@ import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
+import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.profile.section.career.Career;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,20 +57,32 @@ public class AlumniService {
 
 	public PageResponse<AlumniResponse> search(Long userId, AlumniSearchCondition condition, Pageable pageable) {
 		Page<AlumniSearchRepository.Row> rows = alumniSearchRepository.search(condition, pageable);
-		List<Long> userIds = rows.map(AlumniSearchRepository.Row::id).getContent();
+		return PageResponse.from(rows, toResponse(userId, rows.getContent()));
+	}
+
+	public List<AlumniResponse> recommendSeniors(Long userId, int limit) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(AlumniErrorCode.USER_NOT_FOUND));
+		LionPart part = profileRepository.findById(userId).map(Profile::getLionPart1).orElse(null);
+		List<AlumniSearchRepository.Row> rows = alumniSearchRepository.findSeniors(userId, user.getGeneration(), part, limit);
+		return rows.stream().map(toResponse(userId, rows)).toList();
+	}
+
+	private Function<AlumniSearchRepository.Row, AlumniResponse> toResponse(Long userId, List<AlumniSearchRepository.Row> rows) {
+		List<Long> userIds = rows.stream().map(AlumniSearchRepository.Row::id).toList();
 		if (userIds.isEmpty()) {
-			return PageResponse.from(rows, row -> AlumniResponse.of(row, null, false));
+			return row -> AlumniResponse.of(row, null, false);
 		}
 
 		Set<Long> bookmarkedIds = bookmarkRepository.findTargetUserIds(userId, userIds);
 		Set<Long> connectedIds = coffeeChatRepository.findPartnerIds(userId, userIds, CONNECTED_STATUSES);
 		Map<Long, String> companies = currentCompanies(userIds);
 
-		return PageResponse.from(rows, row -> {
+		return row -> {
 			boolean companyVisible = row.profile().getCompanyVisibility()
 					.isVisibleTo(row.id().equals(userId), connectedIds.contains(row.id()));
 			return AlumniResponse.of(row, companyVisible ? companies.get(row.id()) : null, bookmarkedIds.contains(row.id()));
-		});
+		};
 	}
 
 	public AlumniDetailResponse getDetail(Long userId, Long targetUserId) {
