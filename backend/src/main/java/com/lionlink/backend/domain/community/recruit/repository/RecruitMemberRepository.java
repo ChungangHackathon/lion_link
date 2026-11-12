@@ -21,4 +21,6 @@ public interface RecruitMemberRepository extends JpaRepository<RecruitMember, Re
 	List<RecruitMember> findByRecruitPostIdOrderByJoinedAtAscUserIdAsc(Long postId);
 
 	long countByRecruitPostId(Long postId);
+
+	void deleteByRecruitPostId(Long postId);
 }

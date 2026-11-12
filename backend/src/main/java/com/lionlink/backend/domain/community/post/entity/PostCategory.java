@@ -10,10 +10,6 @@ public enum PostCategory {
 	MEETUP,
 	RECRUIT;
 
-	public boolean isGeneral() {
-		return this != MEETUP && this != RECRUIT;
-	}
-
 	public boolean allowsDeadline() {
 		return this == CONTEST || this == JOB;
 	}

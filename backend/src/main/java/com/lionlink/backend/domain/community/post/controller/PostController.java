@@ -114,15 +114,16 @@ public class PostController {
 		return postQueryService.getDetail(userId, postId);
 	}
 
-	@Operation(summary = "게시글 수정", description = "보낸 필드만 바꾼다. 작성자만 수정할 수 있다.")
+	@Operation(summary = "게시글 수정",
+			description = "보낸 필드만 바꾼다. 작성자만 수정할 수 있다. 번개·커피챗 모집 글은 작성자 말고 참여자가 없을 때만 카테고리를 바꿀 수 있다.")
 	@ApiResponse(responseCode = "200")
-	@ApiResponse(responseCode = "400", description = "입력값 오류 (VALIDATION_ERROR, CATEGORY_CHANGE_NOT_ALLOWED, INVALID_CATEGORY_DETAIL, INVALID_MEETUP_TIME)",
+	@ApiResponse(responseCode = "400", description = "입력값 오류 (VALIDATION_ERROR, INVALID_CATEGORY_DETAIL, INVALID_MEETUP_TIME, INVALID_RECRUIT_SENIOR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "403", description = "작성자가 아님 (NOT_OWNER)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "게시글 없음 (POST_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-	@ApiResponse(responseCode = "409", description = "수정할 수 없는 상태 (MEETUP_CLOSED, RECRUIT_CLOSED, RECRUIT_SENIOR_LOCKED, CAPACITY_BELOW_MEMBERS)",
+	@ApiResponse(responseCode = "409", description = "수정할 수 없는 상태 (CATEGORY_CHANGE_NOT_ALLOWED, MEETUP_CLOSED, RECRUIT_CLOSED, RECRUIT_SENIOR_LOCKED, CAPACITY_BELOW_MEMBERS, GROUP_COFFEE_CHAT_NOT_ALLOWED)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@PatchMapping("/{postId}")
 	public PostUpdateResponse update(
