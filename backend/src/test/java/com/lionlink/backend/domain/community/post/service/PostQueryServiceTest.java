@@ -118,6 +118,8 @@ class PostQueryServiceTest {
 		Long openRecruit = create(TestPosts.recruit("모집 중 커피챗", senior, 4));
 		Long applied = create(TestPosts.recruit("신청한 커피챗", senior, 4));
 		TestPosts.update(entityManager, "update coffeechat_recruits set status = 'APPLIED' where post_id = :id", applied);
+		Long expired = create(TestPosts.recruit("마감 지난 커피챗", senior, 4));
+		TestPosts.update(entityManager, "update coffeechat_recruits set deadline = dateadd('DAY', -1, current_date) where post_id = :id", expired);
 		create(TestPosts.general(PostCategory.FREE, "일반 글"));
 
 		PageResponse<PostSummaryResponse> result = search(new PostSearchCondition(null, null, PostSort.LATEST, true, null));
@@ -130,7 +132,10 @@ class PostQueryServiceTest {
 		PostSummaryResponse recruit = find(all, openRecruit);
 		assertThat(recruit.recruit().senior().name()).isEqualTo("선배사자");
 		assertThat(recruit.recruit().memberCount()).isEqualTo(1);
+		assertThat(recruit.recruit().status()).isEqualTo(RecruitStatus.OPEN);
 		assertThat(find(all, applied).recruit().status()).isEqualTo(RecruitStatus.APPLIED);
+		assertThat(find(all, expired).recruit().status()).isEqualTo(RecruitStatus.ENDED);
+		assertThat(postQueryService.getDetail(kim, expired).recruit().status()).isEqualTo(RecruitStatus.ENDED);
 	}
 
 	@Test
