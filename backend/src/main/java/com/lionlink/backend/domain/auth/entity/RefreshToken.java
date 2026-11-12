@@ -46,4 +46,19 @@ public class RefreshToken extends BaseCreatedEntity {
 		this.tokenHash = tokenHash;
 		this.expiresAt = expiresAt;
 	}
+
+	public boolean isRevoked() {
+		return revokedAt != null;
+	}
+
+	public boolean isExpired(LocalDateTime now) {
+		return !expiresAt.isAfter(now);
+	}
+
+	/** 폐기 시각을 남긴다. 이미 폐기된 토큰은 처음 폐기 시각을 유지한다. */
+	public void revoke(LocalDateTime now) {
+		if (revokedAt == null) {
+			this.revokedAt = now;
+		}
+	}
 }
