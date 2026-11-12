@@ -4,6 +4,7 @@ import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition;
 import com.lionlink.backend.domain.alumni.dto.request.AlumniSearchCondition.AlumniSort;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniDetailResponse;
 import com.lionlink.backend.domain.alumni.dto.response.AlumniResponse;
+import com.lionlink.backend.domain.alumni.service.AlumniDetailService;
 import com.lionlink.backend.domain.alumni.service.AlumniService;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.ProfileStatus;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AlumniController {
 
 	private final AlumniService alumniService;
+	private final AlumniDetailService alumniDetailService;
 
 	@Operation(summary = "동문 목록 조회 및 검색",
 			description = "같은 필터 안의 값은 OR, 서로 다른 필터는 AND로 묶는다. 나 자신은 목록에서 뺀다.")
@@ -69,7 +71,7 @@ public class AlumniController {
 	}
 
 	@Operation(summary = "동문 프로필 상세 조회",
-			description = "공개 범위에 따라 이메일·전화번호·링크·회사 정보는 null로 내려간다.")
+			description = "공개 범위로 가려진 연락처·링크는 키째 빠지고, 회사가 비공개면 경력의 company 대신 companyHidden=true가 온다.")
 	@ApiResponse(responseCode = "200")
 	@ApiResponse(responseCode = "404", description = "동문 없음 또는 탈퇴 (USER_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -78,6 +80,6 @@ public class AlumniController {
 			@CurrentUser Long currentUserId,
 			@Parameter(description = "조회할 동문의 회원 ID") @PathVariable Long userId
 	) {
-		return alumniService.getDetail(currentUserId, userId);
+		return alumniDetailService.getDetail(currentUserId, userId);
 	}
 }
