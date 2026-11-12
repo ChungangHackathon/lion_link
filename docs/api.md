@@ -1,6 +1,6 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(85개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형. 나머지 영역 상세는 팀 노션 API 명세서가 원본이다.
+> 전체 API 목록(86개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP)·홈(HOME) — 동문·커뮤니티·홈 담당. 커피챗·채팅·알림 상세는 팀 노션 API 명세서가 원본이다.
 > 마지막 갱신: 2026-11-12 (구글 로그인 Authorization Code 방식 반영). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
@@ -16,7 +16,7 @@
 | ID | 숫자(BIGINT) |
 | 삭제 | 소프트 삭제. 삭제·탈퇴한 데이터는 404로 응답해 |
 | 열거값 | 영어 대문자 코드(`APPROVED`, `ADMIN` 등)로 주고받고, 한글 문구는 FE가 붙여 |
-| 목록 | 페이지 방식은 `page`(0부터), `size`로 요청하고 `{ items, page, size, totalElements }`로 응답해 |
+| 목록 | 페이지 방식은 `page`(0부터), `size`로 요청하고 `{ items, page, size, totalElements, hasNext }`로 응답해. 전체 개수가 필요 없는 더보기 목록(댓글, 관심 동문)은 `{ items, page, size, hasNext }` |
 | 성공 응답 | 감싸지 않고 데이터 객체를 그대로 반환해. 본문이 없으면 `204 No Content` |
 
 ### 회원 상태별 접근
@@ -51,7 +51,7 @@
 
 ## 전체 API 목록 (팀 노션 기준)
 
-팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개다. 상세 명세는 계정·인증·프로필·관리자만 이 문서에 있고, 나머지는 각 담당자의 노션 페이지가 원본이다.
+팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개를 더해 86개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
 
 | 영역 | API 수 | 담당 (노션 기준) | 상세 명세 |
 | --- | --- | --- | --- |
@@ -59,9 +59,9 @@
 | 2. 프로필 | 18 | 이시형 | 이 문서 아래 |
 | 3. 관리자 | 6 | 이시형 | 이 문서 아래 |
 | 4. 커피챗 | 10 | 커피챗·채팅·알림 담당 | **미작성** |
-| 5. 동문 찾기 | 5 | 동문·커뮤니티·홈 담당 | 노션 |
-| 6. 커뮤니티 | 15 | 동문·커뮤니티·홈 담당 | 노션 |
-| 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 노션 |
+| 5. 동문 찾기 | 5 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
+| 6. 커뮤니티 | 16 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
+| 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 8. 채팅 | 14 | 커피챗·채팅·알림 담당 | **미작성** |
 | 9. 알림 | 6 | 커피챗·채팅·알림 담당 | **미작성** |
 
@@ -117,21 +117,22 @@
 | 5. 동문 찾기 | `GET` | `/users/me/bookmarks` | 관심 동문 목록 조회 | 동문·커뮤니티·홈 담당 |
 | 5. 동문 찾기 | `PUT` | `/users/{userId}/bookmark` | 관심 동문 저장 | 동문·커뮤니티·홈 담당 |
 | 5. 동문 찾기 | `DELETE` | `/users/{userId}/bookmark` | 관심 동문 저장 취소 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts` | 게시글 목록·검색·정렬 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `GET` | `/posts` | 게시글 목록·검색·정렬 (카테고리 여러 개 가능) | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `POST` | `/posts` | 게시글 작성 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/popular-keywords` | 인기 키워드 조회 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `GET` | `/posts/category-counts` | 카테고리별 게시글 수 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `GET` | `/posts/popular-keywords` | 인기 키워드 조회 (미구현) | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `GET` | `/posts/{postId}` | 게시글 상세 조회 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `PATCH` | `/posts/{postId}` | 게시글 수정 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `DELETE` | `/posts/{postId}` | 게시글 삭제 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/{postId}/comments` | 댓글·대댓글 목록 조회 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/comments` | 댓글·대댓글 작성 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}` | 게시글 삭제 (번개 글이면 번개 취소, 참여자 알림) | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/like` | 게시글 좋아요 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/like` | 게시글 좋아요 취소 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `GET` | `/posts/{postId}/comments` | 댓글 목록 조회 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `POST` | `/posts/{postId}/comments` | 댓글 작성 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `DELETE` | `/posts/{postId}/comments/{commentId}` | 댓글 삭제 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/join` | 번개모임 참여 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/{postId}/meetup/members` | 번개모임 참여자 목록 조회 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 관심 동문에게 번개 초대 알림 발송 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/cancel` | 번개모임 취소 (참여자 알림) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 URL 발급 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 URL 발급 (미구현) | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `POST` | `/home/coffee-guide/dismiss` | 첫 커피챗 가이드 카드 닫기 | 동문·커뮤니티·홈 담당 |
 | 8. 채팅 | `POST` | `/chat-requests` | 첫 메시지 요청 보내기 | 커피챗·채팅·알림 담당 |
@@ -163,7 +164,8 @@
 | 2 | 다른 영역 명세(홈 등)와 공용 코드(`CommonErrorCode`)는 승인 전 403을 `NOT_APPROVED`, 프로필 미완료를 `PROFILE_NOT_COMPLETED`로 쓴다 | **확정(2026-11-12)**: `NOT_APPROVED`로 통일. 이 문서의 `APPROVAL_PENDING`·`ACCOUNT_REJECTED`는 없앴다 |
 | 3 | 커뮤니티가 `POST /files`(업로드 URL 발급, 설계 제안 단계)를 쓴다 | 프로필 사진(PROFILE-05)도 같은 저장소·발급 방식을 쓸지 커뮤니티 담당과 맞춘다 (확정 필요 5번) |
 | 4 | 커피챗·채팅·알림 상세 명세가 비어 있다 | 커피챗 신청(4.1)·수락은 프로필의 커피챗 설정(PROFILE-12~15)과 맞물린다. 담당자에게 작성 일정 확인 |
-| 5 | 실시간 채팅(5.3)의 WebSocket 연결·구독 경로, 커피챗 함께 신청 모집(4.11) API가 목록에 없다 | 채팅·커뮤니티 담당 확인 |
+| 5 | 실시간 채팅(5.3)의 WebSocket 연결·구독 경로, 커피챗 함께 신청 모집(4.11) API가 목록에 없다 | 채팅 담당 확인. 커피챗 함께 신청 모집은 모집 참여를 커뮤니티가, 모인 인원으로 신청을 커피챗 신청(`fromRecruitId`)이 맡는다 ('커뮤니티 확정 필요' 2번) |
+| 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | 동문 찾기 담당이 PROFILE-03 기준으로 맞춘다 (ALUMNI-02 참고) |
 
 ## 1. 계정·인증
 
@@ -878,3 +880,437 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 12 | 탈퇴(AUTH-08) 본인 재확인 | 구글 로그인을 Authorization Code 방식으로 바꿔 FE가 ID 토큰을 받지 않는다. 구글 재로그인 리다이렉트 등으로 다시 설계한다 | BE, FE |
 
 리프레시 토큰은 Redis 대신 DB `refresh_tokens` 테이블에 SHA-256 해시로 저장하기로 정했다(2026-11-12).
+
+## 5. 동문 찾기
+
+담당: 동문·커뮤니티·홈. 노션 초안(3-1~3-5)을 프론트 화면에 맞춰 구현한 기준이야. 모두 승인 회원(`APPROVED`)만 쓸 수 있어.
+
+| ID | 기능 | 메서드·경로 | 노션 |
+| --- | --- | --- | --- |
+| ALUMNI-01 | 동문 목록·검색 | `GET /users` | 3-1 |
+| ALUMNI-02 | 동문 프로필 상세 | `GET /users/{userId}` | 3-2 (= PROFILE-03) |
+| ALUMNI-03 | 관심 동문 목록 | `GET /users/me/bookmarks` | 3-3 |
+| ALUMNI-04 | 관심 동문 저장 | `PUT /users/{userId}/bookmark` | 3-4 |
+| ALUMNI-05 | 관심 동문 저장 취소 | `DELETE /users/{userId}/bookmark` | 3-5 |
+
+### ALUMNI-01 동문 목록·검색
+
+`GET /users` · 승인 회원
+
+승인되고 탈퇴하지 않았고 기본 프로필이 있는 회원만 최근 가입순으로 내려줘.
+
+| 쿼리 | 타입 | 설명 |
+| --- | --- | --- |
+| `q` | string | 0\~50자. 이름, 한 줄 소개, 대표 기술, 현재 경력의 직무·회사(회사 공개인 사람만)에서 대소문자 없이 찾아 |
+| `generations` | number\[\] | 기수. 여러 개는 쉼표로 (`13,14`) |
+| `parts` | string\[\] | `lionPart`. 파트 1·2 둘 다 봐 |
+| `statuses` | string\[\] | 현재 상태 |
+| `interests` | string\[\] | 관심 분야. 값이 정확히 같아야 걸려 |
+| `page`, `size` | number | 기본 0, 20. `size`는 1\~100 |
+
+같은 조건 안의 값은 OR, 다른 조건끼리는 AND야.
+
+```json
+{
+  "items": [{
+    "id": 25, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "status": "EMPLOYED",
+    "headline": "백엔드 개발자", "photoUrl": null, "company": "예시회사",
+    "interests": ["BACKEND"], "skills": ["Spring"], "bookmarked": false
+  }],
+  "page": 0, "size": 20, "totalElements": 1, "hasNext": false
+}
+```
+
+`company`는 현재 경력의 회사이고, 회사 공개 범위로 가려지면 `null`이야.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | `size` 범위, 검색어 50자 초과, 없는 열거값(`fieldErrors`에 파라미터 이름) |
+
+### ALUMNI-02 동문 프로필 상세
+
+`GET /users/{userId}` · 승인 회원
+
+> **맞출 예정:** PROFILE-03에 적힌 응답 형식(`userId`, `contact`, 9개 섹션, 가려진 키 빼기, `companyHidden`, `coffeeChat`, `chat`, `commonalities`, `mutualCount`)이 최종 형식이야. 지금 구현은 아래와 같고, 동문 찾기 담당이 PROFILE-03 기준으로 맞춘다.
+
+지금 응답은 `id, name, generation, lionParts, status, headline, bio, photoUrl, major, region, interests, skills, links, careers, educations, projects, lionActivities, contactEmail, phone, bookmarked, coffeeChatAvailable`이야. 공개 범위로 가려진 값은 `null`이고, 본인 프로필이면 모두 보여.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 404 | `USER_NOT_FOUND` | 없는 회원, 승인 전, 탈퇴, 프로필이 없는 회원 |
+
+### ALUMNI-03 관심 동문 목록
+
+`GET /users/me/bookmarks?page=0&size=20` · 승인 회원
+
+최근 저장한 순서야. 저장한 뒤 탈퇴한 동문도 목록에 남고 `isDeleted: true`, 개인정보는 `null`이야.
+
+```json
+{
+  "items": [{ "userId": 25, "name": "김사자", "generation": 13, "headline": "백엔드 개발자", "photoUrl": null, "isDeleted": false, "bookmarkedAt": "2026-11-08T10:00:00+09:00" }],
+  "page": 0, "size": 20, "hasNext": false
+}
+```
+
+### ALUMNI-04 관심 동문 저장 · ALUMNI-05 저장 취소
+
+`PUT /users/{userId}/bookmark` · `DELETE /users/{userId}/bookmark` · 승인 회원
+
+`PUT`은 `200`에 `{ "userId": 25, "bookmarked": true }`를 돌려줘. 이미 저장했으면 그대로 성공해. `DELETE`는 저장하지 않았어도 `204`야.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `CANNOT_BOOKMARK_SELF` | 자기 자신을 저장 |
+| 404 | `USER_NOT_FOUND` | 없는 회원, 승인 전, 탈퇴 회원 |
+
+## 6. 커뮤니티
+
+담당: 동문·커뮤니티·홈. 노션 초안(6-1~6-15)을 프론트 화면에 맞춰 바꾼 기준이야. 모두 승인 회원만 쓸 수 있어.
+
+| ID | 기능 | 메서드·경로 | 노션 |
+| --- | --- | --- | --- |
+| POST-01 | 게시글 목록·검색 | `GET /posts` | 6-1 |
+| POST-02 | 카테고리별 게시글 수 | `GET /posts/category-counts` | 신규 |
+| POST-03 | 게시글 작성 | `POST /posts` | 6-3 |
+| POST-04 | 게시글 상세 | `GET /posts/{postId}` | 6-4 |
+| POST-05 | 게시글 수정 | `PATCH /posts/{postId}` | 6-5 |
+| POST-06 | 게시글 삭제 | `DELETE /posts/{postId}` | 6-6 (+ 6-15 번개 취소) |
+| POST-07 | 좋아요 · 좋아요 취소 | `PUT` `DELETE /posts/{postId}/like` | 신규 |
+| COMMENT-01 | 댓글 목록 | `GET /posts/{postId}/comments` | 6-7 |
+| COMMENT-02 | 댓글 작성 | `POST /posts/{postId}/comments` | 6-8 |
+| COMMENT-03 | 댓글 삭제 | `DELETE /posts/{postId}/comments/{commentId}` | 6-9 |
+| MEETUP-01 | 번개 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/meetup/members/me` | 6-12, 6-13 |
+| MEETUP-02 | 번개 초대 | `POST /posts/{postId}/meetup/invites` | 6-14 |
+| - | 인기 키워드 | `GET /posts/popular-keywords` | 6-2, 미구현 |
+| - | 업로드 URL 발급 | `POST /files` | 6-10, 미구현 |
+
+노션의 6-11 참여자 목록은 POST-04에 들어가서, 6-15 번개 취소는 POST-06이 대신해서 없앴어.
+
+### 열거값
+
+| 이름 | 값 |
+| --- | --- |
+| `category` | `CONTEST` 공모전, `JOB` 채용·협업, `MATERIAL` 족보·자료, `EVENT` 세미나·행사, `NOW` 지금 사자는, `FREE` 자유, `MEETUP` 번개, `RECRUIT` 커피챗 모집 |
+| `meetup.status` | `OPEN` 모집 중, `FULL` 정원 마감, `ENDED` 모임 시각 지남, `CANCELED` 취소 |
+| `recruit.status` | `OPEN` 모집 중, `APPLIED` 커피챗 신청 완료, `ENDED` 모집 종료 |
+
+### 공통 객체
+
+- `author`: `{ id, name, generation, lionParts, photoUrl, headline, isDeleted }`. 익명 글·댓글은 `null`, 탈퇴한 작성자는 `isDeleted: true`이고 나머지는 `null`(FE는 '알 수 없음')
+- `members[]`: `{ id, name, generation, lionParts, photoUrl, isHost, isDeleted }`. 작성자가 맨 앞
+
+### POST-01 게시글 목록·검색
+
+`GET /posts` · 승인 회원
+
+| 쿼리 | 타입 | 설명 |
+| --- | --- | --- |
+| `category` | string\[\] | 없으면 전체. 여러 개는 쉼표로 (`CONTEST,JOB`). 홈 새 소식 탭에서 써 |
+| `q` | string | 0\~50자. 제목·본문에서 대소문자 없이 찾아 |
+| `sort` | string | `LATEST` 최신순(기본), `VIEWS` 조회순 |
+| `recruiting` | boolean | `true`면 모집 중인 번개(취소·종료 전, 정원 남음)와 커피챗 모집(`OPEN`, 마감일 전, 정원 남음)만 |
+| `period` | string | `WEEK`면 최근 7일 글만 ('이번 주 많이 본 글'은 `period=WEEK&sort=VIEWS`) |
+| `page`, `size` | number | 기본 0, 20. `size`는 1\~100 |
+
+```json
+{
+  "items": [{
+    "id": 101, "category": "MEETUP", "title": "금요일 저녁 번개", "isAnonymous": false,
+    "author": { "id": 12, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "isDeleted": false },
+    "viewCount": 42, "commentCount": 3, "hasFile": false, "thumbnailUrl": null, "deadline": null,
+    "meetup": { "meetAt": "2026-11-20T19:00:00+09:00", "place": "흑석역 2번 출구", "capacity": 6, "participantCount": 3, "status": "OPEN" },
+    "recruit": null,
+    "createdAt": "2026-11-10T14:00:00+09:00"
+  }],
+  "page": 0, "size": 20, "totalElements": 1, "hasNext": false
+}
+```
+
+- 커피챗 모집 글은 `recruit: { senior: { id, name, generation, isDeleted }, capacity, memberCount, deadline, status }`
+- `deadline`은 공모전·채용 글의 마감일(D-n 태그). `thumbnailUrl`은 첫 이미지인데 업로드 기능 전까지 `null`
+- 삭제된 글은 빠지고, `commentCount`는 삭제된 댓글을 빼고 세
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 없는 카테고리·정렬값, `size` 범위 (`fieldErrors`에 파라미터 이름) |
+
+### POST-02 카테고리별 게시글 수
+
+`GET /posts/category-counts` · 승인 회원
+
+커뮤니티 왼쪽 카테고리 목록의 숫자야. 글이 없는 카테고리도 `0`으로 와.
+
+```json
+{ "total": 42, "counts": { "CONTEST": 5, "JOB": 3, "MATERIAL": 8, "EVENT": 2, "NOW": 6, "FREE": 12, "MEETUP": 4, "RECRUIT": 2 } }
+```
+
+### POST-03 게시글 작성
+
+`POST /posts` · 승인 회원
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `category` | string | O | `category` |
+| `title` | string | O | 2\~50자 |
+| `content` | string | O | 1\~5000자 |
+| `links` | string\[\] | X | 0\~3개, http(s) URL |
+| `isAnonymous` | boolean | X | `FREE`에서만 `true` 가능 |
+| `deadline` | date | X | `CONTEST`·`JOB`만. 오늘 이후 |
+| `meetup` | object | `MEETUP`이면 O | `{ meetAt, place, capacity, companionIds }` |
+| `meetup.meetAt` | datetime | O | 지금부터 1시간 뒤 \~ 14일 이내 |
+| `meetup.place` | string | O | 1\~50자 |
+| `meetup.capacity` | number | O | 2\~30명(작성자 포함) |
+| `meetup.companionIds` | number\[\] | X | 함께하는 동문. 등록하면 바로 참여자가 돼. 승인 회원, 본인·중복 불가, `capacity - 1`명 이하 |
+| `recruit` | object | `RECRUIT`이면 O | `{ seniorId, capacity, deadline }` |
+| `recruit.seniorId` | number | O | 신청받을 사자. 본인 불가, 커피챗을 받고 여러 명 신청을 받는 사자만 |
+| `recruit.capacity` | number | O | 2\~5명(작성자 포함) |
+| `recruit.deadline` | date | O | 오늘 이후 |
+
+`201`에 `{ "id": 101, "category": "MEETUP", "createdAt": "..." }`를 돌려줘. 번개는 작성자와 함께하는 동문을, 커피챗 모집은 작성자를 참여자로 같이 저장해.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수, 링크 형식·개수, 정원 범위 |
+| 400 | `ANONYMOUS_NOT_ALLOWED` | `FREE`가 아닌데 익명 |
+| 400 | `INVALID_CATEGORY_DETAIL` | 카테고리와 맞지 않는 `meetup`·`recruit`·`deadline` |
+| 400 | `INVALID_MEETUP_TIME` | 번개 일정이 1시간 이내이거나 14일 넘음 |
+| 400 | `INVALID_COMPANIONS` | 함께하는 동문에 본인·중복이 있거나 정원 초과 |
+| 400 | `INVALID_RECRUIT_SENIOR` | 신청받을 사자로 본인을 고름 |
+| 404 | `USER_NOT_FOUND` | 함께하는 동문이나 신청받을 사자가 없거나 승인 전·탈퇴 |
+| 409 | `GROUP_COFFEE_CHAT_NOT_ALLOWED` | 신청받을 사자가 커피챗을 안 받거나 1:1만 받음 |
+
+### POST-04 게시글 상세
+
+`GET /posts/{postId}` · 승인 회원
+
+같은 회원이 24시간 안에 다시 보면 조회수를 올리지 않아(`post_views`).
+
+```json
+{
+  "id": 101, "category": "MEETUP", "title": "금요일 저녁 번개", "content": "...",
+  "isAnonymous": false, "isMine": false,
+  "author": { "id": 12, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "status": "EMPLOYED", "isDeleted": false },
+  "links": [], "files": [], "deadline": null,
+  "viewCount": 43, "commentCount": 3, "likeCount": 8, "likedByMe": false,
+  "meetup": {
+    "meetAt": "2026-11-20T19:00:00+09:00", "place": "흑석역 2번 출구", "capacity": 6,
+    "participantCount": 3, "status": "OPEN", "joinedByMe": false, "members": []
+  },
+  "recruit": null,
+  "createdAt": "2026-11-10T14:00:00+09:00", "updatedAt": null
+}
+```
+
+- 커피챗 모집 글은 `recruit: { senior: { id, name, generation, lionParts, photoUrl, acceptGroup, isDeleted }, capacity, memberCount, deadline, status, joinedByMe, isSenior, hasOpenCoffeeChatWithSenior, members }`
+- `isMine`은 익명 글이어도 내 글이면 `true`. `updatedAt`은 수정한 적이 있을 때만 값이 있어('수정됨' 표시)
+- `files[]`는 `{ id, type(IMAGE·ATTACHMENT), url, name, size }`
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+
+### POST-05 게시글 수정
+
+`PATCH /posts/{postId}` · 작성자만
+
+보낸 필드만 바꿔. 필드는 POST-03과 같고 규칙도 같아(`isAnonymous`, `meetup.companionIds`는 없음).
+
+- 카테고리는 일반 카테고리(`CONTEST` `JOB` `MATERIAL` `EVENT` `NOW` `FREE`)끼리만 바꿀 수 있어. 익명 글은 `FREE`에서 못 바꿔
+- 마감일을 쓸 수 없는 카테고리로 바꾸면 `deadline`은 지워져
+- 번개: 시작되거나 취소된 번개는 수정할 수 없고, 정원은 지금 참여 인원보다 줄일 수 없어
+- 커피챗 모집: 커피챗을 신청한 뒤(`APPLIED`)에는 모집 정보를 못 바꾸고, 참여자가 있으면 신청받을 사자를 못 바꿔
+
+`200`에 `{ "id": 101, "title": "...", "updatedAt": "..." }`를 돌려줘.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `CATEGORY_CHANGE_NOT_ALLOWED` | 번개·커피챗 모집 글의 카테고리를 바꾸거나 일반 글을 번개·모집으로 바꿈 |
+| 400 | `ANONYMOUS_NOT_ALLOWED` | 익명 글을 `FREE` 밖으로 옮김 |
+| 400 | `INVALID_CATEGORY_DETAIL`, `INVALID_MEETUP_TIME` | POST-03과 같음 |
+| 400 | `INVALID_RECRUIT_SENIOR` | 신청받을 사자를 본인으로 바꿈 |
+| 403 | `NOT_OWNER` | 작성자가 아님 |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+| 404 | `USER_NOT_FOUND` | 바꾸려는 신청받을 사자가 없거나 승인 전·탈퇴 |
+| 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
+| 409 | `GROUP_COFFEE_CHAT_NOT_ALLOWED` | 바꾸려는 사자가 커피챗을 안 받거나 1:1만 받음 |
+| 409 | `RECRUIT_CLOSED` | 신청 완료된 모집의 모집 정보를 바꿈 |
+| 409 | `RECRUIT_SENIOR_LOCKED` | 참여자가 있는데 신청받을 사자를 바꿈 |
+| 409 | `CAPACITY_BELOW_MEMBERS` | 정원을 참여 인원보다 적게 |
+
+### POST-06 게시글 삭제
+
+`DELETE /posts/{postId}` · 작성자 또는 관리자
+
+소프트 삭제(`deleted_at`)이고 `204`야. 댓글도 화면에서 같이 사라져.
+
+- 번개 글이면 번개도 취소(`meetups.canceled_at`)하고 작성자를 뺀 참여자에게 취소 알림을 저장해. 프론트의 [번개 취소]가 이 API야
+- 커피챗 모집 글은 신청 전(`OPEN`)에만 지울 수 있어. 프론트의 [모집 취소]가 이 API야
+- 관리자는 위 상태 제한 없이 지울 수 있어
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `NOT_OWNER` | 작성자도 관리자도 아님 |
+| 404 | `POST_NOT_FOUND` | 없거나 이미 삭제된 글 |
+| 409 | `MEETUP_CLOSED` | 이미 시작된 번개 |
+| 409 | `RECRUIT_CLOSED` | 커피챗을 신청한 모집 |
+
+### POST-07 좋아요 · 좋아요 취소
+
+`PUT /posts/{postId}/like` · `DELETE /posts/{postId}/like` · 승인 회원
+
+둘 다 `200`에 `{ "postId": 101, "liked": true, "likeCount": 9 }`를 돌려줘. 여러 번 눌러도 결과가 같아.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+
+### COMMENT-01 댓글 목록
+
+`GET /posts/{postId}/comments?page=0&size=20` · 승인 회원
+
+오래된 순이야. 삭제된 댓글도 남고 `deleted: true`, 본문은 '삭제된 댓글이에요.', `author`는 `null`이야.
+
+```json
+{
+  "items": [{
+    "id": 801, "postId": 101, "content": "좋은 정보 감사합니다!", "isAnonymous": false,
+    "author": { "id": 25, "name": "이사자", "generation": 14, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "isDeleted": false },
+    "deleted": false, "isMine": false, "createdAt": "2026-11-10T15:00:00+09:00"
+  }],
+  "page": 0, "size": 20, "hasNext": false
+}
+```
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+
+### COMMENT-02 댓글 작성
+
+`POST /posts/{postId}/comments` · 승인 회원
+
+`{ "content": "..." }` 1\~500자. 익명은 고르지 않고 서버가 정해. 익명 글의 작성자가 쓴 댓글만 익명이야. `201`에 COMMENT-01의 항목 하나를 돌려줘. 대댓글은 프론트 화면이 없어서 아직 받지 않아.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 비었거나 500자 초과 |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+
+### COMMENT-03 댓글 삭제
+
+`DELETE /posts/{postId}/comments/{commentId}` · 작성자 또는 관리자
+
+소프트 삭제이고 `204`야.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `NOT_OWNER` | 작성자도 관리자도 아님 |
+| 404 | `POST_NOT_FOUND`, `COMMENT_NOT_FOUND` | 없거나 삭제된 글·댓글, 다른 글의 댓글 |
+
+### MEETUP-01 번개 참여 · 참여 취소
+
+`PUT /posts/{postId}/meetup/members/me` · `DELETE /posts/{postId}/meetup/members/me` · 승인 회원
+
+둘 다 `200`에 지금 참여 상태를 돌려줘. 화면이 다시 조회하지 않고 버튼·인원을 바꿀 수 있어.
+
+```json
+{ "postId": 101, "joined": true, "participantCount": 4, "capacity": 6, "status": "OPEN", "members": [] }
+```
+
+- 이미 참여 중이면 참여는 그대로 성공해
+- 마지막 한 자리에 여러 명이 동시에 눌러도 한 명만 들어가(번개 행 잠금 + `READ COMMITTED`)
+- 작성자는 참여 취소 대신 POST-06으로 번개를 취소해
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `HOST_CANNOT_LEAVE` | 작성자가 참여 취소 |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+| 404 | `MEETUP_NOT_FOUND` | 번개 글이 아님 |
+| 404 | `NOT_MEETUP_MEMBER` | 참여하지 않았는데 참여 취소 |
+| 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
+| 409 | `MEETUP_FULL` | 정원 마감 |
+
+### MEETUP-02 번개 초대
+
+`POST /posts/{postId}/meetup/invites` · 번개 작성자만
+
+`{ "userIds": [25, 31] }` 1\~20명. 본인, 이미 참여했거나 초대한 회원, 승인 전·탈퇴·없는 회원은 건너뛰어. 초대 기록(`meetup_invites`)과 받는 사람의 알림(커뮤니티 탭, `MEETUP_INVITED`)을 저장해. 자동 참여는 아니야.
+
+`200`에 `{ "sentCount": 1, "skippedUserIds": [31] }`를 돌려줘.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 비었거나 20명 초과 |
+| 403 | `NOT_OWNER` | 번개 작성자가 아님 |
+| 404 | `POST_NOT_FOUND`, `MEETUP_NOT_FOUND` | MEETUP-01과 같음 |
+| 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
+
+### 커뮤니티가 저장하는 알림
+
+알림 담당 테이블(`notifications`)에 커뮤니티 탭·`POST` 대상으로 저장해. 알림 조회 API는 알림 담당 범위야.
+
+| `type` | 받는 사람 | 문구 |
+| --- | --- | --- |
+| `MEETUP_INVITED` | 초대받은 회원 | `{작성자}님이 번개에 초대했어요. {제목}` |
+| `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
+
+### 커뮤니티 확정 필요
+
+| 번호 | 무엇을 | 지금 구현 | 맞출 사람 |
+| --- | --- | --- | --- |
+| 1 | 익명 허용 범위 | 글은 `FREE`만, 댓글은 익명 글 작성자만 자동 익명. PRD(6.3·6.6)는 번개·커피챗 모집 빼고 모두 익명 가능 | 기획, FE |
+| 2 | 커피챗 함께 신청 모집 참여(4.11) | 미구현. 모집 참여는 커뮤니티, 모인 인원으로 신청(`APPLIED`로 변경)은 커피챗 신청이 맡는다 | 커피챗 담당 |
+| 3 | 인기 키워드(6-2) | 미구현. PRD에 없음 | 기획, FE |
+| 4 | 업로드 URL 발급(6-10) | 미구현. 프로필 사진과 같은 저장소를 쓸지 정해야 한다 | BE |
+| 5 | 탈퇴(AUTH-08)·여러 명 커피챗 끄기(PROFILE-13) 때 모집글 처리 | 미구현. 회원·프로필 쪽에서 이벤트를 보내면 커뮤니티가 모집글 종료·참여자 정리·알림을 맡는다 | 계정·프로필 담당 |
+
+## 7. 홈
+
+담당: 동문·커뮤니티·홈. 커뮤니티 새 소식과 모집 중인 글은 POST-01로 받고, 커피챗 받기 카드는 PROFILE-12·14, 프로필 완성도는 FE가 계산해.
+
+| ID | 기능 | 메서드·경로 | 노션 |
+| --- | --- | --- | --- |
+| HOME-01 | 홈 화면 | `GET /home` | 8-1 |
+| HOME-02 | 환영 배너 닫기 | `POST /home/coffee-guide/dismiss` | 8-2 |
+
+### HOME-01 홈 화면
+
+`GET /home` · 승인 회원 + 기본 프로필 입력 완료
+
+```json
+{
+  "me": { "id": 12, "name": "김사자", "generation": 14, "lionParts": ["BACKEND"], "headline": "백엔드 지망생", "bio": "...", "photoUrl": null },
+  "welcomeBannerVisible": true,
+  "counts": { "pendingCoffeeChats": 1, "activeCoffeeChats": 2, "unreadMessages": 3, "messageRequests": 1, "bookmarks": 5 },
+  "upcomingCoffeeChat": {
+    "id": 41, "scheduledAt": "2026-11-20T19:00:00+09:00", "meetingMode": "ONLINE", "roomId": 7,
+    "partner": { "id": 25, "name": "박사자", "generation": 11, "lionParts": ["BACKEND"], "photoUrl": null, "isDeleted": false }
+  },
+  "recommendedSeniors": [],
+  "onThisDay": { "id": 501, "category": "NOW", "title": "13기 중커톤 시상식 후기", "thumbnailUrl": null, "createdAt": "2025-11-12T15:00:00+09:00" }
+}
+```
+
+| 필드 | 기준 |
+| --- | --- |
+| `welcomeBannerVisible` | `users.guide_dismissed_at`이 없으면 `true` |
+| `counts.pendingCoffeeChats` | 내가 받은 `PENDING` 커피챗 |
+| `counts.activeCoffeeChats` | 내가 신청자·받는 사자·함께 신청자인 `ACCEPTED`·`SCHEDULED` 커피챗 |
+| `counts.unreadMessages` | 나가지 않은 `ACTIVE` 방에서 마지막으로 읽은 메시지 이후 다른 사람이 보낸 메시지 |
+| `counts.messageRequests` | 내가 받은 `REQUESTED` 메시지 요청 |
+| `upcomingCoffeeChat` | 지금 이후 가장 가까운 `SCHEDULED` 커피챗 1건. 없으면 `null` |
+| `recommendedSeniors` | 나보다 앞 기수이면서 커피챗을 받는 사자 2명, 같은 파트 먼저. ALUMNI-01 항목 형식 |
+| `onThisDay` | 1년 전 같은 날 쓴 글 중 조회수가 가장 많은 글. 없으면 `null` |
+
+커피챗·채팅 개수는 커피챗·채팅 담당 테이블을 읽기만 해. '커피챗을 받는 중'은 지금 `default_mode = ON`만 보는데, PROFILE-12의 기간 규칙(쉬는 기간·받는 기간)으로 맞출 예정이야.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `NOT_APPROVED` | 승인 전 |
+| 403 | `PROFILE_NOT_COMPLETED` | 기본 프로필(2.1)을 입력하지 않음 |
+
+### HOME-02 환영 배너 닫기
+
+`POST /home/coffee-guide/dismiss` · 승인 회원
+
+승인 후 첫 방문 환영 배너의 [닫기]야. `users.guide_dismissed_at`을 기록하고 `200`에 `{ "visible": false, "dismissedAt": "..." }`를 돌려줘. 여러 번 불러도 처음 닫은 시각을 유지해.
