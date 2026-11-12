@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
+import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
@@ -18,6 +19,7 @@ import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.ErrorCode;
 import com.lionlink.backend.support.TestPosts;
+import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -129,11 +131,19 @@ class PostServiceTest {
 	}
 
 	@Test
-	void 커피챗_모집은_여러_명_신청을_받는_선배에게만_만들_수_있다() {
+	void 커피챗_모집은_오늘_여러_명_신청을_받는_선배에게만_만들_수_있다() {
 		Long senior = TestUsers.approved(entityManager, "선배사자");
+		Long noSetting = TestUsers.approved(entityManager, "설정없는사자");
 		Long oneOnOne = TestUsers.approved(entityManager, "일대일사자");
+		TestProfiles.coffeeSetting(entityManager, oneOnOne, ReceiveMode.ON, false);
+		Long resting = TestUsers.approved(entityManager, "쉬는사자");
+		TestProfiles.coffeeSetting(entityManager, resting, ReceiveMode.ON, true);
+		TestProfiles.coffeePeriod(entityManager, resting, LocalDate.now(), LocalDate.now().plusDays(1));
 
-		assertError(() -> postService.create(me, TestPosts.recruit("모집", oneOnOne, 4)), CommunityErrorCode.GROUP_COFFEE_CHAT_NOT_ALLOWED);
+		for (Long notAllowed : List.of(noSetting, oneOnOne, resting)) {
+			assertError(() -> postService.create(me, TestPosts.recruit("모집", notAllowed, 4)),
+					CommunityErrorCode.GROUP_COFFEE_CHAT_NOT_ALLOWED);
+		}
 		assertError(() -> postService.create(me, TestPosts.recruit("모집", me, 4)), CommunityErrorCode.INVALID_RECRUIT_SENIOR);
 		assertError(() -> postService.create(me, TestPosts.recruit("모집", 999_999L, 4)), AlumniErrorCode.USER_NOT_FOUND);
 
