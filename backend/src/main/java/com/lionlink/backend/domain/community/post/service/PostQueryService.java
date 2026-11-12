@@ -1,8 +1,6 @@
 package com.lionlink.backend.domain.community.post.service;
 
-import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
-import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
 import com.lionlink.backend.domain.community.comment.repository.CommentRepository;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
@@ -31,6 +29,7 @@ import com.lionlink.backend.domain.community.recruit.entity.CoffeeChatRecruit;
 import com.lionlink.backend.domain.community.recruit.entity.RecruitMember;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
+import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
@@ -70,10 +69,10 @@ public class PostQueryService {
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
 	private final RecruitMemberRepository recruitMemberRepository;
-	private final CoffeeSettingRepository coffeeSettingRepository;
 	private final CoffeeChatRepository coffeeChatRepository;
 	private final ProfileRepository profileRepository;
 	private final UserSummaryReader userSummaryReader;
+	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 
 	public PageResponse<PostSummaryResponse> search(PostSearchCondition condition, Pageable pageable) {
 		Page<Post> posts = postSearchRepository.search(condition, pageable);
@@ -175,6 +174,7 @@ public class PostQueryService {
 	}
 
 	private PostDetailResponse.AuthorDetail authorDetail(UserSummary summary) {
+		Profile profile = summary.deleted() ? null : profileRepository.findById(summary.id()).orElse(null);
 		return new PostDetailResponse.AuthorDetail(
 				summary.id(),
 				summary.name(),
@@ -182,7 +182,8 @@ public class PostQueryService {
 				summary.lionParts(),
 				summary.photoUrl(),
 				summary.headline(),
-				summary.deleted() ? null : profileRepository.findById(summary.id()).map(Profile::getStatus).orElse(null),
+				profile == null ? null : profile.getBio(),
+				profile == null ? null : profile.getStatus(),
 				summary.deleted()
 		);
 	}
@@ -203,9 +204,7 @@ public class PostQueryService {
 	private PostDetailResponse.RecruitDetail recruitDetail(Post post, CoffeeChatRecruit recruit, List<Long> memberIds,
 			Map<Long, UserSummary> summaries, Long userId) {
 		UserSummary senior = summary(summaries, recruit.getSeniorId());
-		boolean acceptGroup = coffeeSettingRepository.findById(recruit.getSeniorId())
-				.map(setting -> setting.getDefaultMode() == ReceiveMode.ON && setting.isAcceptGroup())
-				.orElse(false);
+		boolean acceptGroup = coffeeAvailabilityReader.getAvailability(recruit.getSeniorId()).groupAvailable();
 		boolean isSenior = recruit.getSeniorId().equals(userId);
 		return new PostDetailResponse.RecruitDetail(
 				new PostDetailResponse.SeniorDetail(senior.id(), senior.name(), senior.generation(), senior.lionParts(),

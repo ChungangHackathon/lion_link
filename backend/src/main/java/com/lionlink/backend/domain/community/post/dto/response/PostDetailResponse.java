@@ -39,6 +39,7 @@ public record PostDetailResponse(
 			List<LionPart> lionParts,
 			String photoUrl,
 			String headline,
+			String bio,
 			ProfileStatus status,
 			boolean isDeleted
 	) {
