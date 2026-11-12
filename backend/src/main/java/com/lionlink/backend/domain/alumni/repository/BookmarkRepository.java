@@ -13,6 +13,8 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, BookmarkId> 
 
 	Slice<Bookmark> findByUserIdOrderByCreatedAtDescTargetUserIdDesc(Long userId, Pageable pageable);
 
+	long countByUserId(Long userId);
+
 	@Query("select b.targetUserId from Bookmark b where b.userId = :userId and b.targetUserId in :targetUserIds")
 	Set<Long> findTargetUserIds(Long userId, Collection<Long> targetUserIds);
 }
