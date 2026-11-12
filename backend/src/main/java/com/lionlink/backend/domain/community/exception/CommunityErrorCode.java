@@ -11,7 +11,16 @@ public enum CommunityErrorCode implements ErrorCode {
 
 	POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없어요."),
 	NOT_OWNER(HttpStatus.FORBIDDEN, "본인이 작성한 글만 수정·삭제할 수 있어요."),
-	ANONYMOUS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "번개모임과 커피챗 모집은 익명으로 작성할 수 없어요."),
+	ANONYMOUS_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "익명 글은 자유 게시판에서만 쓸 수 있어요."),
+	INVALID_CATEGORY_DETAIL(HttpStatus.BAD_REQUEST, "카테고리에 맞는 정보를 입력해 주세요."),
+	CATEGORY_CHANGE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "번개·커피챗 모집 글은 카테고리를 바꿀 수 없어요."),
+	INVALID_MEETUP_TIME(HttpStatus.BAD_REQUEST, "번개 일정은 1시간 뒤부터 14일 이내로 정해 주세요."),
+	INVALID_COMPANIONS(HttpStatus.BAD_REQUEST, "함께하는 동문을 다시 확인해 주세요."),
+	INVALID_RECRUIT_SENIOR(HttpStatus.BAD_REQUEST, "본인은 신청할 선배로 고를 수 없어요."),
+	GROUP_COFFEE_CHAT_NOT_ALLOWED(HttpStatus.CONFLICT, "이 선배는 지금 1:1 커피챗만 받아요."),
+	RECRUIT_CLOSED(HttpStatus.CONFLICT, "신청한 뒤에는 모집 정보를 바꿀 수 없어요."),
+	RECRUIT_SENIOR_LOCKED(HttpStatus.CONFLICT, "참여자가 있어 신청할 선배를 바꿀 수 없어요."),
+	CAPACITY_BELOW_MEMBERS(HttpStatus.CONFLICT, "지금 참여 인원보다 적게 정할 수 없어요."),
 
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없어요."),
 	PARENT_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "답글을 작성할 댓글을 찾을 수 없어요."),

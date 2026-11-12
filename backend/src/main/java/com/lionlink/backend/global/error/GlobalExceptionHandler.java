@@ -44,9 +44,15 @@ public class GlobalExceptionHandler {
 		return toResponse(errorCode, ErrorResponse.of(errorCode, fieldErrors));
 	}
 
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+		ErrorCode errorCode = CommonErrorCode.VALIDATION_ERROR;
+		List<FieldErrorResponse> fieldErrors = List.of(new FieldErrorResponse(e.getName(), "지원하지 않는 값입니다."));
+		return toResponse(errorCode, ErrorResponse.of(errorCode, fieldErrors));
+	}
+
 	@ExceptionHandler({
 			MissingServletRequestParameterException.class,
-			MethodArgumentTypeMismatchException.class,
 			HttpMessageNotReadableException.class
 	})
 	public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception e) {
