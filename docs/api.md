@@ -904,7 +904,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /users` · 승인 회원
 
-승인되고 탈퇴하지 않았고 기본 프로필이 있는 회원만 내려줘. 나 자신은 목록에서 빠져 (구현 예정, 지금은 포함).
+승인되고 탈퇴하지 않았고 기본 프로필이 있는 회원만 내려줘. 나 자신은 목록에서 빠져.
 
 | 쿼리 | 타입 | 설명 |
 | --- | --- | --- |
@@ -913,8 +913,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `parts` | string\[\] | `lionPart`. 파트 1·2 둘 다 봐 |
 | `statuses` | string\[\] | 현재 상태(`status` 열거값) |
 | `interests` | string\[\] | 관심 분야(`interest` 열거값 코드, 예: `PLANNING_PM,DATA_AI`). 값이 정확히 같아야 걸려 |
-| `available` | boolean | `true`면 오늘 기준 커피챗을 받는 사자만 (구현 예정) |
-| `sort` | string | `RECOMMEND` 추천순(받는 중 먼저, 그다음 나와 같은 파트), `GENERATION` 기수 오름차순, `LATEST` 최근 가입순. 기본 `RECOMMEND` (구현 예정, 지금은 `LATEST`만) |
+| `available` | boolean | `true`면 오늘 기준 커피챗을 받는(`AVAILABLE`) 사자만 |
+| `sort` | string | `RECOMMEND` 추천순(받는 중 먼저, 그다음 나와 같은 파트), `GENERATION` 기수 오름차순, `LATEST` 최근 가입순. 기본 `RECOMMEND`. 순서가 같으면 최근 가입순 |
 | `page`, `size` | number | 기본 0, 20. `size`는 1\~100 |
 
 같은 조건 안의 값은 OR, 다른 조건끼리는 AND야. 열거값은 PROFILE의 열거값 표와 같아.
@@ -934,10 +934,10 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 필드 | 설명 |
 | --- | --- |
 | `company` | 현재 경력의 회사. 회사 공개 범위로 가려지면 `null` |
-| `bio` | 카드에 2줄로 보여주는 소개 (구현 예정) |
-| `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 값. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중 (구현 예정) |
-| `coffeeChat.nextAvailableDate` | `RESTING`·`NOT_ACCEPTING`일 때 다시 받는 날. 카드의 '11/20부터 받아요'에 써 (구현 예정) |
-| `coffeeChat.acceptGroup` | 여러 명 신청을 받는지. 커피챗 모집 글을 쓸 때 사자 선택 목록을 거르는 데 써 (구현 예정) |
+| `bio` | 카드에 2줄로 보여주는 소개 |
+| `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 규칙으로 오늘 기준으로 정해. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중. 커피챗 설정이 없으면 `NOT_ACCEPTING` |
+| `coffeeChat.nextAvailableDate` | 다시 받는 날. 카드의 '11/20부터 받아요'에 써. `RESTING`이면 쉬는 기간이 끝난 다음 날(바로 이어지는 쉬는 기간이 있으면 마지막 기간 기준), `NOT_ACCEPTING`이면 곧 시작하는 받는 기간의 시작일, 그 밖에는 `null` |
+| `coffeeChat.acceptGroup` | 여러 명 신청을 받는 설정인지. 커피챗 모집 글의 사자는 `AVAILABLE`이면서 `true`인 사자만 고를 수 있어 |
 
 이 항목 형식은 ALUMNI-03, HOME-01 `recommendedSeniors`, 동문 상세 오른쪽 목록에서도 같이 써.
 
@@ -968,11 +968,11 @@ PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있
 
 `GET /users/me/bookmarks?page=0&size=20` · 승인 회원
 
-최근 저장한 순서야. 화면이 동문 목록과 같은 카드에 '최근 저장순 · N명'을 보여줘서, 아래처럼 바꿀 예정이야 (구현 예정).
+최근 저장한 순서야. 화면이 동문 목록과 같은 카드에 '최근 저장순 · N명'을 보여줘.
 
 - 항목은 ALUMNI-01 항목 형식에 `bookmarkedAt`을 더한 것
 - 전체 수가 있는 페이지 형식(`totalElements` 포함)
-- 저장한 뒤 탈퇴한 동문은 목록에서 빠짐
+- 저장한 뒤 탈퇴한 동문은 목록에서 빠짐(`totalElements`에도 안 셈)
 
 ```json
 {
@@ -980,8 +980,6 @@ PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있
   "page": 0, "size": 20, "totalElements": 1, "hasNext": false
 }
 ```
-
-지금 구현은 `{ userId, name, generation, headline, photoUrl, isDeleted, bookmarkedAt }` 항목에 `{ items, page, size, hasNext }`이고, 탈퇴한 동문도 `isDeleted: true`로 남아.
 
 ### ALUMNI-04 관심 동문 저장 · ALUMNI-05 저장 취소
 
@@ -1121,7 +1119,7 @@ PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있
 {
   "id": 101, "category": "MEETUP", "title": "금요일 저녁 번개", "content": "...",
   "isAnonymous": false, "isMine": false,
-  "author": { "id": 12, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "status": "EMPLOYED", "isDeleted": false },
+  "author": { "id": 12, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "bio": null, "status": "EMPLOYED", "isDeleted": false },
   "links": [], "files": [], "deadline": null,
   "viewCount": 43, "commentCount": 3, "likeCount": 8, "likedByMe": false,
   "meetup": {
@@ -1134,7 +1132,8 @@ PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있
 ```
 
 - 커피챗 모집 글은 `recruit: { senior: { id, name, generation, lionParts, photoUrl, acceptGroup, isDeleted }, capacity, memberCount, deadline, status, joinedByMe, isSenior, hasOpenCoffeeChatWithSenior, members }`
-- `author`에 `bio`(소개)가 추가돼. 일반 글 오른쪽 작성자 카드에 써 (구현 예정)
+- `author.bio`(소개)는 일반 글 오른쪽 작성자 카드에 써
+- `recruit.senior.acceptGroup`은 그 사자가 오늘 커피챗을 받는 중(`AVAILABLE`)이면서 여러 명 신청을 받을 때만 `true`
 - `isMine`은 익명 글이어도 내 글이면 `true`. `updatedAt`은 수정한 적이 있을 때만 값이 있어('수정됨' 표시)
 - `files[]`는 `{ id, type(IMAGE·ATTACHMENT), url, name, size }`
 
@@ -1366,11 +1365,12 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `counts.activeCoffeeChats` | 내가 신청자·받는 사자·함께 신청자인 `ACCEPTED`·`SCHEDULED` 커피챗 |
 | `counts.unreadMessages` | 나가지 않은 `ACTIVE` 방에서 마지막으로 읽은 메시지 이후 다른 사람이 보낸 메시지 |
 | `counts.messageRequests` | 내가 받은 `REQUESTED` 메시지 요청 |
+| `counts.bookmarks` | 관심 동문 목록(ALUMNI-03)에 나오는 사자 수. 탈퇴한 사자는 빼 |
 | `upcomingCoffeeChat` | 지금 이후 가장 가까운 `SCHEDULED` 커피챗 1건. 없으면 `null` |
-| `recommendedSeniors` | 나보다 앞 기수이면서 커피챗을 받는 사자 2명, 같은 파트 먼저. ALUMNI-01 항목 형식 |
+| `recommendedSeniors` | 나보다 앞 기수이면서 오늘 커피챗을 받는(`AVAILABLE`) 사자 2명. 같은 파트 먼저, 그다음 가까운 기수 순. ALUMNI-01 항목 형식 |
 | `onThisDay` | 1년 전 같은 날 쓴 글 중 조회수가 가장 많은 글. 없으면 `null` |
 
-커피챗·채팅 개수는 커피챗·채팅 담당 테이블을 읽기만 해. '커피챗을 받는 중'은 지금 `default_mode = ON`만 보는데, PROFILE-12의 기간 규칙(쉬는 기간·받는 기간)으로 맞출 예정이야.
+커피챗·채팅 개수는 커피챗·채팅 담당 테이블을 읽기만 해. '커피챗을 받는 중'은 PROFILE-12 규칙(받기 설정 + 쉬는 기간·받는 기간)으로 오늘 기준으로 판단해.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
