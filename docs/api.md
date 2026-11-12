@@ -1,6 +1,6 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(86개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP)·홈(HOME) — 동문·커뮤니티·홈 담당. 커피챗·채팅·알림 상세는 팀 노션 API 명세서가 원본이다.
+> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME) — 동문·커뮤니티·홈 담당. 커피챗·채팅·알림 상세는 팀 노션 API 명세서가 원본이다.
 > 마지막 갱신: 2026-11-12 (구글 로그인 Authorization Code 방식 반영). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
@@ -51,7 +51,7 @@
 
 ## 전체 API 목록 (팀 노션 기준)
 
-팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개를 더해 86개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
+팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11, 구현 예정)를 더해 87개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
 
 | 영역 | API 수 | 담당 (노션 기준) | 상세 명세 |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@
 | 3. 관리자 | 6 | 이시형 | 이 문서 아래 |
 | 4. 커피챗 | 10 | 커피챗·채팅·알림 담당 | **미작성** |
 | 5. 동문 찾기 | 5 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
-| 6. 커뮤니티 | 16 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
+| 6. 커뮤니티 | 17 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 8. 채팅 | 14 | 커피챗·채팅·알림 담당 | **미작성** |
 | 9. 알림 | 6 | 커피챗·채팅·알림 담당 | **미작성** |
@@ -132,6 +132,7 @@
 | 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/recruit/members/me` | 커피챗 모집 참여 (구현 예정, 참여 취소 `DELETE`는 결정 후 추가) | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 URL 발급 (미구현) | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `POST` | `/home/coffee-guide/dismiss` | 첫 커피챗 가이드 카드 닫기 | 동문·커뮤니티·홈 담당 |
@@ -885,6 +886,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 담당: 동문·커뮤니티·홈. 노션 초안(3-1~3-5)을 프론트 화면에 맞춰 구현한 기준이야. 모두 승인 회원(`APPROVED`)만 쓸 수 있어.
 
+> 5~7장에서 **(구현 예정)**이 붙은 필드·쿼리·API는 프론트 화면에 필요해서 형식을 먼저 정해 둔 거야. 서버에는 아직 없으니 FE는 구현 완료 표시가 바뀐 뒤 써 줘.
+
 | ID | 기능 | 메서드·경로 | 노션 |
 | --- | --- | --- | --- |
 | ALUMNI-01 | 동문 목록·검색 | `GET /users` | 3-1 |
@@ -897,31 +900,42 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /users` · 승인 회원
 
-승인되고 탈퇴하지 않았고 기본 프로필이 있는 회원만 최근 가입순으로 내려줘.
+승인되고 탈퇴하지 않았고 기본 프로필이 있는 회원만 내려줘. 나 자신은 목록에서 빠져 (구현 예정, 지금은 포함).
 
 | 쿼리 | 타입 | 설명 |
 | --- | --- | --- |
 | `q` | string | 0\~50자. 이름, 한 줄 소개, 대표 기술, 현재 경력의 직무·회사(회사 공개인 사람만)에서 대소문자 없이 찾아 |
 | `generations` | number\[\] | 기수. 여러 개는 쉼표로 (`13,14`) |
 | `parts` | string\[\] | `lionPart`. 파트 1·2 둘 다 봐 |
-| `statuses` | string\[\] | 현재 상태 |
-| `interests` | string\[\] | 관심 분야. 값이 정확히 같아야 걸려 |
+| `statuses` | string\[\] | 현재 상태(`status` 열거값) |
+| `interests` | string\[\] | 관심 분야(`interest` 열거값 코드, 예: `PLANNING_PM,DATA_AI`). 값이 정확히 같아야 걸려 |
+| `available` | boolean | `true`면 오늘 기준 커피챗을 받는 사자만 (구현 예정) |
+| `sort` | string | `RECOMMEND` 추천순(받는 중 먼저, 그다음 나와 같은 파트), `GENERATION` 기수 오름차순, `LATEST` 최근 가입순. 기본 `RECOMMEND` (구현 예정, 지금은 `LATEST`만) |
 | `page`, `size` | number | 기본 0, 20. `size`는 1\~100 |
 
-같은 조건 안의 값은 OR, 다른 조건끼리는 AND야.
+같은 조건 안의 값은 OR, 다른 조건끼리는 AND야. 열거값은 PROFILE의 열거값 표와 같아.
 
 ```json
 {
   "items": [{
     "id": 25, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "status": "EMPLOYED",
-    "headline": "백엔드 개발자", "photoUrl": null, "company": "예시회사",
-    "interests": ["BACKEND"], "skills": ["Spring"], "bookmarked": false
+    "headline": "백엔드 개발자", "bio": "서버 개발 이야기를 좋아해요", "photoUrl": null, "company": "예시회사",
+    "interests": ["BACKEND"], "skills": ["Spring"], "bookmarked": false,
+    "coffeeChat": { "availability": "AVAILABLE", "nextAvailableDate": null, "acceptGroup": true }
   }],
   "page": 0, "size": 20, "totalElements": 1, "hasNext": false
 }
 ```
 
-`company`는 현재 경력의 회사이고, 회사 공개 범위로 가려지면 `null`이야.
+| 필드 | 설명 |
+| --- | --- |
+| `company` | 현재 경력의 회사. 회사 공개 범위로 가려지면 `null` |
+| `bio` | 카드에 2줄로 보여주는 소개 (구현 예정) |
+| `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 값. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중 (구현 예정) |
+| `coffeeChat.nextAvailableDate` | `RESTING`·`NOT_ACCEPTING`일 때 다시 받는 날. 카드의 '11/20부터 받아요'에 써 (구현 예정) |
+| `coffeeChat.acceptGroup` | 여러 명 신청을 받는지. 커피챗 모집 글을 쓸 때 사자 선택 목록을 거르는 데 써 (구현 예정) |
+
+이 항목 형식은 ALUMNI-03, HOME-01 `recommendedSeniors`, 동문 상세 오른쪽 목록에서도 같이 써.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
@@ -935,6 +949,13 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 지금 응답은 `id, name, generation, lionParts, status, headline, bio, photoUrl, major, region, interests, skills, links, careers, educations, projects, lionActivities, contactEmail, phone, bookmarked, coffeeChatAvailable`이야. 공개 범위로 가려진 값은 `null`이고, 본인 프로필이면 모두 보여.
 
+PROFILE-03 형식에 더해 프론트 상세 화면이 쓰는 필드가 2개 있어 (구현 예정).
+
+| 추가 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `isStaff` | boolean | 멋사 활동 중 `STAFF` 역할이 있으면 `true`. 이름 옆 '운영진' 태그 |
+| `coffeeChat.pendingCoffeeChatId` | number / null | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
+
 | 상태 | code | 언제 |
 | --- | --- | --- |
 | 404 | `USER_NOT_FOUND` | 없는 회원, 승인 전, 탈퇴, 프로필이 없는 회원 |
@@ -943,14 +964,20 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /users/me/bookmarks?page=0&size=20` · 승인 회원
 
-최근 저장한 순서야. 저장한 뒤 탈퇴한 동문도 목록에 남고 `isDeleted: true`, 개인정보는 `null`이야.
+최근 저장한 순서야. 화면이 동문 목록과 같은 카드에 '최근 저장순 · N명'을 보여줘서, 아래처럼 바꿀 예정이야 (구현 예정).
+
+- 항목은 ALUMNI-01 항목 형식에 `bookmarkedAt`을 더한 것
+- 전체 수가 있는 페이지 형식(`totalElements` 포함)
+- 저장한 뒤 탈퇴한 동문은 목록에서 빠짐
 
 ```json
 {
-  "items": [{ "userId": 25, "name": "김사자", "generation": 13, "headline": "백엔드 개발자", "photoUrl": null, "isDeleted": false, "bookmarkedAt": "2026-11-08T10:00:00+09:00" }],
-  "page": 0, "size": 20, "hasNext": false
+  "items": [{ "id": 25, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "...": "ALUMNI-01 항목과 같음", "bookmarkedAt": "2026-11-08T10:00:00+09:00" }],
+  "page": 0, "size": 20, "totalElements": 1, "hasNext": false
 }
 ```
+
+지금 구현은 `{ userId, name, generation, headline, photoUrl, isDeleted, bookmarkedAt }` 항목에 `{ items, page, size, hasNext }`이고, 탈퇴한 동문도 `isDeleted: true`로 남아.
 
 ### ALUMNI-04 관심 동문 저장 · ALUMNI-05 저장 취소
 
@@ -981,6 +1008,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | COMMENT-03 | 댓글 삭제 | `DELETE /posts/{postId}/comments/{commentId}` | 6-9 |
 | MEETUP-01 | 번개 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/meetup/members/me` | 6-12, 6-13 |
 | MEETUP-02 | 번개 초대 | `POST /posts/{postId}/meetup/invites` | 6-14 |
+| RECRUIT-01 | 커피챗 모집 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/recruit/members/me` | 신규 (4.11), 구현 예정 |
 | - | 인기 키워드 | `GET /posts/popular-keywords` | 6-2, 미구현 |
 | - | 업로드 URL 발급 | `POST /files` | 6-10, 미구현 |
 
@@ -992,7 +1020,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- |
 | `category` | `CONTEST` 공모전, `JOB` 채용·협업, `MATERIAL` 족보·자료, `EVENT` 세미나·행사, `NOW` 지금 사자는, `FREE` 자유, `MEETUP` 번개, `RECRUIT` 커피챗 모집 |
 | `meetup.status` | `OPEN` 모집 중, `FULL` 정원 마감, `ENDED` 모임 시각 지남, `CANCELED` 취소 |
-| `recruit.status` | `OPEN` 모집 중, `APPLIED` 커피챗 신청 완료, `ENDED` 모집 종료 |
+| `recruit.status` | `OPEN` 모집 중, `APPLIED` 커피챗 신청 완료, `ENDED` 모집 종료. 마감일이 지난 `OPEN` 모집은 응답에서 `ENDED`로 보여줘 (구현 예정, 지금은 `OPEN` 그대로) |
 
 ### 공통 객체
 
@@ -1102,6 +1130,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 ```
 
 - 커피챗 모집 글은 `recruit: { senior: { id, name, generation, lionParts, photoUrl, acceptGroup, isDeleted }, capacity, memberCount, deadline, status, joinedByMe, isSenior, hasOpenCoffeeChatWithSenior, members }`
+- `author`에 `bio`(소개)가 추가돼. 일반 글 오른쪽 작성자 카드에 써 (구현 예정)
 - `isMine`은 익명 글이어도 내 글이면 `true`. `updatedAt`은 수정한 적이 있을 때만 값이 있어('수정됨' 표시)
 - `files[]`는 `{ id, type(IMAGE·ATTACHMENT), url, name, size }`
 
@@ -1220,6 +1249,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 - 이미 참여 중이면 참여는 그대로 성공해
 - 마지막 한 자리에 여러 명이 동시에 눌러도 한 명만 들어가(번개 행 잠금 + `READ COMMITTED`)
 - 작성자는 참여 취소 대신 POST-06으로 번개를 취소해
+- 참여해도 단체 채팅방은 아직 만들지 않아. 번개 단체방은 채팅 담당과 정할 예정이니, 그 전까지 FE는 '단체 채팅방에 초대될 거예요' 안내를 빼 줘
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
@@ -1245,6 +1275,36 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 404 | `POST_NOT_FOUND`, `MEETUP_NOT_FOUND` | MEETUP-01과 같음 |
 | 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
 
+FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아니라 `sentCount`를 써 줘.
+
+### RECRUIT-01 커피챗 모집 참여 · 참여 취소 (구현 예정)
+
+`PUT /posts/{postId}/recruit/members/me` · `DELETE /posts/{postId}/recruit/members/me` · 승인 회원
+
+커피챗 모집 글(4.11) 상세의 [참여하기]야. 모인 인원으로 커피챗을 신청하는 [이 인원으로 커피챗 신청하기]는 커피챗 신청 API(4.1)가 `fromRecruitId`를 받아 처리하고, 신청하면 모집 상태가 `APPLIED`가 돼. 그 부분은 커피챗 담당 범위야.
+
+둘 다 `200`에 지금 참여 상태를 돌려줘.
+
+```json
+{ "postId": 102, "joined": true, "memberCount": 2, "capacity": 4, "status": "OPEN", "members": [] }
+```
+
+- 이미 참여 중이면 참여는 그대로 성공해
+- 신청받을 사자 본인은 참여할 수 없어
+- 그 사자와 이미 진행 중인 커피챗(`PENDING` `ACCEPTED` `SCHEDULED`)이 있으면 참여할 수 없어
+- 마지막 한 자리에 여러 명이 동시에 눌러도 한 명만 들어가(MEETUP-01과 같은 방식)
+- 참여하면 모집 작성자에게 `RECRUIT_JOINED` 알림을 저장해
+- 참여 취소(`DELETE`)는 프론트에 버튼이 없어서 만들지 팀에서 정한다. 만든다면 작성자와 신청 완료(`APPLIED`) 뒤에는 취소할 수 없어
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `SENIOR_CANNOT_JOIN` | 신청받을 사자 본인이 참여 |
+| 404 | `POST_NOT_FOUND` | 없거나 삭제된 글 |
+| 404 | `RECRUIT_NOT_FOUND` | 커피챗 모집 글이 아님 |
+| 409 | `RECRUIT_CLOSED` | 신청 완료·종료됐거나 마감일이 지남 |
+| 409 | `RECRUIT_FULL` | 정원 마감 |
+| 409 | `OPEN_COFFEE_CHAT_EXISTS` | 그 사자와 진행 중인 커피챗이 있음 |
+
 ### 커뮤니티가 저장하는 알림
 
 알림 담당 테이블(`notifications`)에 커뮤니티 탭·`POST` 대상으로 저장해. 알림 조회 API는 알림 담당 범위야.
@@ -1253,13 +1313,17 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- | --- |
 | `MEETUP_INVITED` | 초대받은 회원 | `{작성자}님이 번개에 초대했어요. {제목}` |
 | `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
+| `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `{댓글 작성자}님이 내 글에 댓글을 남겼어요. {제목}` (구현 예정) |
+| `RECRUIT_JOINED` | 커피챗 모집 작성자 | `{참여자}님이 내 모집글에 참여했어요. {제목}` (구현 예정) |
+
+익명 댓글이면 문구의 이름 자리에 '익명'을 넣어. 프론트 알림 목록은 보낸 사람의 아바타·이름(`actorId`)을 따로 보여주는데, `notifications`에 보낸 사람 칼럼이 없어서 지금은 문구에 이름을 넣고 있어. 칼럼을 추가할지는 알림 담당과 정한다.
 
 ### 커뮤니티 확정 필요
 
 | 번호 | 무엇을 | 지금 구현 | 맞출 사람 |
 | --- | --- | --- | --- |
 | 1 | 익명 허용 범위 | 글은 `FREE`만, 댓글은 익명 글 작성자만 자동 익명. PRD(6.3·6.6)는 번개·커피챗 모집 빼고 모두 익명 가능 | 기획, FE |
-| 2 | 커피챗 함께 신청 모집 참여(4.11) | 미구현. 모집 참여는 커뮤니티, 모인 인원으로 신청(`APPLIED`로 변경)은 커피챗 신청이 맡는다 | 커피챗 담당 |
+| 2 | 커피챗 함께 신청 모집(4.11) | RECRUIT-01 명세 작성, 구현 예정. 모인 인원으로 신청(`APPLIED`로 변경, `coffee_chat_id` 기록)은 커피챗 신청이 맡는다. 참여 취소를 만들지, 신청 후 커피챗이 거절·만료돼도 '신청 완료'로 남길지 정해야 한다 | 커피챗 담당, 기획 |
 | 3 | 인기 키워드(6-2) | 미구현. PRD에 없음 | 기획, FE |
 | 4 | 업로드 URL 발급(6-10) | 미구현. 프로필 사진과 같은 저장소를 쓸지 정해야 한다 | BE |
 | 5 | 탈퇴(AUTH-08)·여러 명 커피챗 끄기(PROFILE-13) 때 모집글 처리 | 미구현. 회원·프로필 쪽에서 이벤트를 보내면 커뮤니티가 모집글 종료·참여자 정리·알림을 맡는다 | 계정·프로필 담당 |
