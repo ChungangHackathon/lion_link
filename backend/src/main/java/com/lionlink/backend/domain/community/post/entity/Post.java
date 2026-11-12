@@ -68,4 +68,21 @@ public class Post extends BaseCreatedEntity {
 		this.isAnonymous = isAnonymous;
 		this.deadline = deadline;
 	}
+
+	public void update(PostCategory category, String title, String content, List<String> links, LocalDate deadline) {
+		this.category = category;
+		this.title = title;
+		this.content = content;
+		this.links = links;
+		this.deadline = deadline;
+		this.updatedAt = LocalDateTime.now();
+	}
+
+	public void delete() {
+		this.deletedAt = LocalDateTime.now();
+	}
+
+	public boolean isWrittenBy(Long userId) {
+		return authorId.equals(userId);
+	}
 }
