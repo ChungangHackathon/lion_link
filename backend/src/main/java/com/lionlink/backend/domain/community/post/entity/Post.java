@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AccessLevel;
@@ -47,6 +48,8 @@ public class Post extends BaseCreatedEntity {
 
 	private boolean isAnonymous;
 
+	private LocalDate deadline;
+
 	private int viewCount;
 
 	// 수정됐을 때만 값이 생긴다. Auditing은 생성 시에도 채우므로 BaseTimeEntity를 쓰지 않는다
@@ -56,12 +59,13 @@ public class Post extends BaseCreatedEntity {
 
 	@Builder
 	private Post(Long authorId, PostCategory category, String title, String content,
-			List<String> links, boolean isAnonymous) {
+			List<String> links, boolean isAnonymous, LocalDate deadline) {
 		this.authorId = authorId;
 		this.category = category;
 		this.title = title;
 		this.content = content;
 		this.links = links;
 		this.isAnonymous = isAnonymous;
+		this.deadline = deadline;
 	}
 }
