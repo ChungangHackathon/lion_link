@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.alumni.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.lionlink.backend.domain.coffeechat.entity.AvailableSlot;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.ProfileStatus;
@@ -134,7 +135,7 @@ public record AlumniDetailResponse(
 			boolean acceptGroup,
 			List<String> topics,
 			List<MeetingMode> modes,
-			List<String> availableSlots,
+			List<AvailableSlot> availableSlots,
 			String preferredArea,
 			Long pendingCoffeeChatId
 	) {
