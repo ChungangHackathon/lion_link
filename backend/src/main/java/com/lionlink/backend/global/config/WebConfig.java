@@ -1,5 +1,6 @@
 package com.lionlink.backend.global.config;
 
+import com.lionlink.backend.domain.admin.config.AdminAccessInterceptor;
 import com.lionlink.backend.global.security.CurrentUserArgumentResolver;
 import com.lionlink.backend.global.security.MemberAccessInterceptor;
 import java.util.List;
@@ -28,6 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
 
 	private final CurrentUserArgumentResolver currentUserArgumentResolver;
 	private final MemberAccessInterceptor memberAccessInterceptor;
+	private final AdminAccessInterceptor adminAccessInterceptor;
 
 	@Override
 	public void configurePathMatch(PathMatchConfigurer configurer) {
@@ -44,5 +46,8 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addInterceptor(memberAccessInterceptor)
 				.addPathPatterns(API_PREFIX + "/**")
 				.excludePathPatterns(UNAPPROVED_ALLOWED_PATHS);
+		// 등록 순서대로 실행된다: 승인 여부(NOT_APPROVED) 다음에 관리자 여부(FORBIDDEN).
+		registry.addInterceptor(adminAccessInterceptor)
+				.addPathPatterns(API_PREFIX + "/admin/**");
 	}
 }
