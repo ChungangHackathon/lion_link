@@ -5,9 +5,9 @@ import com.lionlink.backend.domain.file.config.StorageProperties;
 import com.lionlink.backend.domain.file.dto.request.FileUploadRequest;
 import com.lionlink.backend.domain.file.dto.response.FileUploadResponse;
 import com.lionlink.backend.domain.file.exception.FileErrorCode;
-import com.lionlink.backend.global.config.JacksonConfig;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.UUID;
@@ -51,7 +51,7 @@ public class FileUploadService {
 				presigned.url().toString(),
 				storageProperties.publicBaseUrl() + "/" + key,
 				contentType,
-				LocalDateTime.ofInstant(presigned.expiration().truncatedTo(ChronoUnit.SECONDS), JacksonConfig.ZONE)
+				LocalDateTime.ofInstant(presigned.expiration().truncatedTo(ChronoUnit.SECONDS), ZoneId.systemDefault())
 		);
 	}
 
