@@ -107,6 +107,12 @@ public class User extends BaseTimeEntity {
 		this.reappliedAt = LocalDateTime.now();
 	}
 
+	/** AUTH-08: 탈퇴. 같은 구글 계정으로 다시 가입할 수 있게 google_sub 연결을 푼다. */
+	public void withdraw(LocalDateTime now) {
+		this.deletedAt = now;
+		this.googleSub = null;
+	}
+
 	/** PROFILE-01: 기본 정보 입력을 마쳤다. 되돌리지 않는다. */
 	public void completeProfile() {
 		this.profileCompleted = true;
