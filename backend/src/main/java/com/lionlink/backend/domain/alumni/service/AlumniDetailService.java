@@ -16,6 +16,7 @@ import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeSetting;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeSettingRepository;
+import com.lionlink.backend.domain.coffeechat.service.CoffeeChatCooldownPolicy;
 import com.lionlink.backend.domain.profile.CoffeeAvailability;
 import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.profile.LionPart;
@@ -37,6 +38,7 @@ import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -93,6 +96,7 @@ public class AlumniDetailService {
 	private final CoffeeSettingRepository coffeeSettingRepository;
 	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 	private final RelationQueryRepository relationQueryRepository;
+	private final CoffeeChatCooldownPolicy cooldownPolicy;
 
 	public AlumniDetailResponse getDetail(Long userId, Long targetUserId) {
 		User target = userRepository.findById(targetUserId)
@@ -141,9 +145,15 @@ public class AlumniDetailService {
 		CoffeeSetting setting = coffeeSettingRepository.findById(targetUserId).orElse(null);
 		CoffeeAvailability availability = coffeeAvailabilityReader.getAvailability(targetUserId);
 		boolean inProgress = !owner && relationQueryRepository.existsInProgress(userId, targetUserId);
+		Optional<LocalDate> cooldown = owner || inProgress
+				? Optional.empty()
+				: cooldownPolicy.availableFrom(userId, targetUserId, LocalDate.now());
+		CoffeeChatAvailability status = inProgress
+				? CoffeeChatAvailability.IN_PROGRESS
+				: cooldown.isPresent() ? CoffeeChatAvailability.COOLDOWN : CoffeeChatAvailability.valueOf(availability.availability().name());
 		return new CoffeeChat(
-				inProgress ? CoffeeChatAvailability.IN_PROGRESS : CoffeeChatAvailability.valueOf(availability.availability().name()),
-				inProgress ? null : availability.nextAvailableDate(),
+				status,
+				inProgress ? null : cooldown.orElse(availability.nextAvailableDate()),
 				availability.acceptGroup(),
 				setting == null ? List.of() : Objects.requireNonNullElse(setting.getTopics(), List.of()),
 				setting == null ? List.of() : Objects.requireNonNullElse(setting.getModes(), List.of()),
