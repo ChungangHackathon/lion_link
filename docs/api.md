@@ -1,7 +1,7 @@
 # LION LINK API 명세서
 
 > 전체 API 목록(88개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
-> 마지막 갱신: 2026-11-14 (채팅 안 읽은 수 CHAT-15, S3 이전 파일 지우기, 탈퇴 때 정리). 기준: 기능명세서 v1.17, `docs/erd.md`
+> 마지막 갱신: 2026-11-14 (CHAT-09 커피챗 정보 보강). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
 
@@ -2076,7 +2076,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 `GET /chat-rooms/{roomId}`
 
-`{ roomId, type, status, requestedByMe, members(나를 뺀 참여자), coffeeChat({ id, status, scheduledAt } 또는 null), meetup({ postId, title, meetAt, place, status } 또는 null), pinned, muted, canSend }`를 줘. `meetup.status`는 MEETUP-01과 같은 `OPEN` `FULL` `ENDED` `CANCELED`야. `canSend`는 `ACTIVE`이고 닫히지 않은 방(취소된 번개 방이 아님)일 때만 `true`야. 1:1 방 상대가 탈퇴했으면 `false`야.
+`{ roomId, type, status, requestedByMe, members(나를 뺀 참여자), coffeeChat({ id, status, scheduledAt, proposedSlots, meetingMode, meetingPlace, meetingLink, questions } 또는 null), meetup({ postId, title, meetAt, place, status } 또는 null), pinned, muted, canSend }`를 줘. `meetup.status`는 MEETUP-01과 같은 `OPEN` `FULL` `ENDED` `CANCELED`야. `canSend`는 `ACTIVE`이고 닫히지 않은 방(취소된 번개 방이 아님)일 때만 `true`야. 1:1 방 상대가 탈퇴했으면 `false`야. `coffeeChat`은 채팅방 오른쪽 "이 대화의 커피챗" 카드에 쓰는 값이고 COFFEE-03과 같아(`proposedSlots` 일정 후보, `questions` 미리 드린 질문).
 
 ### CHAT-10 메시지 목록
 
