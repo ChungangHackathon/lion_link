@@ -113,8 +113,9 @@ public record ProfileResponse(
 	public record CareerItem(Long id, String company, String jobTitle, String employmentType,
 			YearMonth startYm, YearMonth endYm, boolean isCurrent, String description) {
 
-		static CareerItem from(Career career) {
-			return new CareerItem(career.getId(), career.getCompany(), career.getTitle(), career.getEmploymentType(),
+		public static CareerItem from(Career career) {
+			return new CareerItem(career.getId(), career.getCompany(), career.getTitle(),
+					career.getEmploymentType() == null ? null : career.getEmploymentType().name(),
 					career.getStartYm(), career.getEndYm(), career.isCurrent(), career.getDescription());
 		}
 	}
@@ -122,7 +123,7 @@ public record ProfileResponse(
 	public record EducationItem(Long id, String school, String major, String degree,
 			YearMonth startYm, YearMonth endYm, boolean isCurrent, String description) {
 
-		static EducationItem from(Education education) {
+		public static EducationItem from(Education education) {
 			return new EducationItem(education.getId(), education.getSchool(), education.getMajor(),
 					education.getDegree() == null ? null : education.getDegree().name(),
 					education.getStartYm(), education.getEndYm(), education.isCurrent(), education.getDescription());
@@ -131,7 +132,7 @@ public record ProfileResponse(
 
 	public record LionActivityItem(Long id, Integer generation, String role, List<String> parts, boolean isDefault) {
 
-		static LionActivityItem from(LionActivity activity) {
+		public static LionActivityItem from(LionActivity activity) {
 			List<String> parts = Stream.of(activity.getPart1(), activity.getPart2())
 					.filter(Objects::nonNull)
 					.map(Enum::name)
@@ -144,7 +145,7 @@ public record ProfileResponse(
 	public record LionProjectItem(Long id, String name, String eventType, Integer generation,
 			String myRole, String description, String link) {
 
-		static LionProjectItem from(LionProject project) {
+		public static LionProjectItem from(LionProject project) {
 			return new LionProjectItem(project.getId(), project.getName(), project.getEventType().name(),
 					project.getGeneration(), project.getMyRole(), project.getDescription(), project.getLink());
 		}
@@ -153,7 +154,7 @@ public record ProfileResponse(
 	public record ProjectItem(Long id, String name, YearMonth startYm, YearMonth endYm, boolean isCurrent,
 			String role, String description, String link, List<String> tags) {
 
-		static ProjectItem from(Project project) {
+		public static ProjectItem from(Project project) {
 			return new ProjectItem(project.getId(), project.getName(), project.getStartYm(), project.getEndYm(),
 					project.isCurrent(), project.getRole(), project.getDescription(), project.getLink(),
 					orEmpty(project.getTags()));
@@ -162,7 +163,7 @@ public record ProfileResponse(
 
 	public record CertificationItem(Long id, String name, String issuer, YearMonth acquiredYm) {
 
-		static CertificationItem from(Certification certification) {
+		public static CertificationItem from(Certification certification) {
 			return new CertificationItem(certification.getId(), certification.getName(),
 					certification.getOrganization(), certification.getDate());
 		}
@@ -170,7 +171,7 @@ public record ProfileResponse(
 
 	public record AwardItem(Long id, String name, String host, YearMonth awardedYm, String description) {
 
-		static AwardItem from(Award award) {
+		public static AwardItem from(Award award) {
 			return new AwardItem(award.getId(), award.getName(), award.getOrganization(), award.getDate(),
 					award.getDescription());
 		}
@@ -179,7 +180,7 @@ public record ProfileResponse(
 	public record ActivityItem(Long id, String name, String organization, YearMonth startYm, YearMonth endYm,
 			String description) {
 
-		static ActivityItem from(Activity activity) {
+		public static ActivityItem from(Activity activity) {
 			return new ActivityItem(activity.getId(), activity.getName(), activity.getOrganization(),
 					activity.getStartYm(), activity.getEndYm(), activity.getDescription());
 		}
@@ -187,7 +188,7 @@ public record ProfileResponse(
 
 	public record LanguageItem(Long id, String language, String level) {
 
-		static LanguageItem from(Language language) {
+		public static LanguageItem from(Language language) {
 			return new LanguageItem(language.getId(), language.getLanguage(), language.getLevel().name());
 		}
 	}

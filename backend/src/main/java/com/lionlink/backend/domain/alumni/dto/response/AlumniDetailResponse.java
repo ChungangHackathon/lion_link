@@ -186,7 +186,7 @@ public record AlumniDetailResponse(
 					companyVisible ? career.getCompany() : null,
 					!companyVisible,
 					career.getTitle(),
-					career.getEmploymentType(),
+					career.getEmploymentType() == null ? null : career.getEmploymentType().name(),
 					career.getStartYm(),
 					career.getEndYm(),
 					career.isCurrent(),
