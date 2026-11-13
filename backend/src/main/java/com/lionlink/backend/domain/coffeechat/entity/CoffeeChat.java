@@ -54,7 +54,7 @@ public class CoffeeChat extends BaseTimeEntity {
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(nullable = false, length = 10)
-	private MeetingMode preferredMode;
+	private PreferredMode preferredMode;
 
 	@Column(length = 100)
 	private String scheduleNote;
@@ -109,7 +109,7 @@ public class CoffeeChat extends BaseTimeEntity {
 
 	@Builder
 	private CoffeeChat(Long requesterId, Long receiverId, String topic, String topicCustom, String reason,
-			List<String> questions, MeetingMode preferredMode, String scheduleNote, LocalDateTime expiresAt) {
+			List<String> questions, PreferredMode preferredMode, String scheduleNote, LocalDateTime expiresAt) {
 		this.requesterId = requesterId;
 		this.receiverId = receiverId;
 		this.topic = topic;
@@ -121,5 +121,64 @@ public class CoffeeChat extends BaseTimeEntity {
 		this.expiresAt = expiresAt;
 		this.status = CoffeeChatStatus.PENDING;
 		this.openFlag = 1;
+	}
+
+	public boolean isReceiver(Long userId) {
+		return receiverId.equals(userId);
+	}
+
+	public boolean isRequester(Long userId) {
+		return requesterId.equals(userId);
+	}
+
+	public boolean isOpen() {
+		return status == CoffeeChatStatus.PENDING || status == CoffeeChatStatus.ACCEPTED
+				|| status == CoffeeChatStatus.SCHEDULED;
+	}
+
+	public boolean isExpired(LocalDateTime now) {
+		return status == CoffeeChatStatus.PENDING && !expiresAt.isAfter(now);
+	}
+
+	public void accept(List<String> proposedSlots, String responseMessage, LocalDateTime now) {
+		this.status = CoffeeChatStatus.ACCEPTED;
+		this.proposedSlots = proposedSlots;
+		this.responseMessage = responseMessage;
+		this.acceptedAt = now;
+	}
+
+	public void reject(CoffeeChatRejectReason rejectReason, String responseMessage, LocalDateTime now) {
+		this.status = CoffeeChatStatus.REJECTED;
+		this.rejectReason = rejectReason;
+		this.responseMessage = responseMessage;
+		this.rejectedAt = now;
+		this.openFlag = null;
+	}
+
+	public void schedule(LocalDateTime scheduledAt, MeetingMode meetingMode, String meetingPlace, String meetingLink) {
+		this.status = CoffeeChatStatus.SCHEDULED;
+		this.scheduledAt = scheduledAt;
+		this.meetingMode = meetingMode;
+		this.meetingPlace = meetingPlace;
+		this.meetingLink = meetingLink;
+	}
+
+	public void cancel(Long userId, String cancelReason, LocalDateTime now) {
+		this.status = CoffeeChatStatus.CANCELED;
+		this.canceledBy = userId;
+		this.cancelReason = cancelReason;
+		this.canceledAt = now;
+		this.openFlag = null;
+	}
+
+	public void complete(LocalDateTime now) {
+		this.status = CoffeeChatStatus.COMPLETED;
+		this.completedAt = now;
+		this.openFlag = null;
+	}
+
+	public void expire() {
+		this.status = CoffeeChatStatus.EXPIRED;
+		this.openFlag = null;
 	}
 }

@@ -68,6 +68,11 @@ public class CoffeeChatRecruit {
 		return status == RecruitStatus.OPEN;
 	}
 
+	public void apply(Long coffeeChatId) {
+		this.status = RecruitStatus.APPLIED;
+		this.coffeeChatId = coffeeChatId;
+	}
+
 	public RecruitStatus statusOn(LocalDate today) {
 		return isOpen() && deadline.isBefore(today) ? RecruitStatus.ENDED : status;
 	}

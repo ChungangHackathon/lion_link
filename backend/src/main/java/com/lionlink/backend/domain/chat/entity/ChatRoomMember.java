@@ -52,4 +52,16 @@ public class ChatRoomMember {
 		this.room = room;
 		this.userId = userId;
 	}
+
+	public boolean isActive() {
+		return leftAt == null;
+	}
+
+	public void rejoin() {
+		this.leftAt = null;
+	}
+
+	public void leave(LocalDateTime now) {
+		this.leftAt = now;
+	}
 }

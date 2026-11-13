@@ -54,4 +54,12 @@ public class CoffeeChatMember {
 		this.userId = userId;
 		this.role = role;
 	}
+
+	public boolean isActiveMember() {
+		return role == CoffeeChatMemberRole.MEMBER && leftAt == null;
+	}
+
+	public void leave(LocalDateTime now) {
+		this.leftAt = now;
+	}
 }
