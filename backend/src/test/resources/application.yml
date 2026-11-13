@@ -20,6 +20,8 @@ app:
   auth:
     jwt-secret: test-only-secret-for-jwt-0123456789-abcdefghij
     frontend-url: http://localhost:3000
+  email:
+    poll-interval-ms: 3600000 # 테스트가 직접 sendDue를 부르므로 스케줄러는 사실상 멈춰 둔다
   storage:
     bucket: test-bucket
     region: ap-northeast-2
