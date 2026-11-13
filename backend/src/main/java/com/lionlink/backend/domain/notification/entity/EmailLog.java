@@ -9,12 +9,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -55,6 +57,10 @@ public class EmailLog extends BaseCreatedEntity {
 
 	private LocalDateTime sentAt;
 
+	// ddl-auto update로 컬럼이 추가될 때 기존 행도 0에서 시작하게 기본값을 준다.
+	@ColumnDefault("0")
+	private int attemptCount;
+
 	@Builder
 	private EmailLog(Long userId, String toEmail, EmailType type, List<Long> targetIds,
 			String subject, LocalDateTime scheduledAt) {
@@ -65,5 +71,30 @@ public class EmailLog extends BaseCreatedEntity {
 		this.subject = subject;
 		this.scheduledAt = scheduledAt;
 		this.status = EmailStatus.PENDING;
+	}
+
+	public Long targetId() {
+		return targetIds == null || targetIds.isEmpty() ? null : targetIds.get(0);
+	}
+
+	public void markSent(LocalDateTime now) {
+		this.status = EmailStatus.SENT;
+		this.sentAt = now;
+		this.attemptCount++;
+	}
+
+	/** 수신 거부, 탈퇴, 이미 처리된 대상처럼 보낼 필요가 없어진 메일 */
+	public void skip() {
+		this.status = EmailStatus.SKIPPED;
+	}
+
+	/** 실패하면 retryDelay 뒤에 다시 보낸다. maxAttempts번 실패하면 더 보내지 않는다. */
+	public void fail(LocalDateTime now, int maxAttempts, Duration retryDelay) {
+		this.attemptCount++;
+		if (attemptCount >= maxAttempts) {
+			this.status = EmailStatus.FAILED;
+			return;
+		}
+		this.scheduledAt = now.plus(retryDelay);
 	}
 }
