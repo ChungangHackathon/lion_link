@@ -52,4 +52,16 @@ public class Education extends ProfileSectionItem {
 		this.isCurrent = isCurrent;
 		this.description = description;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. 진행 중이면 종료 년월은 비운다. */
+	public void update(String school, String major, Degree degree,
+			YearMonth startYm, YearMonth endYm, boolean isCurrent, String description) {
+		this.school = school;
+		this.major = major;
+		this.degree = degree;
+		this.startYm = startYm;
+		this.endYm = isCurrent ? null : endYm;
+		this.isCurrent = isCurrent;
+		this.description = description;
+	}
 }
