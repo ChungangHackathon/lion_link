@@ -47,6 +47,7 @@
 | 커뮤니티 | `coffeechat_recruits` | 커피챗 함께 신청 모집. 게시글과 1:1 |
 | 커뮤니티 | `recruit_members` | 모집 참여자 |
 | 커뮤니티 | `keyword_blocklist` | 금칙어 |
+| 커뮤니티 | `post_search_keywords` | 커뮤니티 검색어 기록(인기 키워드). (user_id, keyword) UNIQUE라 회원별 키워드당 1줄, 7일 지나면 지움 |
 | 알림 | `notifications` | 인앱 알림. 탭(커피챗, 채팅, 커뮤니티, 계정), 대상(target_type, target_id), 보낸 사람(actor_id) |
 | 알림 | `notification_settings` | 이메일 알림 설정과 수신 거부 토큰. 회원과 1:1 |
 | 알림 | `email_logs` | 메일 발송 기록 |
@@ -334,6 +335,7 @@ erDiagram
   posts ||--o{ post_files : "post_id"
   posts ||--o{ post_views : "post_id"
   users ||--o{ post_views : "user_id"
+  users ||--o{ post_search_keywords : "user_id"
   posts ||--o{ post_likes : "post_id"
   users ||--o{ post_likes : "user_id"
   posts ||--o{ comments : "post_id"
@@ -431,6 +433,12 @@ erDiagram
     bigint id PK
     varchar word
     datetime created_at
+  }
+  post_search_keywords {
+    bigint id PK
+    bigint user_id FK
+    varchar keyword
+    datetime searched_at
   }
 ```
 
