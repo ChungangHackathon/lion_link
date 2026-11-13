@@ -52,7 +52,9 @@ public class CommunityNotificationListener {
 
 	@EventListener
 	public void onRecruitClosed(RecruitClosedEvent event) {
-		String message = "님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. " + event.title();
+		String message = event.seniorId() == null
+				? "신청받을 사자가 탈퇴해서 모집이 마감됐어요. " + event.title()
+				: "님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. " + event.title();
 		save(event.memberIds(), RECRUIT_CLOSED, event.postId(), event.seniorId(), message);
 	}
 

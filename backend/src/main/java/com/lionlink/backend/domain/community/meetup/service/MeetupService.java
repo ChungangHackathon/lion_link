@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.community.meetup.service;
 
 import com.lionlink.backend.domain.chat.service.MeetupChatRoomService;
+import com.lionlink.backend.domain.community.event.MeetupCanceledEvent;
 import com.lionlink.backend.domain.community.event.MeetupInvitedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.dto.request.MeetupInviteRequest;
@@ -21,6 +22,7 @@ import com.lionlink.backend.domain.community.post.repository.PostRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.user.entity.UserStatus;
+import com.lionlink.backend.domain.user.event.UserWithdrawnEvent;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDateTime;
@@ -30,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,6 +114,25 @@ public class MeetupService {
 		}
 		List<Long> skipped = requested.stream().filter(id -> !inviteeIds.contains(id)).toList();
 		return new MeetupInviteResponse(inviteeIds.size(), skipped);
+	}
+
+	@EventListener
+	public void onUserWithdrawn(UserWithdrawnEvent event) {
+		Long userId = event.userId();
+		LocalDateTime now = LocalDateTime.now();
+		for (Meetup meetup : meetupRepository.findHostedInProgress(userId, now)) {
+			Post post = meetup.getPost();
+			List<Long> memberIds = meetupMemberRepository.findByMeetupPostIdOrderByJoinedAtAscUserIdAsc(post.getId()).stream()
+					.map(MeetupMember::getUserId)
+					.filter(memberId -> !memberId.equals(userId))
+					.toList();
+			meetup.cancel();
+			if (!memberIds.isEmpty()) {
+				eventPublisher.publishEvent(new MeetupCanceledEvent(post.getId(), post.getTitle(), memberIds));
+			}
+			meetupChatRoomService.close(post.getId(), MeetupChatRoomService.CANCELED, now);
+		}
+		meetupMemberRepository.deleteAll(meetupMemberRepository.findJoinedInProgress(userId, now));
 	}
 
 	private MeetupParticipationResponse participation(Post post, Meetup meetup, Long userId) {

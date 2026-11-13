@@ -3,6 +3,7 @@ package com.lionlink.backend.domain.community.meetup.repository;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupMember;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupMemberId;
 import com.lionlink.backend.global.jpa.IdCount;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -24,6 +25,13 @@ public interface MeetupMemberRepository extends JpaRepository<MeetupMember, Meet
 	long countByMeetupPostId(Long postId);
 
 	void deleteByMeetupPostId(Long postId);
+
+	@Query("""
+			select mm from MeetupMember mm join fetch mm.meetup m join fetch m.post p
+			where mm.userId = :userId and p.authorId <> :userId and p.deletedAt is null
+			  and m.canceledAt is null and m.meetAt > :now
+			""")
+	List<MeetupMember> findJoinedInProgress(Long userId, LocalDateTime now);
 
 	@Query("select m.userId from MeetupMember m where m.meetup.postId = :postId and m.userId in :userIds")
 	Set<Long> findMemberIds(Long postId, Collection<Long> userIds);
