@@ -64,4 +64,33 @@ public class ChatRoomMember {
 	public void leave(LocalDateTime now) {
 		this.leftAt = now;
 	}
+
+	public void hide(Long lastMessageId, LocalDateTime now) {
+		this.leftAt = now;
+		this.clearedMessageId = lastMessageId;
+		this.lastReadMessageId = lastMessageId;
+	}
+
+	public void read(Long messageId) {
+		if (messageId != null && (lastReadMessageId == null || messageId > lastReadMessageId)) {
+			this.lastReadMessageId = messageId;
+		}
+	}
+
+	public void changePreferences(Boolean pinned, Boolean muted, LocalDateTime now) {
+		if (pinned != null) {
+			this.pinnedAt = pinned ? (pinnedAt == null ? now : pinnedAt) : null;
+		}
+		if (muted != null) {
+			this.muted = muted;
+		}
+	}
+
+	public boolean isPinned() {
+		return pinnedAt != null;
+	}
+
+	public long visibleFrom() {
+		return clearedMessageId == null ? 0 : clearedMessageId;
+	}
 }

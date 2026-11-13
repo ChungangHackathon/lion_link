@@ -63,4 +63,21 @@ public class ChatMessage extends BaseCreatedEntity {
 		this.content = content;
 		this.clientMsgId = clientMsgId;
 	}
+
+	public boolean isDeleted() {
+		return deletedAt != null;
+	}
+
+	public boolean isSentBy(Long userId) {
+		return userId.equals(senderId);
+	}
+
+	public void edit(String content, LocalDateTime now) {
+		this.content = content;
+		this.editedAt = now;
+	}
+
+	public void delete(LocalDateTime now) {
+		this.deletedAt = now;
+	}
 }
