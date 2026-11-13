@@ -31,4 +31,11 @@ public class Certification extends ProfileSectionItem {
 		this.organization = organization;
 		this.date = date;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. */
+	public void update(String name, String organization, YearMonth date) {
+		this.name = name;
+		this.organization = organization;
+		this.date = date;
+	}
 }

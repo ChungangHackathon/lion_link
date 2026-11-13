@@ -39,4 +39,13 @@ public class Activity extends ProfileSectionItem {
 		this.endYm = endYm;
 		this.description = description;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. */
+	public void update(String name, String organization, YearMonth startYm, YearMonth endYm, String description) {
+		this.name = name;
+		this.organization = organization;
+		this.startYm = startYm;
+		this.endYm = endYm;
+		this.description = description;
+	}
 }

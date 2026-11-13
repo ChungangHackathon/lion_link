@@ -37,4 +37,10 @@ public class Language extends ProfileSectionItem {
 		this.language = language;
 		this.level = level;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. */
+	public void update(String language, LanguageLevel level) {
+		this.language = language;
+		this.level = level;
+	}
 }
