@@ -1,6 +1,6 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE) — 동문·커뮤니티·홈 담당. 채팅·알림 상세는 아직 없다(노션 페이지가 빈 템플릿).
+> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE) — 담당 조상원. 채팅·알림 상세는 아직 없다(노션 페이지가 빈 템플릿).
 > 마지막 갱신: 2026-11-12 (구글 로그인 Authorization Code 방식 반영). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
@@ -58,12 +58,12 @@
 | 1. 계정·인증 | 9 | 이시형 | 이 문서 아래 |
 | 2. 프로필 | 18 | 이시형 | 이 문서 아래 |
 | 3. 관리자 | 6 | 이시형 | 이 문서 아래 |
-| 4. 커피챗 | 10 | 커피챗·채팅·알림 담당 (동문·커뮤니티·홈 담당이 함께 맡음) | 이 문서 8장 |
-| 5. 동문 찾기 | 5 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
-| 6. 커뮤니티 | 17 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
-| 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
-| 8. 채팅 | 14 | 커피챗·채팅·알림 담당 | **미작성** |
-| 9. 알림 | 6 | 커피챗·채팅·알림 담당 | 이 문서 9장 |
+| 4. 커피챗 | 10 | 차예은 (조상원이 함께 맡음) | 이 문서 8장 |
+| 5. 동문 찾기 | 5 | 조상원 | 이 문서 아래 |
+| 6. 커뮤니티 | 17 | 조상원 | 이 문서 아래 |
+| 7. 홈 | 2 | 조상원 | 이 문서 아래 |
+| 8. 채팅 | 14 | 차예은 | **미작성** |
+| 9. 알림 | 6 | 차예은 | 이 문서 9장 |
 
 커피챗·채팅·알림 30개는 노션 표에 행만 있고, 확인한 페이지(커피챗 신청, 첫 메시지 요청, 알림 목록)의 본문은 빈 템플릿이었다.
 
@@ -102,60 +102,60 @@
 | 3. 관리자 | `POST` | `/admin/signups/{userId}/reject` | 가입 반려 | 이시형 |
 | 3. 관리자 | `POST` | `/admin/signups/approve-batch` | 가입 일괄 승인 | 이시형 |
 | 3. 관리자 | `PATCH` | `/admin/signups/{userId}/signup-info` | 가입 정보 수정 (이름·기수) | 이시형 |
-| 4. 커피챗 | `GET` | `/coffee-chats` | 받은·보낸 신청 보기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats` | 커피챗 신청 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `GET` | `/coffee-chats/{coffeeChatId}` | 신청 내용과 가능한 버튼 보기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/accept` | 신청 수락하기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/reject` | 신청 거절하기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/withdraw` | 상대가 답하기 전 신청 거두기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `PUT` | `/coffee-chats/{coffeeChatId}/schedule` | 만날 시간·장소 정하기 또는 바꾸기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/cancel` | 수락한 커피챗 취소하기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/complete` | 만남 완료 기록하기 | 커피챗·채팅·알림 담당 |
-| 4. 커피챗 | `DELETE` | `/coffee-chats/{coffeeChatId}/members/me` | 함께 신청한 커피챗에서 빠지기 | 커피챗·채팅·알림 담당 |
-| 5. 동문 찾기 | `GET` | `/users` | 동문 목록 조회 (검색·필터) | 동문·커뮤니티·홈 담당 |
-| 5. 동문 찾기 | `GET` | `/users/{userId}` | 동문 프로필 상세 조회 (= PROFILE-03) | 동문·커뮤니티·홈 담당 |
-| 5. 동문 찾기 | `GET` | `/users/me/bookmarks` | 관심 동문 목록 조회 | 동문·커뮤니티·홈 담당 |
-| 5. 동문 찾기 | `PUT` | `/users/{userId}/bookmark` | 관심 동문 저장 | 동문·커뮤니티·홈 담당 |
-| 5. 동문 찾기 | `DELETE` | `/users/{userId}/bookmark` | 관심 동문 저장 취소 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts` | 게시글 목록·검색·정렬 (카테고리 여러 개 가능) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts` | 게시글 작성 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/category-counts` | 카테고리별 게시글 수 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/popular-keywords` | 인기 키워드 조회 (미구현) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/{postId}` | 게시글 상세 조회 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `PATCH` | `/posts/{postId}` | 게시글 수정 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `DELETE` | `/posts/{postId}` | 게시글 삭제 (번개 글이면 번개 취소, 참여자 알림) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `PUT` | `/posts/{postId}/like` | 게시글 좋아요 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/like` | 게시글 좋아요 취소 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `GET` | `/posts/{postId}/comments` | 댓글 목록 조회 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/comments` | 댓글 작성 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/comments/{commentId}` | 댓글 삭제 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `PUT` | `/posts/{postId}/recruit/members/me` | 커피챗 모집 참여 (참여 취소 `DELETE`는 결정 후 추가) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 주소 발급 | 동문·커뮤니티·홈 담당 |
-| 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 동문·커뮤니티·홈 담당 |
-| 7. 홈 | `POST` | `/home/coffee-guide/dismiss` | 첫 커피챗 가이드 카드 닫기 | 동문·커뮤니티·홈 담당 |
-| 8. 채팅 | `POST` | `/chat-requests` | 첫 메시지 요청 보내기 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `GET` | `/chat-requests` | 받은 요청함 열기 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `GET` | `/chat-requests/{roomId}` | 첫 메시지 내용 보기 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `POST` | `/chat-requests/{roomId}/accept` | 메시지 요청 수락 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `POST` | `/chat-requests/{roomId}/decline` | 메시지 요청 거절 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `PATCH` | `/chat-requests/{roomId}/messages/{messageId}` | 수락 전 첫 메시지 수정 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `DELETE` | `/chat-requests/{roomId}/messages/{messageId}` | 수락 전 첫 메시지 삭제·요청 취소 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `GET` | `/chat-rooms` | 내 채팅방 목록 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `GET` | `/chat-rooms/{roomId}` | 채팅방 정보와 참여자 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `GET` | `/chat-rooms/{roomId}/messages` | 이전 메시지·끊긴 동안 온 메시지 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `POST` | `/chat-rooms/{roomId}/messages` | 일반 메시지 보내기 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `PUT` | `/chat-rooms/{roomId}/read` | 읽음 처리 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/preferences` | 방 고정·알림 끄기 | 커피챗·채팅·알림 담당 |
-| 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/members/me` | 방 나가기·종료된 요청 숨기기 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `GET` | `/notifications` | 최근 알림 20개 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `PUT` | `/notifications/{notificationId}/read` | 알림 하나 읽음 처리 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `PUT` | `/notifications/read-all` | 알림 모두 읽음 처리 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `GET` | `/me/notification-settings` | 이메일 알림 설정 조회 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `PATCH` | `/me/notification-settings` | 이메일 알림 종류별 켜기·끄기 | 커피챗·채팅·알림 담당 |
-| 9. 알림 | `GET` | `/email-notifications/unsubscribe` | 메일 링크로 해당 종류 수신 거부 | 커피챗·채팅·알림 담당 |
+| 4. 커피챗 | `GET` | `/coffee-chats` | 받은·보낸 신청 보기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats` | 커피챗 신청 | 차예은 |
+| 4. 커피챗 | `GET` | `/coffee-chats/{coffeeChatId}` | 신청 내용과 가능한 버튼 보기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/accept` | 신청 수락하기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/reject` | 신청 거절하기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/withdraw` | 상대가 답하기 전 신청 거두기 | 차예은 |
+| 4. 커피챗 | `PUT` | `/coffee-chats/{coffeeChatId}/schedule` | 만날 시간·장소 정하기 또는 바꾸기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/cancel` | 수락한 커피챗 취소하기 | 차예은 |
+| 4. 커피챗 | `POST` | `/coffee-chats/{coffeeChatId}/complete` | 만남 완료 기록하기 | 차예은 |
+| 4. 커피챗 | `DELETE` | `/coffee-chats/{coffeeChatId}/members/me` | 함께 신청한 커피챗에서 빠지기 | 차예은 |
+| 5. 동문 찾기 | `GET` | `/users` | 동문 목록 조회 (검색·필터) | 조상원 |
+| 5. 동문 찾기 | `GET` | `/users/{userId}` | 동문 프로필 상세 조회 (= PROFILE-03) | 조상원 |
+| 5. 동문 찾기 | `GET` | `/users/me/bookmarks` | 관심 동문 목록 조회 | 조상원 |
+| 5. 동문 찾기 | `PUT` | `/users/{userId}/bookmark` | 관심 동문 저장 | 조상원 |
+| 5. 동문 찾기 | `DELETE` | `/users/{userId}/bookmark` | 관심 동문 저장 취소 | 조상원 |
+| 6. 커뮤니티 | `GET` | `/posts` | 게시글 목록·검색·정렬 (카테고리 여러 개 가능) | 조상원 |
+| 6. 커뮤니티 | `POST` | `/posts` | 게시글 작성 | 조상원 |
+| 6. 커뮤니티 | `GET` | `/posts/category-counts` | 카테고리별 게시글 수 | 조상원 |
+| 6. 커뮤니티 | `GET` | `/posts/popular-keywords` | 인기 키워드 조회 (미구현) | 조상원 |
+| 6. 커뮤니티 | `GET` | `/posts/{postId}` | 게시글 상세 조회 | 조상원 |
+| 6. 커뮤니티 | `PATCH` | `/posts/{postId}` | 게시글 수정 | 조상원 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}` | 게시글 삭제 (번개 글이면 번개 취소, 참여자 알림) | 조상원 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/like` | 게시글 좋아요 | 조상원 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/like` | 게시글 좋아요 취소 | 조상원 |
+| 6. 커뮤니티 | `GET` | `/posts/{postId}/comments` | 댓글 목록 조회 | 조상원 |
+| 6. 커뮤니티 | `POST` | `/posts/{postId}/comments` | 댓글 작성 | 조상원 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/comments/{commentId}` | 댓글 삭제 | 조상원 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 | 조상원 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 조상원 |
+| 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 조상원 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/recruit/members/me` | 커피챗 모집 참여 (참여 취소 `DELETE`는 결정 후 추가) | 조상원 |
+| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 주소 발급 | 조상원 |
+| 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 조상원 |
+| 7. 홈 | `POST` | `/home/coffee-guide/dismiss` | 첫 커피챗 가이드 카드 닫기 | 조상원 |
+| 8. 채팅 | `POST` | `/chat-requests` | 첫 메시지 요청 보내기 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-requests` | 받은 요청함 열기 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-requests/{roomId}` | 첫 메시지 내용 보기 | 차예은 |
+| 8. 채팅 | `POST` | `/chat-requests/{roomId}/accept` | 메시지 요청 수락 | 차예은 |
+| 8. 채팅 | `POST` | `/chat-requests/{roomId}/decline` | 메시지 요청 거절 | 차예은 |
+| 8. 채팅 | `PATCH` | `/chat-requests/{roomId}/messages/{messageId}` | 수락 전 첫 메시지 수정 | 차예은 |
+| 8. 채팅 | `DELETE` | `/chat-requests/{roomId}/messages/{messageId}` | 수락 전 첫 메시지 삭제·요청 취소 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-rooms` | 내 채팅방 목록 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-rooms/{roomId}` | 채팅방 정보와 참여자 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-rooms/{roomId}/messages` | 이전 메시지·끊긴 동안 온 메시지 | 차예은 |
+| 8. 채팅 | `POST` | `/chat-rooms/{roomId}/messages` | 일반 메시지 보내기 | 차예은 |
+| 8. 채팅 | `PUT` | `/chat-rooms/{roomId}/read` | 읽음 처리 | 차예은 |
+| 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/preferences` | 방 고정·알림 끄기 | 차예은 |
+| 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/members/me` | 방 나가기·종료된 요청 숨기기 | 차예은 |
+| 9. 알림 | `GET` | `/notifications` | 최근 알림 20개 | 차예은 |
+| 9. 알림 | `PUT` | `/notifications/{notificationId}/read` | 알림 하나 읽음 처리 | 차예은 |
+| 9. 알림 | `PUT` | `/notifications/read-all` | 알림 모두 읽음 처리 | 차예은 |
+| 9. 알림 | `GET` | `/me/notification-settings` | 이메일 알림 설정 조회 | 차예은 |
+| 9. 알림 | `PATCH` | `/me/notification-settings` | 이메일 알림 종류별 켜기·끄기 | 차예은 |
+| 9. 알림 | `GET` | `/email-notifications/unsubscribe` | 메일 링크로 해당 종류 수신 거부 | 차예은 |
 
 ### 노션 표와 이 문서를 맞추며 찾은 것
 
@@ -895,7 +895,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 ## 5. 동문 찾기
 
-담당: 동문·커뮤니티·홈. 노션 초안(3-1~3-5)을 프론트 화면에 맞춰 구현한 기준이야. 모두 승인 회원(`APPROVED`)만 쓸 수 있어.
+담당: 조상원(동문·커뮤니티·홈). 노션 초안(3-1~3-5)을 프론트 화면에 맞춰 구현한 기준이야. 모두 승인 회원(`APPROVED`)만 쓸 수 있어.
 
 > 5~7장에서 **(구현 예정)**이 붙은 필드·쿼리·API는 프론트 화면에 필요해서 형식을 먼저 정해 둔 거야. 서버에는 아직 없으니 FE는 구현 완료 표시가 바뀐 뒤 써 줘.
 
@@ -1027,7 +1027,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 ## 6. 커뮤니티
 
-담당: 동문·커뮤니티·홈. 노션 초안(6-1~6-15)을 프론트 화면에 맞춰 바꾼 기준이야. 모두 승인 회원만 쓸 수 있어.
+담당: 조상원(동문·커뮤니티·홈). 노션 초안(6-1~6-15)을 프론트 화면에 맞춰 바꾼 기준이야. 모두 승인 회원만 쓸 수 있어.
 
 | ID | 기능 | 메서드·경로 | 노션 |
 | --- | --- | --- | --- |
@@ -1412,7 +1412,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 ## 7. 홈
 
-담당: 동문·커뮤니티·홈. 커뮤니티 새 소식과 모집 중인 글은 POST-01로 받고, 커피챗 받기 카드는 PROFILE-12·14, 프로필 완성도는 FE가 계산해.
+담당: 조상원(동문·커뮤니티·홈). 커뮤니티 새 소식과 모집 중인 글은 POST-01로 받고, 커피챗 받기 카드는 PROFILE-12·14, 프로필 완성도는 FE가 계산해.
 
 | ID | 기능 | 메서드·경로 | 노션 |
 | --- | --- | --- | --- |
@@ -1464,7 +1464,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 ## 8. 커피챗
 
-담당: 커피챗·채팅·알림 (지금은 동문·커뮤니티·홈 담당이 함께 맡음). 노션 명세가 비어 있어서 PRD 4장·상태 흐름(0.2)과 프론트 화면(M-01·M-02, 신청·수락·거절·일정·취소 팝업)을 기준으로 정했어.
+담당: 차예은(커피챗·채팅·알림). 지금은 조상원이 함께 맡음. 노션 명세가 비어 있어서 PRD 4장·상태 흐름(0.2)과 프론트 화면(M-01·M-02, 신청·수락·거절·일정·취소 팝업)을 기준으로 정했어.
 
 | ID | 기능 | 메서드·경로 | PRD |
 | --- | --- | --- | --- |
