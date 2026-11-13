@@ -1,10 +1,14 @@
 package com.lionlink.backend.domain.chat.repository;
 
+import com.lionlink.backend.domain.chat.entity.ChatMessage;
 import com.lionlink.backend.domain.chat.entity.ChatRoomMember;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import jakarta.persistence.EntityManager;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -70,6 +74,36 @@ public class ChatQueryRepository {
 				.setParameter("userId", userId)
 				.setParameter("requested", ChatRoomStatus.REQUESTED)
 				.getSingleResult();
+	}
+
+	public Map<Long, ChatMessage> findLastMessages(Collection<Long> roomIds) {
+		if (roomIds.isEmpty()) {
+			return Map.of();
+		}
+		return entityManager.createQuery("""
+						select m from ChatMessage m
+						where m.id in (select max(latest.id) from ChatMessage latest where latest.room.id in :roomIds group by latest.room.id)
+						""", ChatMessage.class)
+				.setParameter("roomIds", roomIds)
+				.getResultStream()
+				.collect(Collectors.toMap(message -> message.getRoom().getId(), message -> message));
+	}
+
+	public Map<Long, Long> countUnreadByRoom(Long userId, Collection<Long> roomIds) {
+		if (roomIds.isEmpty()) {
+			return Map.of();
+		}
+		return entityManager.createQuery("""
+						select m.room.id, count(m) from ChatMessage m, ChatRoomMember rm
+						where rm.room = m.room and rm.userId = :userId and m.room.id in :roomIds
+						  and m.senderId <> :userId and m.deletedAt is null
+						  and m.id > coalesce(rm.lastReadMessageId, 0) and m.id > coalesce(rm.clearedMessageId, 0)
+						group by m.room.id
+						""", Object[].class)
+				.setParameter("userId", userId)
+				.setParameter("roomIds", roomIds)
+				.getResultStream()
+				.collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
 	}
 
 	private Slice<ChatRoomMember> slice(List<ChatRoomMember> rows, Pageable pageable) {

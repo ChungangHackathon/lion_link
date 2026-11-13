@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -85,13 +86,15 @@ public class ChatRoomService {
 		List<Long> meetupIds = mine.getContent().stream().map(member -> member.getRoom().getMeetupId()).filter(Objects::nonNull).toList();
 		Map<Long, String> titles = meetupIds.isEmpty() ? Map.of()
 				: postRepository.findAllById(meetupIds).stream().collect(Collectors.toMap(Post::getId, Post::getTitle));
+		Map<Long, ChatMessage> lastMessages = chatQueryRepository.findLastMessages(roomIds);
+		Map<Long, Long> unreadCounts = chatQueryRepository.countUnreadByRoom(userId, roomIds);
 
 		return SliceResponse.from(mine, member -> {
 			ChatRoom room = member.getRoom();
 			List<ChatRoomMember> members = membersByRoom.getOrDefault(room.getId(), List.of());
 			List<ChatUserResponse> others = others(userId, members, summaries);
-			ChatMessageResponse lastMessage = chatMessageRepository
-					.findFirstByRoomIdAndIdGreaterThanOrderByIdDesc(room.getId(), member.visibleFrom())
+			ChatMessageResponse lastMessage = Optional.ofNullable(lastMessages.get(room.getId()))
+					.filter(message -> message.getId() > member.visibleFrom())
 					.map(message -> ChatMessageResponse.of(message, chatMessageWriter.unreadCount(message, members)))
 					.orElse(null);
 			return new ChatRoomSummaryResponse(
@@ -106,7 +109,7 @@ public class ChatRoomService {
 					room.getMeetupId(),
 					room.isMeetupRoom() ? titles.get(room.getMeetupId()) : null,
 					lastMessage,
-					unreadCount(room.getId(), member, userId),
+					unreadCounts.getOrDefault(room.getId(), 0L),
 					member.isPinned(),
 					member.isMuted()
 			);
@@ -239,7 +242,7 @@ public class ChatRoomService {
 				members.stream().map(ChatRoomMember::getUserId).collect(Collectors.toSet()));
 		ChatRoomDetailResponse.CoffeeChat coffeeChat = room.getCoffeeChatId() == null ? null
 				: coffeeChatRepository.findById(room.getCoffeeChatId())
-						.map(chat -> new ChatRoomDetailResponse.CoffeeChat(chat.getId(), chat.getStatus(), chat.getScheduledAt()))
+						.map(ChatRoomDetailResponse.CoffeeChat::from)
 						.orElse(null);
 		return new ChatRoomDetailResponse(
 				room.getId(),
@@ -271,11 +274,6 @@ public class ChatRoomService {
 		return chatRoomMemberRepository.findByRoomIdAndUserId(roomId, userId)
 				.filter(ChatRoomMember::isActive)
 				.orElseThrow(() -> new BusinessException(ChatErrorCode.ROOM_NOT_FOUND));
-	}
-
-	private long unreadCount(Long roomId, ChatRoomMember member, Long userId) {
-		long readUpTo = Math.max(member.visibleFrom(), member.getLastReadMessageId() == null ? 0 : member.getLastReadMessageId());
-		return chatMessageRepository.countByRoomIdAndIdGreaterThanAndSenderIdNotAndDeletedAtIsNull(roomId, readUpTo, userId);
 	}
 
 	private List<ChatUserResponse> others(Long userId, List<ChatRoomMember> members, Map<Long, UserSummary> summaries) {

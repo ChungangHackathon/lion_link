@@ -14,8 +14,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 	@Query("select max(m.id) from ChatMessage m where m.room.id = :roomId")
 	Long findLastMessageId(Long roomId);
 
-	Optional<ChatMessage> findFirstByRoomIdAndIdGreaterThanOrderByIdDesc(Long roomId, Long visibleFrom);
-
 	Optional<ChatMessage> findFirstByRoomIdAndIdGreaterThanOrderByIdAsc(Long roomId, Long visibleFrom);
 
 	List<ChatMessage> findByRoomIdAndIdGreaterThanOrderByIdDesc(Long roomId, Long visibleFrom, Pageable pageable);
@@ -24,8 +22,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 			Pageable pageable);
 
 	List<ChatMessage> findByRoomIdAndIdGreaterThanOrderByIdAsc(Long roomId, Long after, Pageable pageable);
-
-	long countByRoomIdAndIdGreaterThanAndSenderIdNotAndDeletedAtIsNull(Long roomId, Long readUpTo, Long userId);
 
 	void deleteByRoomId(Long roomId);
 }
