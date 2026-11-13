@@ -37,4 +37,10 @@ public class CoffeePeriod {
 		this.startDate = startDate;
 		this.endDate = endDate;
 	}
+
+	/** PROFILE-14·15: 기간을 줄이거나 겹친 기간을 합칠 때 쓴다. */
+	public void changeRange(LocalDate startDate, LocalDate endDate) {
+		this.startDate = startDate;
+		this.endDate = endDate;
+	}
 }
