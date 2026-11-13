@@ -133,7 +133,7 @@
 | 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 동문·커뮤니티·홈 담당 |
 | 6. 커뮤니티 | `PUT` | `/posts/{postId}/recruit/members/me` | 커피챗 모집 참여 (참여 취소 `DELETE`는 결정 후 추가) | 동문·커뮤니티·홈 담당 |
-| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 URL 발급 (미구현) | 동문·커뮤니티·홈 담당 |
+| 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 주소 발급 | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 동문·커뮤니티·홈 담당 |
 | 7. 홈 | `POST` | `/home/coffee-guide/dismiss` | 첫 커피챗 가이드 카드 닫기 | 동문·커뮤니티·홈 담당 |
 | 8. 채팅 | `POST` | `/chat-requests` | 첫 메시지 요청 보내기 | 커피챗·채팅·알림 담당 |
@@ -163,7 +163,7 @@
 | --- | --- | --- |
 | 1 | `GET /users/{userId}`가 '2. 프로필'(PROFILE-03)과 '5. 동문 찾기' 두 행에 있다 | 동문 찾기(`AlumniController`)에 이미 구현돼 있으니 프로필 쪽 행은 "동문 찾기와 같음"으로 표시 |
 | 2 | 다른 영역 명세(홈 등)와 공용 코드(`CommonErrorCode`)는 승인 전 403을 `NOT_APPROVED`, 프로필 미완료를 `PROFILE_NOT_COMPLETED`로 쓴다 | **확정(2026-11-12)**: `NOT_APPROVED`로 통일. 이 문서의 `APPROVAL_PENDING`·`ACCOUNT_REJECTED`는 없앴다 |
-| 3 | 커뮤니티가 `POST /files`(업로드 URL 발급, 설계 제안 단계)를 쓴다 | 프로필 사진(PROFILE-05)도 같은 저장소·발급 방식을 쓸지 커뮤니티 담당과 맞춘다 (확정 필요 5번) |
+| 3 | 커뮤니티가 `POST /files`(업로드 주소 발급)를 쓴다 | **반영(2026-11-13)**: S3 업로드 주소 발급으로 구현(FILE-01). 프로필 사진(PROFILE-05)도 같은 API를 쓰면 된다 |
 | 4 | 커피챗·채팅·알림 상세 명세가 비어 있다 | 커피챗 신청(4.1)·수락은 프로필의 커피챗 설정(PROFILE-12~15)과 맞물린다. 담당자에게 작성 일정 확인 |
 | 5 | 실시간 채팅(5.3)의 WebSocket 연결·구독 경로, 커피챗 함께 신청 모집(4.11) API가 목록에 없다 | 채팅 담당 확인. 커피챗 함께 신청 모집은 모집 참여를 커뮤니티가, 모인 인원으로 신청을 커피챗 신청(`fromRecruitId`)이 맡는다 ('커뮤니티 확정 필요' 2번) |
 | 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | **반영(2026-11-12)**: PROFILE-03 형식으로 맞췄다. `COOLDOWN`만 재신청 제한 규칙이 정해진 뒤 추가 (ALUMNI-02 참고) |
@@ -1045,7 +1045,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | MEETUP-02 | 번개 초대 | `POST /posts/{postId}/meetup/invites` | 6-14 |
 | RECRUIT-01 | 커피챗 모집 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/recruit/members/me` | 신규 (4.11). 참여 취소는 결정 후 추가 |
 | - | 인기 키워드 | `GET /posts/popular-keywords` | 6-2, 미구현 |
-| - | 업로드 URL 발급 | `POST /files` | 6-10, 미구현 |
+| FILE-01 | 업로드 주소 발급 | `POST /files` | 6-10 |
 
 노션의 6-11 참여자 목록은 POST-04에 들어가서, 6-15 번개 취소는 POST-06이 대신해서 없앴어.
 
@@ -1090,7 +1090,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 ```
 
 - 커피챗 모집 글은 `recruit: { senior: { id, name, generation, isDeleted }, capacity, memberCount, deadline, status }`
-- `deadline`은 공모전·채용 글의 마감일(D-n 태그). `thumbnailUrl`은 첫 이미지인데 업로드 기능 전까지 `null`
+- `deadline`은 공모전·채용 글의 마감일(D-n 태그). `thumbnailUrl`은 첫 이미지(없으면 `null`), `hasFile`은 첨부파일이나 이미지가 있으면 `true`
 - 삭제된 글은 빠지고, `commentCount`는 삭제된 댓글을 빼고 세
 
 | 상태 | code | 언제 |
@@ -1128,6 +1128,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `recruit.seniorId` | number | O | 신청받을 사자. 본인 불가, 커피챗을 받고 여러 명 신청을 받는 사자만 |
 | `recruit.capacity` | number | O | 2\~5명(작성자 포함) |
 | `recruit.deadline` | date | O | 오늘 이후 |
+| `files` | object\[\] | X | FILE-01로 올린 파일 `{ type(IMAGE·ATTACHMENT), url, name, size }`. 이미지 5장, 첨부파일 3개까지. `url`은 내가 발급받은 `fileUrl`만 돼. 보낸 순서대로 저장해 |
 
 `201`에 `{ "id": 101, "category": "MEETUP", "createdAt": "..." }`를 돌려줘. 번개는 작성자와 함께하는 동문을, 커피챗 모집은 작성자를 참여자로 같이 저장해.
 
@@ -1139,6 +1140,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 400 | `INVALID_MEETUP_TIME` | 번개 일정이 1시간 이내이거나 14일 넘음 |
 | 400 | `INVALID_COMPANIONS` | 함께하는 동문에 본인·중복이 있거나 정원 초과 |
 | 400 | `INVALID_RECRUIT_SENIOR` | 신청받을 사자로 본인을 고름 |
+| 400 | `FILE_LIMIT_EXCEEDED` | 이미지 6장 이상, 첨부파일 4개 이상 |
+| 400 | `INVALID_FILE_URL` | 내가 FILE-01로 발급받지 않은 파일 주소('올린 파일을 다시 확인해 주세요.') |
 | 404 | `USER_NOT_FOUND` | 함께하는 동문이나 신청받을 사자가 없거나 승인 전·탈퇴 |
 | 409 | `GROUP_COFFEE_CHAT_NOT_ALLOWED` | 신청받을 사자가 커피챗을 안 받거나 1:1만 받음 |
 
@@ -1184,6 +1187,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 - 번개·커피챗 모집 글은 작성자 말고 참여자가 없을 때만 다른 카테고리로 바꿀 수 있어. 바꾸면 모집 정보(번개는 초대 기록까지)는 지워져
 - 일반 글을 번개·커피챗 모집으로 바꿀 때는 `meetup`(`meetAt` `place` `capacity`) 또는 `recruit`(`seniorId` `capacity` `deadline`)를 모두 보내야 해. POST-03처럼 검증하고 작성자가 첫 참여자가 돼
 - 마감일을 쓸 수 없는 카테고리로 바꾸면 `deadline`은 지워져
+- `files`를 보내면 파일 목록을 통째로 바꿔(남길 파일도 다시 보내). 안 보내면 그대로, 빈 배열이면 모두 지워
 - 번개: 시작되거나 취소된 번개는 수정할 수 없고, 정원은 지금 참여 인원보다 줄일 수 없어
 - 커피챗 모집: 커피챗을 신청한 뒤(`APPLIED`)에는 모집 정보를 못 바꾸고, 참여자가 있으면 신청받을 사자를 못 바꿔
 
@@ -1344,6 +1348,44 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | 409 | `RECRUIT_FULL` | 정원 마감 |
 | 409 | `OPEN_COFFEE_CHAT_EXISTS` | 그 사자와 진행 중인 커피챗이 있음 |
 
+### FILE-01 업로드 주소 발급
+
+`POST /files` · 승인 회원
+
+이미지·첨부파일은 서버를 거치지 않고 S3에 바로 올려. 순서는 이래.
+
+1. 이 API로 업로드 주소를 받아
+2. `uploadUrl`에 파일을 `PUT`으로 올려. 헤더 `Content-Type`은 응답의 `contentType` 그대로 보내고, 파일 크기는 요청한 `size`와 같아야 해(다르면 S3가 거절해)
+3. 글을 쓰거나 고칠 때 `fileUrl`을 `files[].url`로 보내
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `type` | string | O | `IMAGE` 이미지, `ATTACHMENT` 첨부파일 |
+| `fileName` | string | O | 원래 파일 이름. 확장자로 형식을 확인해 |
+| `size` | number | O | 바이트. 이미지 10MB, 첨부파일 20MB 이하 |
+
+| 종류 | 확장자 |
+| --- | --- |
+| `IMAGE` | jpg, jpeg, png, webp |
+| `ATTACHMENT` | pdf, hwp, docx, pptx, xlsx, zip |
+
+```json
+{
+  "uploadUrl": "https://{버킷}.s3.ap-northeast-2.amazonaws.com/uploads/12/3f2a....png?X-Amz-Algorithm=...",
+  "fileUrl": "https://{버킷}.s3.ap-northeast-2.amazonaws.com/uploads/12/3f2a....png",
+  "contentType": "image/png",
+  "expiresAt": "2026-11-13T17:40:00+09:00"
+}
+```
+
+`uploadUrl`은 10분 동안만 쓸 수 있어. 올린 파일은 공개 읽기라서 `fileUrl`을 그대로 `<img src>`에 쓰면 돼.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 필수값 누락, 0바이트 |
+| 400 | `INVALID_FILE_TYPE` | 종류에 맞지 않는 확장자('지원하지 않는 파일 형식이에요.') |
+| 400 | `FILE_TOO_LARGE` | 크기 초과('업로드할 수 있는 파일 크기를 넘었어요.') |
+
 ### 커뮤니티가 저장하는 알림
 
 알림 담당 테이블(`notifications`)에 커뮤니티 탭·`POST` 대상으로 저장해. 알림 조회 API는 알림 담당 범위야.
@@ -1365,7 +1407,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | 1 | 익명 허용 범위 | 글은 `FREE`만, 댓글은 익명 글 작성자만 자동 익명. PRD(6.3·6.6)는 번개·커피챗 모집 빼고 모두 익명 가능 | 기획, FE |
 | 2 | 커피챗 함께 신청 모집(4.11) | RECRUIT-01 참여 구현. 모인 인원으로 신청(`APPLIED`로 변경, `coffee_chat_id` 기록)은 커피챗 신청이 맡는다. 참여 취소를 만들지, 신청 후 커피챗이 거절·만료돼도 '신청 완료'로 남길지 정해야 한다 | 커피챗 담당, 기획 |
 | 3 | 인기 키워드(6-2) | 미구현. PRD에 없음 | 기획, FE |
-| 4 | 업로드 URL 발급(6-10) | 미구현. 프로필 사진과 같은 저장소를 쓸지 정해야 한다 | BE |
+| 4 | 업로드 주소 발급(6-10) | **반영**: FILE-01. 글을 지우거나 파일을 바꿀 때 S3의 이전 파일은 아직 지우지 않는다 | BE |
 | 5 | 탈퇴(AUTH-08)·여러 명 커피챗 끄기(PROFILE-13) 때 모집글 처리 | 미구현. 회원·프로필 쪽에서 이벤트를 보내면 커뮤니티가 모집글 종료·참여자 정리·알림을 맡는다 | 계정·프로필 담당 |
 
 ## 7. 홈
