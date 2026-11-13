@@ -10,4 +10,6 @@ public interface PostFileRepository extends JpaRepository<PostFile, Long> {
 	List<PostFile> findByPostIdInOrderBySortOrderAscIdAsc(Collection<Long> postIds);
 
 	List<PostFile> findByPostIdOrderBySortOrderAscIdAsc(Long postId);
+
+	void deleteByPostId(Long postId);
 }

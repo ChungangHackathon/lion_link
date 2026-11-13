@@ -10,17 +10,23 @@ import com.lionlink.backend.domain.community.meetup.repository.MeetupInviteRepos
 import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupRepository;
 import com.lionlink.backend.domain.community.post.dto.request.PostCreateRequest;
+import com.lionlink.backend.domain.community.post.dto.request.PostFileRequest;
 import com.lionlink.backend.domain.community.post.dto.request.PostUpdateRequest;
 import com.lionlink.backend.domain.community.post.dto.response.PostCreateResponse;
 import com.lionlink.backend.domain.community.post.dto.response.PostUpdateResponse;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
+import com.lionlink.backend.domain.community.post.entity.PostFile;
+import com.lionlink.backend.domain.community.post.entity.PostFileType;
+import com.lionlink.backend.domain.community.post.repository.PostFileRepository;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
 import com.lionlink.backend.domain.community.recruit.entity.CoffeeChatRecruit;
 import com.lionlink.backend.domain.community.recruit.entity.RecruitMember;
 import com.lionlink.backend.domain.community.recruit.entity.RecruitStatus;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
+import com.lionlink.backend.domain.file.exception.FileErrorCode;
+import com.lionlink.backend.domain.file.service.FileUploadService;
 import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.user.entity.UserRole;
 import com.lionlink.backend.domain.user.entity.UserStatus;
@@ -31,6 +37,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -41,7 +48,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class PostService {
 
+	private static final int MAX_IMAGES = 5;
+	private static final int MAX_ATTACHMENTS = 3;
+
 	private final PostRepository postRepository;
+	private final PostFileRepository postFileRepository;
 	private final MeetupRepository meetupRepository;
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final MeetupInviteRepository meetupInviteRepository;
@@ -49,6 +60,7 @@ public class PostService {
 	private final RecruitMemberRepository recruitMemberRepository;
 	private final UserRepository userRepository;
 	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
+	private final FileUploadService fileUploadService;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public PostCreateResponse create(Long userId, PostCreateRequest request) {
@@ -70,6 +82,7 @@ public class PostService {
 		if (category == PostCategory.RECRUIT) {
 			validateSenior(userId, request.recruit().seniorId());
 		}
+		validateFiles(userId, request.files());
 
 		Post post = postRepository.save(Post.builder()
 				.authorId(userId)
@@ -89,6 +102,7 @@ public class PostService {
 			PostCreateRequest.RecruitRequest recruit = request.recruit();
 			createRecruit(post, userId, recruit.seniorId(), recruit.capacity(), recruit.deadline());
 		}
+		saveFiles(post, request.files());
 		return PostCreateResponse.from(post);
 	}
 
@@ -107,6 +121,7 @@ public class PostService {
 				|| (request.recruit() != null && category != PostCategory.RECRUIT)) {
 			throw new BusinessException(CommunityErrorCode.INVALID_CATEGORY_DETAIL);
 		}
+		validateFiles(userId, request.files());
 
 		if (category != post.getCategory()) {
 			changeCategory(userId, post, category, request);
@@ -114,6 +129,11 @@ public class PostService {
 			updateMeetup(post, request.meetup());
 		} else if (category == PostCategory.RECRUIT && request.recruit() != null) {
 			updateRecruit(userId, post, request.recruit());
+		}
+
+		if (request.files() != null) {
+			postFileRepository.deleteByPostId(post.getId());
+			saveFiles(post, request.files());
 		}
 
 		LocalDate deadline = category.allowsDeadline()
@@ -300,6 +320,35 @@ public class PostService {
 				Objects.requireNonNullElse(request.capacity(), recruit.getCapacity()),
 				Objects.requireNonNullElse(request.deadline(), recruit.getDeadline())
 		);
+	}
+
+	private void validateFiles(Long userId, List<PostFileRequest> files) {
+		if (files == null) {
+			return;
+		}
+		long images = files.stream().filter(file -> file.type() == PostFileType.IMAGE).count();
+		if (images > MAX_IMAGES || files.size() - images > MAX_ATTACHMENTS) {
+			throw new BusinessException(CommunityErrorCode.FILE_LIMIT_EXCEEDED);
+		}
+		if (files.stream().anyMatch(file -> !fileUploadService.isUploadedBy(userId, file.url()))) {
+			throw new BusinessException(FileErrorCode.INVALID_FILE_URL);
+		}
+	}
+
+	private void saveFiles(Post post, List<PostFileRequest> files) {
+		if (files == null || files.isEmpty()) {
+			return;
+		}
+		postFileRepository.saveAll(IntStream.range(0, files.size())
+				.mapToObj(index -> PostFile.builder()
+						.post(post)
+						.type(files.get(index).type())
+						.url(files.get(index).url())
+						.name(files.get(index).name().trim())
+						.size(files.get(index).size())
+						.sortOrder(index)
+						.build())
+				.toList());
 	}
 
 	private void validateMeetAt(LocalDateTime meetAt) {

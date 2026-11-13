@@ -37,8 +37,7 @@ public enum CommunityErrorCode implements ErrorCode {
 	HOST_CANNOT_LEAVE(HttpStatus.FORBIDDEN, "모임 작성자는 참여 취소 대신 모임 취소를 이용해 주세요."),
 
 	KEYWORD_FETCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "인기 키워드를 불러오지 못했어요."),
-	INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 파일 형식이에요."),
-	FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "업로드 가능한 파일 크기를 초과했어요.");
+	FILE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "이미지는 5장, 첨부파일은 3개까지 올릴 수 있어요.");
 
 	private final HttpStatus status;
 	private final String message;

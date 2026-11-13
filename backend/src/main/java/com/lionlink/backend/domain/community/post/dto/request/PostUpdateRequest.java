@@ -33,7 +33,10 @@ public record PostUpdateRequest(
 		MeetupRequest meetup,
 
 		@Valid
-		RecruitRequest recruit
+		RecruitRequest recruit,
+
+		@Size(max = 8, message = "파일은 이미지 5장, 첨부파일 3개까지 올릴 수 있어요.")
+		List<@Valid PostFileRequest> files
 ) {
 
 	public record MeetupRequest(
