@@ -39,7 +39,6 @@ import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -175,9 +174,9 @@ public class AlumniDetailService {
 			return new Chat(ChatStatus.REQUESTED, null);
 		}
 		if (room.getStatus() == ChatRoomStatus.DECLINED && userId.equals(room.getRequestedBy()) && room.getDeclinedAt() != null) {
-			LocalDateTime availableAt = room.getDeclinedAt().plusDays(CHAT_REQUEST_WAIT_DAYS);
-			if (availableAt.isAfter(LocalDateTime.now())) {
-				return new Chat(ChatStatus.NONE, availableAt.toLocalDate());
+			LocalDate availableDate = room.getDeclinedAt().toLocalDate().plusDays(CHAT_REQUEST_WAIT_DAYS);
+			if (availableDate.isAfter(LocalDate.now())) {
+				return new Chat(ChatStatus.NONE, availableDate);
 			}
 		}
 		return new Chat(ChatStatus.NONE, null);

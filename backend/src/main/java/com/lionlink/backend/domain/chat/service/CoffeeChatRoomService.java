@@ -1,12 +1,9 @@
 package com.lionlink.backend.domain.chat.service;
 
-import com.lionlink.backend.domain.chat.entity.ChatMessage;
-import com.lionlink.backend.domain.chat.entity.ChatMessageType;
 import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomMember;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.chat.entity.ChatRoomType;
-import com.lionlink.backend.domain.chat.repository.ChatMessageRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomMemberRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
@@ -24,7 +21,7 @@ public class CoffeeChatRoomService {
 
 	private final ChatRoomRepository chatRoomRepository;
 	private final ChatRoomMemberRepository chatRoomMemberRepository;
-	private final ChatMessageRepository chatMessageRepository;
+	private final ChatMessageWriter chatMessageWriter;
 
 	public Long open(CoffeeChat coffeeChat, List<Long> memberIds, LocalDateTime now) {
 		ChatRoom room = memberIds.isEmpty() ? directRoom(coffeeChat) : groupRoom();
@@ -36,14 +33,7 @@ public class CoffeeChatRoomService {
 	}
 
 	public void postSystemMessage(Long coffeeChatId, String content, LocalDateTime now) {
-		chatRoomRepository.findByCoffeeChatId(coffeeChatId).ifPresent(room -> {
-			chatMessageRepository.save(ChatMessage.builder()
-					.room(room)
-					.type(ChatMessageType.SYSTEM)
-					.content(content)
-					.build());
-			room.touch(now);
-		});
+		chatRoomRepository.findByCoffeeChatId(coffeeChatId).ifPresent(room -> chatMessageWriter.writeSystem(room, content, now));
 	}
 
 	public void leave(Long coffeeChatId, Long userId, LocalDateTime now) {
