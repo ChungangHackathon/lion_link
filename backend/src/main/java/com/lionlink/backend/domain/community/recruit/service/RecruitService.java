@@ -61,8 +61,7 @@ public class RecruitService {
 		}
 
 		recruitMemberRepository.save(RecruitMember.builder().recruit(recruit).userId(userId).build());
-		String memberName = userSummaryReader.getSummary(userId).map(UserSummary::name).orElse("동문");
-		eventPublisher.publishEvent(new RecruitJoinedEvent(postId, post.getTitle(), post.getAuthorId(), memberName));
+		eventPublisher.publishEvent(new RecruitJoinedEvent(postId, post.getTitle(), post.getAuthorId(), userId));
 		return participation(post, recruit, userId, today);
 	}
 

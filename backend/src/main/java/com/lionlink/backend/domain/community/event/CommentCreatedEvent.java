@@ -1,4 +1,4 @@
 package com.lionlink.backend.domain.community.event;
 
-public record CommentCreatedEvent(Long postId, String title, Long postAuthorId, String commenterName) {
+public record CommentCreatedEvent(Long postId, String title, Long postAuthorId, Long commenterId) {
 }

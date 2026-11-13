@@ -55,8 +55,8 @@ public class CommentService {
 				.build());
 		UserSummary author = userSummaryReader.getSummary(userId).orElse(UserSummary.withdrawn(userId));
 		if (!post.isWrittenBy(userId)) {
-			String commenterName = comment.isAnonymous() ? "익명" : author.name();
-			eventPublisher.publishEvent(new CommentCreatedEvent(postId, post.getTitle(), post.getAuthorId(), commenterName));
+			Long commenterId = comment.isAnonymous() ? null : userId;
+			eventPublisher.publishEvent(new CommentCreatedEvent(postId, post.getTitle(), post.getAuthorId(), commenterId));
 		}
 		return CommentResponse.of(comment, postId, author, userId);
 	}

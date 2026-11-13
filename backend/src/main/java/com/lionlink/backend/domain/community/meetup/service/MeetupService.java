@@ -103,8 +103,7 @@ public class MeetupService {
 				.map(inviteeId -> MeetupInvite.builder().meetup(meetup).inviterId(userId).inviteeId(inviteeId).build())
 				.toList());
 		if (!inviteeIds.isEmpty()) {
-			String hostName = userSummaryReader.getSummary(userId).map(UserSummary::name).orElse("동문");
-			eventPublisher.publishEvent(new MeetupInvitedEvent(postId, post.getTitle(), hostName, inviteeIds));
+			eventPublisher.publishEvent(new MeetupInvitedEvent(postId, post.getTitle(), userId, inviteeIds));
 		}
 		List<Long> skipped = requested.stream().filter(id -> !inviteeIds.contains(id)).toList();
 		return new MeetupInviteResponse(inviteeIds.size(), skipped);

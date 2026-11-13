@@ -77,7 +77,8 @@ class RecruitServiceTest {
 		assertThat(notification.getTab()).isEqualTo(NotificationTab.COMMUNITY);
 		assertThat(notification.getTargetType()).isEqualTo(NotificationTargetType.POST);
 		assertThat(notification.getTargetId()).isEqualTo(postId);
-		assertThat(notification.getMessage()).isEqualTo("김사자님이 내 모집글에 참여했어요. 함께 커피챗 신청해요");
+		assertThat(notification.getActorId()).isEqualTo(kim);
+		assertThat(notification.getMessage()).isEqualTo("님이 내 모집글에 참여했어요. 함께 커피챗 신청해요");
 	}
 
 	@Test

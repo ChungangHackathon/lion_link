@@ -83,7 +83,8 @@ class CommentServiceTest {
 		assertThat(notification.getTab()).isEqualTo(NotificationTab.COMMUNITY);
 		assertThat(notification.getTargetType()).isEqualTo(NotificationTargetType.POST);
 		assertThat(notification.getTargetId()).isEqualTo(postId);
-		assertThat(notification.getMessage()).isEqualTo("김사자님이 내 글에 댓글을 남겼어요. 자유 글");
+		assertThat(notification.getActorId()).isEqualTo(kim);
+		assertThat(notification.getMessage()).isEqualTo("님이 내 글에 댓글을 남겼어요. 자유 글");
 	}
 
 	@Test
@@ -103,8 +104,8 @@ class CommentServiceTest {
 
 		commentService.create(kim, anonymousPostId, request("힘내세요"));
 
-		assertThat(commentNotifications()).extracting(Notification::getUserId, Notification::getMessage)
-				.containsExactly(tuple(me, "김사자님이 내 글에 댓글을 남겼어요. 익명 고민"));
+		assertThat(commentNotifications()).extracting(Notification::getUserId, Notification::getActorId, Notification::getMessage)
+				.containsExactly(tuple(me, kim, "님이 내 글에 댓글을 남겼어요. 익명 고민"));
 	}
 
 	@Test
