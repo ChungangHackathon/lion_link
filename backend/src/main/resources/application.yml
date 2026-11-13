@@ -27,3 +27,10 @@ app:
     frontend-url: ${FRONTEND_URL:http://localhost:3000} # 로그인 후 돌아갈 프론트 주소 (CORS 허용 주소)
     cookie-secure: ${COOKIE_SECURE:false} # HTTPS 배포에서는 true
     cookie-same-site: ${COOKIE_SAME_SITE:Lax} # 프론트·백엔드 도메인이 다르면 None (cookie-secure: true 필요)
+  storage:
+    bucket: ${S3_BUCKET:lionlink-uploads}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    endpoint: ${S3_ENDPOINT:}
+    public-url: ${S3_PUBLIC_URL:}
