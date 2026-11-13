@@ -15,6 +15,7 @@ import com.lionlink.backend.domain.profile.coffee.dto.request.CoffeeSettingUpdat
 import com.lionlink.backend.domain.profile.coffee.dto.request.CoffeeSwitchRequest.RestFor;
 import com.lionlink.backend.domain.profile.coffee.dto.request.CoffeeSwitchRequest;
 import com.lionlink.backend.domain.profile.coffee.dto.response.CoffeeSettingResponse;
+import com.lionlink.backend.domain.profile.coffee.event.GroupCoffeeChatDisabledEvent;
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
 import com.lionlink.backend.domain.profile.section.service.SectionItemSupport;
 import com.lionlink.backend.domain.user.repository.UserRepository;
@@ -26,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,7 @@ public class CoffeeSettingService {
 	private final CoffeePeriodRepository coffeePeriodRepository;
 	private final CoffeePeriodService coffeePeriodService;
 	private final SectionItemSupport support;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/** PROFILE-12: 지난 기간을 뺀 설정과 오늘 기준 상태. */
 	public CoffeeSettingResponse get(Long userId) {
@@ -59,12 +62,16 @@ public class CoffeeSettingService {
 		if (request.defaultMode() != setting.getDefaultMode()) {
 			changeDefaultMode(setting, request.defaultMode(), request.confirmClearPeriods(), today);
 		}
+		boolean acceptedGroup = setting.isAcceptGroup();
 		setting.update(
 				request.acceptGroup(),
 				request.topics() == null ? List.of() : request.topics().stream().map(CoffeeTopic::name).toList(),
 				List.copyOf(request.modes()),
 				toSlots(request.availableSlots()),
 				blankToNull(request.preferredArea()));
+		if (acceptedGroup && !setting.isAcceptGroup()) {
+			eventPublisher.publishEvent(new GroupCoffeeChatDisabledEvent(userId));
+		}
 		return toResponse(setting, userId, today);
 	}
 
