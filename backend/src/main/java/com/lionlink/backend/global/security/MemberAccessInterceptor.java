@@ -31,13 +31,19 @@ public class MemberAccessInterceptor implements HandlerInterceptor {
 
 		MemberAccess access = memberAccessReader.find(userId.get())
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
-		if (!access.approved()) {
+		if (!access.approved() && !(allowsPending(handlerMethod) && !access.rejected())) {
 			throw new BusinessException(CommonErrorCode.NOT_APPROVED);
 		}
 		if (requiresCompletedProfile(handlerMethod) && !access.profileCompleted()) {
 			throw new BusinessException(CommonErrorCode.PROFILE_NOT_COMPLETED);
 		}
 		return true;
+	}
+
+	/** 승인 대기 회원을 허용하는 API인지. 반려 회원은 이 값과 상관없이 호출 전에 막힌다. */
+	private boolean allowsPending(HandlerMethod handlerMethod) {
+		return handlerMethod.hasMethodAnnotation(AllowPendingMember.class)
+				|| handlerMethod.getBeanType().isAnnotationPresent(AllowPendingMember.class);
 	}
 
 	private boolean requiresCompletedProfile(HandlerMethod handlerMethod) {
