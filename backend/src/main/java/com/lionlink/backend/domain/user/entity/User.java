@@ -107,6 +107,11 @@ public class User extends BaseTimeEntity {
 		this.reappliedAt = LocalDateTime.now();
 	}
 
+	/** PROFILE-01: 기본 정보 입력을 마쳤다. 되돌리지 않는다. */
+	public void completeProfile() {
+		this.profileCompleted = true;
+	}
+
 	public void dismissGuide() {
 		if (guideDismissedAt == null) {
 			this.guideDismissedAt = LocalDateTime.now();
