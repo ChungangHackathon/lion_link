@@ -96,6 +96,15 @@ public abstract class AuthIntegrationTest {
 		return signup(sub, "김사자", 13);
 	}
 
+	/** PROFILE-01 호출. 본문은 작은따옴표 JSON. */
+	protected org.springframework.test.web.servlet.ResultActions onboard(Session session, String body)
+			throws Exception {
+		return mockMvc.perform(post("/api/v1/me/profile/onboarding")
+				.header(org.springframework.http.HttpHeaders.AUTHORIZATION, bearer(session))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json(body)));
+	}
+
 	protected String bearer(Session session) {
 		return "Bearer " + session.accessToken();
 	}
