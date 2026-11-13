@@ -1,7 +1,23 @@
 package com.lionlink.backend.domain.admin.service;
 
+import com.lionlink.backend.domain.admin.dto.request.AdminSignupInfoRequest;
+import com.lionlink.backend.domain.admin.dto.request.RejectReasonType;
+import com.lionlink.backend.domain.admin.dto.request.RejectRequest;
+import com.lionlink.backend.domain.admin.dto.response.AdminSignupInfoResponse;
+import com.lionlink.backend.domain.admin.dto.response.ApproveBatchResponse;
+import com.lionlink.backend.domain.admin.dto.response.ApproveResponse;
 import com.lionlink.backend.domain.admin.dto.response.PendingCountResponse;
+import com.lionlink.backend.domain.admin.dto.response.RejectResponse;
 import com.lionlink.backend.domain.admin.dto.response.SignupListItemResponse;
+import com.lionlink.backend.domain.admin.event.SignupApprovedEvent;
+import com.lionlink.backend.domain.admin.exception.AdminErrorCode;
+import com.lionlink.backend.domain.profile.section.lionactivity.DefaultLionActivitySyncer;
+import com.lionlink.backend.global.error.BusinessException;
+import com.lionlink.backend.global.error.CommonErrorCode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import org.springframework.context.ApplicationEventPublisher;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.profile.section.career.Career;
@@ -32,6 +48,8 @@ public class AdminSignupService {
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
 	private final CareerRepository careerRepository;
+	private final DefaultLionActivitySyncer defaultLionActivitySyncer;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
 	 * ADMIN-01. 목록 한 페이지를 읽은 뒤, 그 페이지에 필요한 부가 정보(프로필·재직 회사·처리 관리자·같은 이름 기수)를
@@ -71,6 +89,84 @@ public class AdminSignupService {
 	/** ADMIN-02. */
 	public PendingCountResponse getPendingCount() {
 		return new PendingCountResponse(userRepository.countByStatusAndDeletedAtIsNull(UserStatus.PENDING));
+	}
+
+	/** ADMIN-03. 반려됨 탭의 '승인으로 바꾸기'도 같다. */
+	@Transactional
+	public ApproveResponse approve(Long adminId, Long userId) {
+		return ApproveResponse.of(approveOne(adminId, userId));
+	}
+
+	/**
+	 * ADMIN-04. 승인 대기 회원만 반려한다. 알림·메일은 보내지 않는다.
+	 */
+	@Transactional
+	public RejectResponse reject(Long adminId, Long userId, RejectRequest request) {
+		String reason = resolveReason(request);
+		int updated = userRepository.reject(userId, adminId, LocalDateTime.now(), reason);
+		if (updated == 0) {
+			throw notUpdated(userId);
+		}
+		return RejectResponse.of(userRepository.findById(userId).orElseThrow());
+	}
+
+	/**
+	 * ADMIN-05. 한 명씩 ADMIN-03과 같은 규칙으로 처리한다. 실패는 예외가 아니라 failed에 담으므로
+	 * (조건부 갱신이 0행이면 아무것도 바뀌지 않았다) 한 명이 실패해도 나머지는 같은 트랜잭션에서 승인된다.
+	 */
+	@Transactional
+	public ApproveBatchResponse approveBatch(Long adminId, List<Long> userIds) {
+		if (new HashSet<>(userIds).size() != userIds.size() || userIds.stream().anyMatch(Objects::isNull)) {
+			throw new BusinessException(CommonErrorCode.VALIDATION_ERROR);
+		}
+		List<ApproveBatchResponse.Succeeded> succeeded = new ArrayList<>();
+		List<ApproveBatchResponse.Failed> failed = new ArrayList<>();
+		for (Long userId : userIds) {
+			try {
+				succeeded.add(ApproveBatchResponse.Succeeded.of(approveOne(adminId, userId)));
+			} catch (BusinessException e) {
+				failed.add(new ApproveBatchResponse.Failed(userId, e.getErrorCode().getCode()));
+			}
+		}
+		return new ApproveBatchResponse(succeeded, failed);
+	}
+
+	/** ADMIN-06. 상태와 상관없이 고친다. 기수가 바뀌면 자동 생성 멋사 활동 기수도 같이 바꾼다. */
+	@Transactional
+	public AdminSignupInfoResponse updateSignupInfo(Long userId, AdminSignupInfoRequest request) {
+		User user = userRepository.findById(userId)
+				.filter(found -> found.getDeletedAt() == null)
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+		defaultLionActivitySyncer.sync(userId, request.generation());
+		user.changeSignupInfoByAdmin(request.name().trim(), request.generation());
+		return AdminSignupInfoResponse.of(user);
+	}
+
+	// 조건부 갱신이 1행을 바꿨을 때만 알림 이벤트를 낸다.
+	private User approveOne(Long adminId, Long userId) {
+		if (userRepository.approve(userId, adminId, LocalDateTime.now()) == 0) {
+			throw notUpdated(userId);
+		}
+		User user = userRepository.findById(userId).orElseThrow();
+		eventPublisher.publishEvent(new SignupApprovedEvent(user.getId(), user.getName()));
+		return user;
+	}
+
+	// 갱신된 행이 없을 때: 없거나 탈퇴한 회원이면 404, 있는데 조건에 안 맞으면 이미 처리된 가입이라 409.
+	private BusinessException notUpdated(Long userId) {
+		boolean exists = userRepository.existsByIdAndDeletedAtIsNull(userId);
+		return new BusinessException(exists ? AdminErrorCode.ALREADY_PROCESSED : CommonErrorCode.NOT_FOUND);
+	}
+
+	private String resolveReason(RejectRequest request) {
+		if (request.reasonType() != RejectReasonType.ETC) {
+			return request.reasonType().getFixedText();
+		}
+		String text = request.reasonText() == null ? "" : request.reasonText().trim();
+		if (text.length() < 5 || text.length() > 100) {
+			throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "기타 사유는 5~100자로 입력해 주세요.");
+		}
+		return text;
 	}
 
 	// 대기는 가입이 오래된 순, 처리된 탭은 처리 시각이 최신인 순 (처리 정보가 없는 계정은 맨 뒤).
