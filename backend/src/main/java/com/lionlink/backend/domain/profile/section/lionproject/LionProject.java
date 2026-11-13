@@ -50,4 +50,15 @@ public class LionProject extends ProfileSectionItem {
 		this.description = description;
 		this.link = link;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. */
+	public void update(String name, LionEventType eventType, Integer generation,
+			String myRole, String description, String link) {
+		this.name = name;
+		this.eventType = eventType;
+		this.generation = generation;
+		this.myRole = myRole;
+		this.description = description;
+		this.link = link;
+	}
 }
