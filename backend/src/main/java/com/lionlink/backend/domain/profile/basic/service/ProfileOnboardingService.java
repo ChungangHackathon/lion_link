@@ -81,7 +81,10 @@ public class ProfileOnboardingService {
 				.userId(userId)
 				.modes(List.of(MeetingMode.ONLINE, MeetingMode.OFFLINE))
 				.build());
-		notificationSettingRepository.save(NotificationSetting.builder().userId(userId).build());
+		// 승인 대기 중에 알림 설정을 먼저 열었으면 이미 있다. 덮어쓰면 고른 값과 수신 거부 토큰이 바뀌므로 없을 때만 만든다.
+		if (!notificationSettingRepository.existsById(userId)) {
+			notificationSettingRepository.save(NotificationSetting.builder().userId(userId).build());
+		}
 
 		return meService.toResponse(user);
 	}

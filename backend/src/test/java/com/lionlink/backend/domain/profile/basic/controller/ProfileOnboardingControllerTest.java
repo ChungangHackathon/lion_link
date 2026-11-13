@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,6 +35,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 
@@ -180,6 +182,26 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		entityManager.clear();
 
 		assertEquals("LINKEDIN", profileRepository.findById(lion.userId()).orElseThrow().getLinks().get(0).type());
+	}
+
+	@Test
+	void 온보딩_전에_바꾼_알림_설정은_온보딩_후에도_유지된다() throws Exception {
+		Session lion = signup("lion");
+		mockMvc.perform(patch("/api/v1/me/notification-settings")
+						.header(HttpHeaders.AUTHORIZATION, bearer(lion))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json("{'emailSignupApproved':false}")))
+				.andExpect(status().isOk());
+		entityManager.flush();
+		String token = notificationSettingRepository.findById(lion.userId()).orElseThrow().getUnsubscribeToken();
+
+		onboard(lion, STUDENT_BODY).andExpect(status().isOk());
+		entityManager.flush();
+		entityManager.clear();
+
+		NotificationSetting notification = notificationSettingRepository.findById(lion.userId()).orElseThrow();
+		assertFalse(notification.isEmailSignupApproved());
+		assertEquals(token, notification.getUnsubscribeToken());
 	}
 
 	// ---------- 검증 실패 400 ----------
