@@ -22,7 +22,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @RequiredArgsConstructor
 public class FileUploadService {
 
-	private static final String KEY_PREFIX = "uploads/";
+	static final String KEY_PREFIX = "uploads/";
 
 	private final S3Presigner s3Presigner;
 	private final StorageProperties storageProperties;

@@ -27,6 +27,7 @@ import com.lionlink.backend.domain.community.recruit.entity.RecruitStatus;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.file.exception.FileErrorCode;
+import com.lionlink.backend.domain.file.service.FileDeleteRequestedEvent;
 import com.lionlink.backend.domain.file.service.FileUploadService;
 import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.user.entity.UserRole;
@@ -38,6 +39,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -134,8 +137,11 @@ public class PostService {
 		}
 
 		if (request.files() != null) {
+			List<String> before = fileUrls(post.getId());
 			postFileRepository.deleteByPostId(post.getId());
 			saveFiles(post, request.files());
+			Set<String> kept = request.files().stream().map(PostFileRequest::url).collect(Collectors.toSet());
+			requestFileDelete(post.getId(), before.stream().filter(url -> !kept.contains(url)).toList());
 		}
 
 		LocalDate deadline = category.allowsDeadline()
@@ -181,6 +187,21 @@ public class PostService {
 			}
 		}
 		post.delete();
+		requestFileDelete(postId, fileUrls(postId));
+	}
+
+	private List<String> fileUrls(Long postId) {
+		return postFileRepository.findByPostIdOrderBySortOrderAscIdAsc(postId).stream().map(PostFile::getUrl).toList();
+	}
+
+	private void requestFileDelete(Long postId, List<String> urls) {
+		List<String> unused = urls.stream()
+				.distinct()
+				.filter(url -> !postFileRepository.isUsedByOtherPost(url, postId) && !postFileRepository.isUsedAsProfilePhoto(url))
+				.toList();
+		if (!unused.isEmpty()) {
+			eventPublisher.publishEvent(new FileDeleteRequestedEvent(unused));
+		}
 	}
 
 	private void notifyRecruitCanceled(Post post) {
