@@ -72,8 +72,8 @@ class PostQueryServiceTest {
 
 	@Test
 	void 카테고리와_제목_본문_검색어로_찾고_조회순으로_정렬한다() {
-		Long spring = create(new PostCreateRequest(PostCategory.FREE, "Spring 스터디", "같이 공부해요.", null, false, null, null, null));
-		Long body = create(new PostCreateRequest(PostCategory.FREE, "스터디 모집", "spring boot 위주로 해요.", null, false, null, null, null));
+		Long spring = create(new PostCreateRequest(PostCategory.FREE, "Spring 스터디", "같이 공부해요.", null, false, null, null, null, null));
+		Long body = create(new PostCreateRequest(PostCategory.FREE, "스터디 모집", "spring boot 위주로 해요.", null, false, null, null, null, null));
 		Long contest = create(TestPosts.general(PostCategory.CONTEST, "공모전"));
 		TestPosts.update(entityManager, "update posts set view_count = 10 where id = :id", body);
 
@@ -86,7 +86,7 @@ class PostQueryServiceTest {
 	@Test
 	void 목록에_작성자와_댓글_수를_담고_익명_글은_작성자를_숨긴다() {
 		Long named = create(TestPosts.general(PostCategory.FREE, "실명 글"));
-		Long anonymous = create(new PostCreateRequest(PostCategory.FREE, "익명 글", "본문입니다.", null, true, null, null, null));
+		Long anonymous = create(new PostCreateRequest(PostCategory.FREE, "익명 글", "본문입니다.", null, true, null, null, null, null));
 		entityManager.createNativeQuery("""
 						insert into comments (post_id, author_id, content, is_anonymous, created_at)
 						values (:id, :authorId, '댓글', false, current_timestamp)
@@ -160,7 +160,7 @@ class PostQueryServiceTest {
 	@Test
 	void 상세_조회에_작성자_좋아요_내_글_여부를_담는다() {
 		Long postId = create(new PostCreateRequest(PostCategory.CONTEST, "공모전", "본문입니다.",
-				List.of("https://a.com"), false, null, null, null));
+				List.of("https://a.com"), false, null, null, null, null));
 		Long kim = TestUsers.approved(entityManager, "김사자");
 		postLikeService.like(kim, postId);
 

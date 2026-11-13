@@ -20,3 +20,8 @@ app:
   auth:
     jwt-secret: test-only-secret-for-jwt-0123456789-abcdefghij
     frontend-url: http://localhost:3000
+  storage:
+    bucket: test-bucket
+    region: ap-northeast-2
+    access-key: test-access-key
+    secret-key: test-secret-key

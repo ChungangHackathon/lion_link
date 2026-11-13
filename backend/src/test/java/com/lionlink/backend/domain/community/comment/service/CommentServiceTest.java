@@ -90,7 +90,7 @@ class CommentServiceTest {
 	void 내_글에_내가_쓴_댓글은_알림을_보내지_않는다() {
 		commentService.create(me, postId, request("보충 설명이에요"));
 		Long anonymousPostId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명 고민", "고민이 있어요.",
-				null, true, null, null, null)).id();
+				null, true, null, null, null, null)).id();
 		commentService.create(me, anonymousPostId, request("작성자 답변이에요"));
 
 		assertThat(commentNotifications()).isEmpty();
@@ -99,7 +99,7 @@ class CommentServiceTest {
 	@Test
 	void 익명_글에_달린_댓글도_글_작성자에게_알림이_간다() {
 		Long anonymousPostId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명 고민", "고민이 있어요.",
-				null, true, null, null, null)).id();
+				null, true, null, null, null, null)).id();
 
 		commentService.create(kim, anonymousPostId, request("힘내세요"));
 
@@ -110,7 +110,7 @@ class CommentServiceTest {
 	@Test
 	void 익명_글의_작성자가_쓴_댓글만_익명이_된다() {
 		Long anonymousPostId = postService.create(me, new PostCreateRequest(PostCategory.FREE, "익명 고민", "고민이 있어요.",
-				null, true, null, null, null)).id();
+				null, true, null, null, null, null)).id();
 
 		CommentResponse byAuthor = commentService.create(me, anonymousPostId, request("작성자 댓글"));
 		CommentResponse byOther = commentService.create(kim, anonymousPostId, request("다른 사람 댓글"));
