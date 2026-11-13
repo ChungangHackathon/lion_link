@@ -1824,7 +1824,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 `GET /email-notifications/unsubscribe?token={unsubscribeToken}&type=COFFEE_CHAT_REQUEST` (로그인 없이)
 
-메일 아래의 [이 알림 그만 받기] 링크는 FE 수신 거부 페이지로 가고, FE가 주소의 `token`, `type`으로 이 API를 부른 뒤 완료 화면(N-04)을 보여줘. `type`에 해당하는 메일만 끄고 `204`를 줘. 이미 꺼져 있어도 `204`야. 다시 켜는 건 NOTI-05로 해.
+메일 아래의 [그만 받기] 링크는 FE 수신 거부 페이지 `{FE}/email-notifications/unsubscribe?token=...&type=...`로 가고, FE가 주소의 `token`, `type`으로 이 API를 부른 뒤 완료 화면(N-04)을 보여줘. `type`에 해당하는 메일만 끄고 `204`를 줘. 이미 꺼져 있어도 `204`야. 다시 켜는 건 NOTI-05로 해.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
@@ -1843,11 +1843,34 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 채팅(`CHAT`) 알림은 채팅 작업에서 리스너로 추가해. 회원이 일으킨 알림이면 `actorId`를 채우고 `message`는 이름 뒤 문구로 저장해.
 
+### 이메일 발송
+
+PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가지뿐이야. API가 따로 없고 서버가 이벤트를 받아서 보내.
+
+| 메일 종류 | 언제 | 받는 사람 | 제목 | 버튼 |
+| --- | --- | --- | --- | --- |
+| `COFFEE_CHAT_REQUEST` | 커피챗 신청(COFFEE-01) | 받는 사자 | `[LION:LINK] {이름}({기수}기)님이 커피챗을 신청했어요` (여러 명이면 `님 외 N명이`) | `{FE}/coffee/{coffeeChatId}` |
+| `MESSAGE_REQUEST` | 메시지 요청(채팅) | 요청받은 회원 | `[LION:LINK] 새 메시지 요청이 왔어요` | `{FE}/chat/requests` |
+| `SIGNUP_APPROVED` | 가입 승인(ADMIN-03, 05) | 승인된 회원 | `[LION:LINK] 가입이 승인됐어요` | `{FE}/home` |
+
+- **쌓기**: 요청과 같은 트랜잭션에서 `email_logs`에 `PENDING`으로 저장해. 요청이 롤백되면 메일도 남지 않고, 메일 서버가 느려도 API 응답은 기다리지 않아.
+- **보내기**: 스케줄러가 10초마다 보낼 시각(`scheduled_at`)이 된 메일을 꺼내 보내고 `SENT`로 바꿔.
+- **건너뛰기**: 보내는 시점에 받는 사람이 탈퇴했거나, 그 종류를 꺼 뒀거나(NOTI-05, NOTI-06), 커피챗 신청이 이미 대기 중이 아니면 보내지 않고 `SKIPPED`로 남겨.
+- **다시 보내기**: 실패하면 10분 뒤에 다시 보내고, 3번 실패하면 `FAILED`로 멈춰(`attempt_count`).
+- **본문**: 보내는 시점의 데이터로 만들고, 아래에 해당 종류의 수신 거부 링크를 넣어.
+- **설정**: SMTP 접속 정보는 `spring.mail.*`(환경변수 `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`), 보내는 사람은 `MAIL_FROM`이야. `MAIL_ENABLED`가 `false`(기본값)면 실제로 보내지 않고 로그만 남겨.
+- **채팅에서 메시지 요청 메일 보내기**: 요청을 만들 때 `EmailNotificationService.enqueue(받는 사람 ID, EmailType.MESSAGE_REQUEST, roomId)`를 불러.
+
 ### 알림 남은 일
 
 | 번호 | 무엇을 | 지금 | 맞출 사람 |
 | --- | --- | --- | --- |
-| 1 | 실제 메일 발송(발송, 재시도, `email_logs` 기록) | 미구현. 커피챗 신청 메일과 같이 붙어야 해서 커피챗 작업이 머지된 뒤 진행. 보내기 전에 `NotificationSettingService.getOrCreate`로 수신 여부와 수신 거부 토큰을 얻는다 | 알림 담당 |
+| 1 | 실제 메일 발송(발송, 재시도, `email_logs` 기록) | **반영(2026-11-13)**: 커피챗 신청, 가입 승인 메일 발송. 위 "이메일 발송" 참고 | 완료 |
 | 2 | FE 탭 값 | 목업은 `COFFEE`를 쓰는데 API는 `COFFEE_CHAT`이야. FE가 API 값에 맞춘다 | FE |
 | 3 | 알림을 누를 때 이동할 주소 | API는 `targetType`, `targetId`만 준다. 주소는 FE가 만든다 | FE |
 | 4 | 커피챗 알림의 보낸 사람 | 커피챗 알림은 `actorId` 없이 이름을 `message`에 넣는다. `actor`가 `null`이면 `message`가 문장 전체라 화면은 깨지지 않지만 이름이 굵게 보이지 않는다. 신청자, 받는 사자, 취소한 회원을 `actorId`로 남기도록 맞춘다 | 커피챗 담당 |
+| 5 | 메시지 요청 메일 | 보내는 기능은 준비됐다. 채팅에서 메시지 요청을 만들 때 `enqueue`를 부른다 | 채팅 담당 |
+| 6 | 발송 수단과 보내는 주소 | Gmail SMTP와 AWS SES(SMTP) 어느 쪽이든 설정만 바꾸면 된다. 운영에서 쓸 계정과 주소를 정한다 | BE |
+| 7 | 묶어 보내기 | 지금은 한 건에 한 통을 바로 보낸다. 짧은 시간에 신청이 여러 건 오면 한 통으로 묶을지 정한다(`target_ids`, `scheduled_at`으로 확장 가능) | 기획, BE |
+| 8 | FE 수신 거부 페이지 | `{FE}/email-notifications/unsubscribe?token=...&type=...` 페이지에서 NOTI-06을 부르고 N-04 완료 화면을 보여준다 | FE |
+| 9 | 반송(`BOUNCED`) 처리 | 미구현. 메일 서비스의 반송 알림 연동이 필요하다 | BE |
