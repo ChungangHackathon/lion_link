@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.auth.controller;
 
 import com.lionlink.backend.domain.auth.dto.request.SignupInfoRequest;
+import com.lionlink.backend.domain.auth.dto.request.WithdrawRequest;
 import com.lionlink.backend.domain.auth.dto.response.MeResponse;
 import com.lionlink.backend.domain.auth.service.MeService;
 import com.lionlink.backend.global.error.ErrorResponse;
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MeController {
 
 	private final MeService meService;
+	private final AuthCookies authCookies;
 
 	@Operation(summary = "내 정보 조회 (AUTH-05)",
 			description = "로그인한 모든 상태(승인 대기·반려 포함)에서 부른다. 프론트는 status와 profileCompleted로 화면을 나눈다.")
@@ -72,5 +76,25 @@ public class MeController {
 			@Parameter(hidden = true) @CurrentUser Long userId,
 			@Valid @RequestBody SignupInfoRequest request) {
 		return meService.reapply(userId, request);
+	}
+
+	@Operation(summary = "회원 탈퇴 (AUTH-08)",
+			description = "본문 confirm이 정확히 \"탈퇴\"여야 한다. 승인 대기·반려 회원도 가능하다. "
+					+ "refreshToken을 모두 폐기하고 쿠키를 지우며, 같은 구글 계정으로 다시 가입할 수 있다.")
+	@ApiResponse(responseCode = "204")
+	@ApiResponse(responseCode = "400", description = "확인 문구가 \"탈퇴\"가 아님 (VALIDATION_ERROR)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "토큰 없음·만료, 이미 탈퇴한 회원 (UNAUTHENTICATED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "403", description = "관리자 계정 (ADMIN_CANNOT_WITHDRAW)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@PostMapping("/withdraw")
+	public ResponseEntity<Void> withdraw(
+			@Parameter(hidden = true) @CurrentUser Long userId,
+			@Valid @RequestBody WithdrawRequest request) {
+		meService.withdraw(userId);
+		return ResponseEntity.noContent()
+				.header(HttpHeaders.SET_COOKIE, authCookies.expireRefreshToken())
+				.build();
 	}
 }
