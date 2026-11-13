@@ -90,6 +90,12 @@ public class User extends BaseTimeEntity {
 		this.generation = generation;
 	}
 
+	/** ADMIN-06: 관리자는 상태와 상관없이 이름·기수를 고친다. */
+	public void changeSignupInfoByAdmin(String name, Integer generation) {
+		this.name = name;
+		this.generation = generation;
+	}
+
 	/** AUTH-07: 반려된 회원이 이름·기수를 고쳐 다시 신청한다. 이전 반려 사유는 관리자 확인용으로 남긴다. */
 	public void reapply(String name, Integer generation) {
 		if (status != UserStatus.REJECTED) {
