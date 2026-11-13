@@ -33,7 +33,7 @@
 | 커피챗·채팅 | `coffee_periods` | 커피챗 받는 기간·쉬는 기간 |
 | 커피챗·채팅 | `coffee_chats` | 커피챗 신청. 같은 두 사람 사이 진행 중 1건만(UNIQUE requester_id, receiver_id, open_flag — 진행 중이면 open_flag=1, 끝나면 NULL) |
 | 커피챗·채팅 | `coffee_chat_members` | 여러 명 커피챗의 신청자들 (대표/함께 신청자) |
-| 커피챗·채팅 | `chat_rooms` | 채팅방. 1:1(DIRECT, UNIQUE user_a_id·user_b_id)과 커피챗 단체방(GROUP, 커피챗당 1개) |
+| 커피챗·채팅 | `chat_rooms` | 채팅방. 1:1(DIRECT, UNIQUE user_a_id·user_b_id)과 커피챗 단체방(GROUP, 커피챗당 1개), 번개 단체방(GROUP, 번개당 1개, `meetup_id` UNIQUE). 취소된 번개 방은 `closed_at`이 채워지고 더 보낼 수 없음 |
 | 커피챗·채팅 | `chat_room_members` | 채팅방 참여자. 읽음 위치·알림 끄기·상단 고정 |
 | 커피챗·채팅 | `chat_messages` | 메시지. (sender_id, client_msg_id) UNIQUE로 중복 전송 방지 |
 | 커뮤니티 | `posts` | 게시글. 카테고리별(공모전·채용·족보·세미나·지금 사자는·자유·번개·커피챗), 익명 가능 |
@@ -232,6 +232,7 @@ erDiagram
   users ||--o{ chat_rooms : "user_a_id"
   users ||--o{ chat_rooms : "user_b_id"
   coffee_chats ||--o| chat_rooms : "coffee_chat_id"
+  meetups ||--o| chat_rooms : "meetup_id"
   users ||--o{ chat_rooms : "requested_by"
   chat_rooms ||--o{ chat_room_members : "room_id"
   users ||--o{ chat_room_members : "user_id"
@@ -294,6 +295,7 @@ erDiagram
     bigint user_a_id FK
     bigint user_b_id FK
     bigint coffee_chat_id FK,UK
+    bigint meetup_id FK,UK
     enum status "REQUESTED, ACTIVE, DECLINED, EXPIRED, CANCELED"
     bigint requested_by FK
     datetime requested_at
@@ -302,6 +304,7 @@ erDiagram
     enum decline_reason "BUSY, NOT_MY_FIELD, PREFER_COFFEE_CHAT, ETC"
     varchar decline_message
     datetime last_message_at
+    datetime closed_at
     datetime created_at
   }
   chat_room_members {
