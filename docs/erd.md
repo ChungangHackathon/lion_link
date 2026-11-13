@@ -47,7 +47,7 @@
 | 커뮤니티 | `coffeechat_recruits` | 커피챗 함께 신청 모집. 게시글과 1:1 |
 | 커뮤니티 | `recruit_members` | 모집 참여자 |
 | 커뮤니티 | `keyword_blocklist` | 금칙어 |
-| 알림 | `notifications` | 인앱 알림. 탭(커피챗·커뮤니티·계정)과 대상(target_type, target_id) |
+| 알림 | `notifications` | 인앱 알림. 탭(커피챗, 채팅, 커뮤니티, 계정), 대상(target_type, target_id), 보낸 사람(actor_id) |
 | 알림 | `notification_settings` | 이메일 알림 설정과 수신 거부 토큰. 회원과 1:1 |
 | 알림 | `email_logs` | 메일 발송 기록 |
 
@@ -444,10 +444,11 @@ erDiagram
   notifications {
     bigint id PK
     bigint user_id FK
-    enum tab "COFFEE_CHAT, COMMUNITY, ACCOUNT"
+    enum tab "COFFEE_CHAT, CHAT, COMMUNITY, ACCOUNT"
     varchar type
     enum target_type "COFFEE_CHAT, ROOM, POST, USER"
     bigint target_id
+    bigint actor_id FK "보낸 사람, 시스템 알림은 NULL"
     varchar message
     datetime read_at
     datetime created_at
@@ -456,6 +457,7 @@ erDiagram
     bigint user_id PK,FK
     boolean email_coffee_chat
     boolean email_message_request
+    boolean email_signup_approved
     varchar unsubscribe_token UK
   }
   email_logs {
