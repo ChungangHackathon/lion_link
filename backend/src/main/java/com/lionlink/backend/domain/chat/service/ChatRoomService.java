@@ -9,11 +9,13 @@ import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatUnreadCountResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatUserResponse;
 import com.lionlink.backend.domain.chat.entity.ChatMessage;
 import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomMember;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
+import com.lionlink.backend.domain.chat.entity.ChatRoomType;
 import com.lionlink.backend.domain.chat.event.ChatReadEvent;
 import com.lionlink.backend.domain.chat.event.ChatRoomUpdatedEvent;
 import com.lionlink.backend.domain.chat.exception.ChatErrorCode;
@@ -29,6 +31,8 @@ import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
+import com.lionlink.backend.domain.user.event.UserWithdrawnEvent;
+import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.response.SliceResponse;
 import java.time.LocalDateTime;
@@ -42,6 +46,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -63,6 +68,7 @@ public class ChatRoomService {
 	private final MeetupRepository meetupRepository;
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final PostRepository postRepository;
+	private final UserRepository userRepository;
 	private final UserSummaryReader userSummaryReader;
 	private final ApplicationEventPublisher eventPublisher;
 
@@ -108,6 +114,11 @@ public class ChatRoomService {
 	}
 
 	@Transactional(readOnly = true)
+	public ChatUnreadCountResponse getUnreadCount(Long userId) {
+		return new ChatUnreadCountResponse(chatQueryRepository.countUnreadMessages(userId), chatQueryRepository.countReceivedRequests(userId));
+	}
+
+	@Transactional(readOnly = true)
 	public ChatRoomDetailResponse getDetail(Long userId, Long roomId) {
 		ChatRoomMember member = findActiveMember(userId, roomId);
 		return toDetail(userId, member.getRoom(), member);
@@ -149,6 +160,9 @@ public class ChatRoomService {
 		ChatRoom room = member.getRoom();
 		if (!room.isOpen()) {
 			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS);
+		}
+		if (room.isDirect() && !userRepository.existsByIdAndDeletedAtIsNull(partnerId(userId, room))) {
+			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS, "탈퇴한 동문에게는 메시지를 보낼 수 없어요.");
 		}
 		if (room.isDirect()) {
 			chatRoomMemberRepository.findByRoomId(roomId).stream()
@@ -198,6 +212,22 @@ public class ChatRoomService {
 		chatMessageWriter.writeSystem(room, name + "님이 나갔어요.", now);
 	}
 
+	@EventListener
+	public void onUserWithdrawn(UserWithdrawnEvent event) {
+		Long userId = event.userId();
+		LocalDateTime now = LocalDateTime.now();
+		chatRoomRepository.findDirectByStatus(userId, ChatRoomStatus.REQUESTED).forEach(room -> {
+			room.cancelRequest();
+			notifyRoomUpdated(room);
+		});
+		for (ChatRoomMember member : chatRoomMemberRepository.findActiveByType(userId, ChatRoomType.GROUP)) {
+			member.leave(now);
+			if (member.getRoom().isOpen()) {
+				chatMessageWriter.writeSystem(member.getRoom(), "탈퇴한 동문이 나갔어요.", now);
+			}
+		}
+	}
+
 	public void notifyRoomUpdated(ChatRoom room) {
 		eventPublisher.publishEvent(new ChatRoomUpdatedEvent(room.getId(),
 				ChatMessageWriter.recipients(chatRoomMemberRepository.findByRoomId(room.getId()))));
@@ -221,7 +251,7 @@ public class ChatRoomService {
 				room.isMeetupRoom() ? meetup(room.getMeetupId()) : null,
 				member.isPinned(),
 				member.isMuted(),
-				room.isOpen()
+				room.isOpen() && !(room.isDirect() && user(summaries, partnerId(userId, room)).isDeleted())
 		);
 	}
 
@@ -257,8 +287,11 @@ public class ChatRoomService {
 	}
 
 	private ChatUserResponse partner(Long userId, ChatRoom room, Map<Long, UserSummary> summaries) {
-		Long partnerId = userId.equals(room.getUserAId()) ? room.getUserBId() : room.getUserAId();
-		return user(summaries, partnerId);
+		return user(summaries, partnerId(userId, room));
+	}
+
+	private Long partnerId(Long userId, ChatRoom room) {
+		return userId.equals(room.getUserAId()) ? room.getUserBId() : room.getUserAId();
 	}
 
 	private ChatUserResponse user(Map<Long, UserSummary> summaries, Long userId) {

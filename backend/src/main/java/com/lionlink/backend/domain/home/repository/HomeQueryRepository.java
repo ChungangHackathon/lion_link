@@ -1,6 +1,5 @@
 package com.lionlink.backend.domain.home.repository;
 
-import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import jakarta.persistence.EntityManager;
@@ -58,27 +57,5 @@ public class HomeQueryRepository {
 				.setParameter("coffeeChatId", coffeeChatId)
 				.getResultStream()
 				.findFirst();
-	}
-
-	public long countUnreadMessages(Long userId) {
-		return entityManager.createQuery("""
-						select count(m) from ChatMessage m, ChatRoomMember rm
-						where rm.room = m.room and rm.userId = :userId and rm.leftAt is null
-						  and m.room.status = :status and m.senderId <> :userId and m.deletedAt is null
-						  and m.id > coalesce(rm.lastReadMessageId, 0) and m.id > coalesce(rm.clearedMessageId, 0)
-						""", Long.class)
-				.setParameter("userId", userId)
-				.setParameter("status", ChatRoomStatus.ACTIVE)
-				.getSingleResult();
-	}
-
-	public long countMessageRequests(Long userId) {
-		return entityManager.createQuery("""
-						select count(r) from ChatRoom r
-						where r.status = :status and r.requestedBy <> :userId and (r.userAId = :userId or r.userBId = :userId)
-						""", Long.class)
-				.setParameter("userId", userId)
-				.setParameter("status", ChatRoomStatus.REQUESTED)
-				.getSingleResult();
 	}
 }
