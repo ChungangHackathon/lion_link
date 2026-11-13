@@ -20,6 +20,9 @@ public class UserMemberAccessReader implements MemberAccessReader {
 	public Optional<MemberAccess> find(Long userId) {
 		return userRepository.findById(userId)
 				.filter(user -> user.getDeletedAt() == null)
-				.map(user -> new MemberAccess(user.getStatus() == UserStatus.APPROVED, user.isProfileCompleted()));
+				.map(user -> new MemberAccess(
+						user.getStatus() == UserStatus.APPROVED,
+						user.isProfileCompleted(),
+						user.getStatus() == UserStatus.REJECTED));
 	}
 }
