@@ -3,14 +3,18 @@ package com.lionlink.backend.domain.profile.basic.controller;
 import com.lionlink.backend.domain.auth.dto.response.MeResponse;
 import com.lionlink.backend.domain.profile.basic.dto.request.BasicInfoUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.BioUpdateRequest;
+import com.lionlink.backend.domain.profile.basic.dto.request.ContactUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.LinksUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.OnboardingRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.SkillsUpdateRequest;
+import com.lionlink.backend.domain.profile.basic.dto.request.VisibilityUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.response.BasicInfoResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.BioResponse;
+import com.lionlink.backend.domain.profile.basic.dto.response.ContactResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.LinksResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.ProfileResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.SkillsResponse;
+import com.lionlink.backend.domain.profile.basic.dto.response.VisibilityResponse;
 import com.lionlink.backend.domain.profile.basic.service.MyProfileService;
 import com.lionlink.backend.domain.profile.basic.service.ProfileEditService;
 import com.lionlink.backend.domain.profile.basic.service.ProfileOnboardingService;
@@ -27,6 +31,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -143,5 +148,40 @@ public class ProfileController {
 			@Parameter(hidden = true) @CurrentUser Long userId,
 			@Valid @RequestBody LinksUpdateRequest request) {
 		return profileEditService.updateLinks(userId, request);
+	}
+
+	@Operation(summary = "연락처 수정 (PROFILE-09)",
+			description = "보낸 값으로 통째로 바꾼다. 이메일은 다른 동문에게 보여주는 용도이며 가입 이메일은 바뀌지 않는다. "
+					+ "전화번호는 비우면 삭제된다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "400", description = "이메일 없음·형식 오류, 전화번호 형식 오류 (VALIDATION_ERROR)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "토큰 없음·만료 (UNAUTHENTICATED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "403", description = "반려된 회원 (NOT_APPROVED), 온보딩 전 (PROFILE_NOT_COMPLETED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@RequireCompletedProfile
+	@PutMapping("/contact")
+	public ContactResponse updateContact(
+			@Parameter(hidden = true) @CurrentUser Long userId,
+			@Valid @RequestBody ContactUpdateRequest request) {
+		return profileEditService.updateContact(userId, request);
+	}
+
+	@Operation(summary = "공개 범위 수정 (PROFILE-10)",
+			description = "보낸 키만 바꾸고 안 보낸 키는 그대로 둔다. 응답은 네 값 모두. 회사명(company)은 CONNECTED를 쓸 수 없다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "400", description = "없는 값, company에 CONNECTED (VALIDATION_ERROR)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "401", description = "토큰 없음·만료 (UNAUTHENTICATED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "403", description = "반려된 회원 (NOT_APPROVED), 온보딩 전 (PROFILE_NOT_COMPLETED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@RequireCompletedProfile
+	@PatchMapping("/visibility")
+	public VisibilityResponse updateVisibility(
+			@Parameter(hidden = true) @CurrentUser Long userId,
+			@Valid @RequestBody VisibilityUpdateRequest request) {
+		return profileEditService.updateVisibility(userId, request);
 	}
 }
