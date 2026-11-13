@@ -140,6 +140,11 @@ public class Profile extends BaseTimeEntity {
 		this.interests = interests;
 	}
 
+	/** PROFILE-05: 사진 주소를 바꾼다. 삭제하면 null(기본 이미지). */
+	public void updatePhoto(String photoUrl) {
+		this.photoUrl = photoUrl;
+	}
+
 	/** PROFILE-06: 비우면 null. */
 	public void updateBio(String bio) {
 		this.bio = bio;

@@ -1,5 +1,6 @@
 package com.lionlink.backend.domain.profile.section.service;
 
+import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
 import com.lionlink.backend.domain.profile.section.ProfileSectionItem;
@@ -23,11 +24,11 @@ public class SectionItemSupport {
 	 * 동시에 두 요청이 와도 최대 개수·중복 검사를 둘 다 통과하는 일이 없다.
 	 * 허용 경로는 인터셉터가 탈퇴 여부를 보지 않을 수 있어 직접 확인한다.
 	 */
-	public void lockProfile(Long userId) {
+	public Profile lockProfile(Long userId) {
 		if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
 			throw new BusinessException(CommonErrorCode.UNAUTHENTICATED);
 		}
-		profileRepository.findByIdForUpdate(userId)
+		return profileRepository.findByIdForUpdate(userId)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.PROFILE_NOT_COMPLETED));
 	}
 
