@@ -111,7 +111,8 @@ class CoffeeChatServiceTest {
 		assertThat(notifications).extracting(Notification::getUserId).containsExactly(senior);
 		assertThat(notifications.get(0).getTab()).isEqualTo(NotificationTab.COFFEE_CHAT);
 		assertThat(notifications.get(0).getTargetId()).isEqualTo(id);
-		assertThat(notifications.get(0).getMessage()).isEqualTo("나사자님이 커피챗을 신청했어요.");
+		assertThat(notifications.get(0).getActorId()).isEqualTo(me);
+		assertThat(notifications.get(0).getMessage()).isEqualTo("님이 커피챗을 신청했어요.");
 	}
 
 	@Test
@@ -122,7 +123,7 @@ class CoffeeChatServiceTest {
 		assertThat(forKim.myRole()).isEqualTo(CoffeeChatRole.MEMBER);
 		assertThat(forKim.members()).extracting(CoffeeChatUserResponse::id).containsExactlyInAnyOrder(kim, lee);
 		assertThat(forKim.actions()).containsExactly(CoffeeChatAction.LEAVE);
-		assertThat(notifications("COFFEE_CHAT_REQUESTED").get(0).getMessage()).isEqualTo("나사자님 외 2명이 커피챗을 신청했어요.");
+		assertThat(notifications("COFFEE_CHAT_REQUESTED").get(0).getMessage()).isEqualTo("님 외 2명이 커피챗을 신청했어요.");
 	}
 
 	@Test
@@ -268,7 +269,7 @@ class CoffeeChatServiceTest {
 		assertError(() -> coffeeChatService.complete(senior, id), CoffeeChatErrorCode.MEETING_NOT_PASSED);
 
 		coffeeChatService.schedule(senior, id, new CoffeeChatScheduleRequest(meetAt.plusDays(1), MeetingMode.ONLINE, null, "https://meet.com/a"));
-		assertThat(notifications("COFFEE_CHAT_SCHEDULED")).extracting(Notification::getMessage).last().asString().startsWith("커피챗 일정이 바뀌었어요.");
+		assertThat(notifications("COFFEE_CHAT_SCHEDULED")).extracting(Notification::getMessage).last().asString().startsWith("님이 커피챗 일정을 바꿨어요.");
 
 		update("update coffee_chats set scheduled_at = dateadd('HOUR', -1, current_timestamp) where id = " + id);
 		assertThat(coffeeChatQueryService.getDetail(me, id).actions()).contains(CoffeeChatAction.COMPLETE);
@@ -286,8 +287,8 @@ class CoffeeChatServiceTest {
 		assertThat(canceled.status()).isEqualTo(CoffeeChatStatus.CANCELED);
 		assertThat(canceled.cancelReason()).isEqualTo("급한 일정이 생겼어요");
 		assertThat(canceled.canceledBy()).isEqualTo(senior);
-		assertThat(notifications("COFFEE_CHAT_CANCELED")).extracting(Notification::getUserId, Notification::getMessage)
-				.containsExactly(tuple(me, "선배사자님이 커피챗을 취소했어요."));
+		assertThat(notifications("COFFEE_CHAT_CANCELED")).extracting(Notification::getUserId, Notification::getActorId, Notification::getMessage)
+				.containsExactly(tuple(me, senior, "님이 커피챗을 취소했어요."));
 		assertThat(entityManager.find(ChatRoom.class, canceled.roomId()).getStatus()).isEqualTo(ChatRoomStatus.ACTIVE);
 	}
 

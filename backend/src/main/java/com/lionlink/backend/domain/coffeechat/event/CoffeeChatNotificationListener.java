@@ -23,6 +23,7 @@ public class CoffeeChatNotificationListener {
 						.type(event.type().name())
 						.targetType(NotificationTargetType.COFFEE_CHAT)
 						.targetId(event.coffeeChatId())
+						.actorId(event.actorId())
 						.message(event.message())
 						.build())
 				.toList());

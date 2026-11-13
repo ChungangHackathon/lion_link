@@ -108,7 +108,7 @@ class EmailNotificationServiceTest {
 	@Test
 	void 신청이_아닌_커피챗_알림은_메일을_보내지_않는다() {
 		eventPublisher.publishEvent(new CoffeeChatNotificationEvent(List.of(senior),
-				CoffeeChatNotificationType.COFFEE_CHAT_ACCEPTED, 1L, "수락했어요."));
+				CoffeeChatNotificationType.COFFEE_CHAT_ACCEPTED, 1L, senior, "님이 커피챗을 수락했어요."));
 
 		assertThat(logs()).isEmpty();
 	}
