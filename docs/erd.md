@@ -10,7 +10,7 @@
 - `users`와 연결된 FK가 많아서 도메인별로 그림을 나눴다. 각 그림의 빈 `users` 상자는 회원 테이블을 가리킨다
 - enum 컬럼은 따옴표 안에 값 목록, JSON 컬럼은 `JSON 배열`, 년월은 `YYYY-MM` 문자열
 - 공통: 시간은 KST, 삭제는 소프트 삭제(`deleted_at`). `created_at`·`updated_at`은 JPA Auditing이 채운다
-- enum 컬럼에는 Hibernate가 테이블을 만들 때 허용값 CHECK 제약(`posts_chk_1` 등)을 같이 만든다. `ddl-auto: update`는 이 제약을 고치지 않으니, enum 값을 바꾸면 기존 DB에서 제약을 직접 지워야 한다. 지금까지 지운 것: `posts_chk_1`(게시글 카테고리), `coffee_chats_chk_2`(커피챗 희망 방식 `ANY` 추가)
+- enum 컬럼에는 Hibernate가 테이블을 만들 때 허용값 CHECK 제약(`posts_chk_1` 등)을 같이 만든다. `ddl-auto: update`는 이 제약을 고치지 않으니, enum 값을 바꾸면 기존 DB에서 제약을 직접 지워야 한다. 지금까지 지운 것: `posts_chk_1`(게시글 카테고리), `coffee_chats_chk_2`(커피챗 희망 방식 `ANY` 추가), `chat_rooms_chk_1`(메시지 요청 거절 사유 `PREFER_COFFEE_CHAT` 추가), `notifications_chk_1`(알림 탭 `CHAT` 추가)
 
 ## 테이블 목록
 
@@ -298,7 +298,7 @@ erDiagram
     datetime requested_at
     datetime accepted_at
     datetime declined_at
-    enum decline_reason "BUSY, NOT_MY_FIELD, ETC"
+    enum decline_reason "BUSY, NOT_MY_FIELD, PREFER_COFFEE_CHAT, ETC"
     varchar decline_message
     datetime last_message_at
     datetime created_at
