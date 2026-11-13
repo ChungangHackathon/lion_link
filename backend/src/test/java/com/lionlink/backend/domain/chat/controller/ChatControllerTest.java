@@ -11,10 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.lionlink.backend.domain.community.post.service.PostService;
 import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
+import com.lionlink.backend.support.TestPosts;
 import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,9 @@ class ChatControllerTest {
 	@Autowired
 	private EntityManager entityManager;
 
+	@Autowired
+	private PostService postService;
+
 	private Long me;
 	private Long kim;
 
@@ -44,6 +50,32 @@ class ChatControllerTest {
 	void setUp() {
 		me = alumni("나사자");
 		kim = alumni("김사자");
+	}
+
+	@Test
+	void 번개_단체방은_목록에_제목을_상세에_번개_정보를_준다() throws Exception {
+		Long postId = postService.create(me, TestPosts.meetup("금요일 저녁 번개", 4, List.of(kim))).id();
+
+		String list = mockMvc.perform(get("/api/v1/chat-rooms").header(USER_HEADER, kim))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].type").value("GROUP"))
+				.andExpect(jsonPath("$.items[0].meetupId").value(postId))
+				.andExpect(jsonPath("$.items[0].title").value("금요일 저녁 번개"))
+				.andExpect(jsonPath("$.items[0].members[0].id").value(me))
+				.andReturn().getResponse().getContentAsString();
+		Long roomId = ((Number) JsonPath.read(list, "$.items[0].roomId")).longValue();
+
+		mockMvc.perform(get("/api/v1/chat-rooms/{roomId}", roomId).header(USER_HEADER, kim))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.meetup.postId").value(postId))
+				.andExpect(jsonPath("$.meetup.meetAt").value(endsWith("+09:00")))
+				.andExpect(jsonPath("$.meetup.status").value("OPEN"))
+				.andExpect(jsonPath("$.coffeeChat").doesNotExist())
+				.andExpect(jsonPath("$.canSend").value(true));
+
+		mockMvc.perform(delete("/api/v1/chat-rooms/{roomId}/members/me", roomId).header(USER_HEADER, kim))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("INVALID_ROOM_STATUS"));
 	}
 
 	@Test
