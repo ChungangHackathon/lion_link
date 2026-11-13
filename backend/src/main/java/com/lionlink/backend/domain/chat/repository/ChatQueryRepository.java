@@ -49,6 +49,29 @@ public class ChatQueryRepository {
 		return slice(rows, pageable);
 	}
 
+	public long countUnreadMessages(Long userId) {
+		return entityManager.createQuery("""
+						select count(m) from ChatMessage m, ChatRoomMember rm
+						where rm.room = m.room and rm.userId = :userId and rm.leftAt is null
+						  and m.room.status = :active and m.senderId <> :userId and m.deletedAt is null
+						  and m.id > coalesce(rm.lastReadMessageId, 0) and m.id > coalesce(rm.clearedMessageId, 0)
+						""", Long.class)
+				.setParameter("userId", userId)
+				.setParameter("active", ChatRoomStatus.ACTIVE)
+				.getSingleResult();
+	}
+
+	public long countReceivedRequests(Long userId) {
+		return entityManager.createQuery("""
+						select count(rm) from ChatRoomMember rm join rm.room r
+						where rm.userId = :userId and rm.leftAt is null
+						  and r.status = :requested and r.requestedBy <> :userId
+						""", Long.class)
+				.setParameter("userId", userId)
+				.setParameter("requested", ChatRoomStatus.REQUESTED)
+				.getSingleResult();
+	}
+
 	private Slice<ChatRoomMember> slice(List<ChatRoomMember> rows, Pageable pageable) {
 		boolean hasNext = rows.size() > pageable.getPageSize();
 		return new SliceImpl<>(hasNext ? rows.subList(0, pageable.getPageSize()) : rows, pageable, hasNext);

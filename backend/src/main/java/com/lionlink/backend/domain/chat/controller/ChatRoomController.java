@@ -9,6 +9,7 @@ import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatUnreadCountResponse;
 import com.lionlink.backend.domain.chat.service.ChatRoomService;
 import com.lionlink.backend.global.response.SliceResponse;
 import com.lionlink.backend.global.error.ErrorResponse;
@@ -54,6 +55,12 @@ public class ChatRoomController {
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
 		return chatRoomService.getList(userId, PageRequest.of(page, size));
+	}
+
+	@Operation(summary = "안 읽은 메시지 수", description = "상단 메뉴 채팅 배지용. 나가지 않은 대화 중인 방의 안 읽은 메시지 수와 받은 메시지 요청 수.")
+	@GetMapping("/unread-count")
+	public ChatUnreadCountResponse getUnreadCount(@CurrentUser Long userId) {
+		return chatRoomService.getUnreadCount(userId);
 	}
 
 	@Operation(summary = "채팅방 정보")

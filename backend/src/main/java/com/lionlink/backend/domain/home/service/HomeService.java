@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.home.service;
 
 import com.lionlink.backend.domain.alumni.service.AlumniService;
+import com.lionlink.backend.domain.chat.repository.ChatQueryRepository;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.entity.PostFile;
@@ -37,6 +38,7 @@ public class HomeService {
 	private final PostRepository postRepository;
 	private final PostFileRepository postFileRepository;
 	private final HomeQueryRepository homeQueryRepository;
+	private final ChatQueryRepository chatQueryRepository;
 	private final AlumniService alumniService;
 	private final UserSummaryReader userSummaryReader;
 
@@ -48,8 +50,8 @@ public class HomeService {
 				new HomeResponse.Counts(
 						homeQueryRepository.countPendingCoffeeChats(userId),
 						homeQueryRepository.countActiveCoffeeChats(userId),
-						homeQueryRepository.countUnreadMessages(userId),
-						homeQueryRepository.countMessageRequests(userId),
+						chatQueryRepository.countUnreadMessages(userId),
+						chatQueryRepository.countReceivedRequests(userId),
 						alumniService.countBookmarks(userId)
 				),
 				homeQueryRepository.findUpcomingCoffeeChat(userId, LocalDateTime.now())
