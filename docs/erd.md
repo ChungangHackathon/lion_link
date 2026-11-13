@@ -10,7 +10,8 @@
 - `users`와 연결된 FK가 많아서 도메인별로 그림을 나눴다. 각 그림의 빈 `users` 상자는 회원 테이블을 가리킨다
 - enum 컬럼은 따옴표 안에 값 목록, JSON 컬럼은 `JSON 배열`, 년월은 `YYYY-MM` 문자열
 - 공통: 시간은 KST, 삭제는 소프트 삭제(`deleted_at`). `created_at`·`updated_at`은 JPA Auditing이 채운다
-- enum 컬럼에는 Hibernate가 테이블을 만들 때 허용값 CHECK 제약(`posts_chk_1` 등)을 같이 만든다. `ddl-auto: update`는 이 제약을 고치지 않으니, enum 값을 바꾸면 기존 DB에서 제약을 직접 지워야 한다. 지금까지 지운 것: `posts_chk_1`(게시글 카테고리), `coffee_chats_chk_2`(커피챗 희망 방식 `ANY` 추가), `chat_rooms_chk_1`(메시지 요청 거절 사유 `PREFER_COFFEE_CHAT` 추가), `notifications_chk_1`(알림 탭 `CHAT` 추가)
+- 테이블은 Flyway 마이그레이션(`backend/src/main/resources/db/migration`)으로 만들고 바꾼다. 서버는 엔티티와 테이블이 다르면 뜨지 않는다(`ddl-auto: validate`). 자세한 건 `docs/deploy.md` 6장
+- enum 컬럼에는 CHECK 제약을 두지 않는다. 예전 DB에 있던 제약은 V3 마이그레이션이 지웠고, enum 값은 서버가 검증한다. 그래서 enum 값을 추가해도 DB를 바꿀 필요가 없다
 
 ## 테이블 목록
 
