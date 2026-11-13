@@ -468,8 +468,9 @@ erDiagram
     json target_ids "JSON 배열"
     varchar subject
     enum status "PENDING, SENT, FAILED, BOUNCED, SKIPPED"
-    datetime scheduled_at
+    datetime scheduled_at "보낼 시각, 실패하면 다시 보낼 시각"
     datetime sent_at
+    int attempt_count "보낸 횟수"
     datetime created_at
   }
 ```
