@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+/**
+ * 커뮤니티 알림을 저장한다. 회원이 일으킨 알림은 actorId를 남기고, message에는 이름 뒤에 붙는 문구만 쓴다.
+ * 화면은 지금 이름을 굵게 쓰고 message를 이어 붙인다(알림 드롭다운 H-07).
+ */
 @Component
 @RequiredArgsConstructor
 public class CommunityNotificationListener {
@@ -23,35 +27,37 @@ public class CommunityNotificationListener {
 
 	@EventListener
 	public void onMeetupInvited(MeetupInvitedEvent event) {
-		String message = event.hostName() + "님이 번개에 초대했어요. " + event.title();
-		save(event.inviteeIds(), MEETUP_INVITED, event.postId(), message);
+		String message = "님이 번개에 초대했어요. " + event.title();
+		save(event.inviteeIds(), MEETUP_INVITED, event.postId(), event.hostId(), message);
 	}
 
 	@EventListener
 	public void onMeetupCanceled(MeetupCanceledEvent event) {
 		String message = "참여한 번개가 취소됐어요. " + event.title();
-		save(event.memberIds(), MEETUP_CANCELED, event.postId(), message);
+		save(event.memberIds(), MEETUP_CANCELED, event.postId(), null, message);
 	}
 
 	@EventListener
 	public void onRecruitJoined(RecruitJoinedEvent event) {
-		String message = event.memberName() + "님이 내 모집글에 참여했어요. " + event.title();
-		save(List.of(event.authorId()), RECRUIT_JOINED, event.postId(), message);
+		String message = "님이 내 모집글에 참여했어요. " + event.title();
+		save(List.of(event.authorId()), RECRUIT_JOINED, event.postId(), event.memberId(), message);
 	}
 
 	@EventListener
 	public void onRecruitCanceled(RecruitCanceledEvent event) {
 		String message = "참여한 커피챗 모집이 취소됐어요. " + event.title();
-		save(event.memberIds(), RECRUIT_CANCELED, event.postId(), message);
+		save(event.memberIds(), RECRUIT_CANCELED, event.postId(), null, message);
 	}
 
 	@EventListener
 	public void onCommentCreated(CommentCreatedEvent event) {
-		String message = event.commenterName() + "님이 내 글에 댓글을 남겼어요. " + event.title();
-		save(List.of(event.postAuthorId()), COMMENT_CREATED, event.postId(), message);
+		// 익명 댓글은 보낸 사람을 남기지 않고 문장 전체를 message에 쓴다.
+		String prefix = event.commenterId() == null ? "익명" : "";
+		String message = prefix + "님이 내 글에 댓글을 남겼어요. " + event.title();
+		save(List.of(event.postAuthorId()), COMMENT_CREATED, event.postId(), event.commenterId(), message);
 	}
 
-	private void save(List<Long> userIds, String type, Long postId, String message) {
+	private void save(List<Long> userIds, String type, Long postId, Long actorId, String message) {
 		notificationRepository.saveAll(userIds.stream()
 				.map(userId -> Notification.builder()
 						.userId(userId)
@@ -59,6 +65,7 @@ public class CommunityNotificationListener {
 						.type(type)
 						.targetType(NotificationTargetType.POST)
 						.targetId(postId)
+						.actorId(actorId)
 						.message(message)
 						.build())
 				.toList());

@@ -155,7 +155,8 @@ class MeetupServiceTest {
 		assertThat(notification.getTab()).isEqualTo(NotificationTab.COMMUNITY);
 		assertThat(notification.getTargetType()).isEqualTo(NotificationTargetType.POST);
 		assertThat(notification.getTargetId()).isEqualTo(postId);
-		assertThat(notification.getMessage()).isEqualTo("나사자님이 번개에 초대했어요. 금요일 번개");
+		assertThat(notification.getActorId()).isEqualTo(host);
+		assertThat(notification.getMessage()).isEqualTo("님이 번개에 초대했어요. 금요일 번개");
 	}
 
 	@Test
@@ -182,6 +183,7 @@ class MeetupServiceTest {
 				.filter(n -> n.getType().equals("MEETUP_CANCELED"))
 				.toList();
 		assertThat(notifications).extracting(Notification::getUserId).containsExactlyInAnyOrder(kim, lee);
+		assertThat(notifications.get(0).getActorId()).isNull();
 		assertThat(notifications.get(0).getMessage()).isEqualTo("참여한 번개가 취소됐어요. 금요일 번개");
 	}
 
