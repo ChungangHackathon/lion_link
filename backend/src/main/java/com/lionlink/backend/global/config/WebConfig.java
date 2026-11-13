@@ -24,7 +24,6 @@ public class WebConfig implements WebMvcConfigurer {
 			API_PREFIX + "/me",
 			API_PREFIX + "/me/signup-info",
 			API_PREFIX + "/me/reapply",
-			API_PREFIX + "/me/notification-settings",
 			API_PREFIX + "/email-notifications/unsubscribe"
 	);
 
