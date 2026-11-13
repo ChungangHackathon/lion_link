@@ -154,4 +154,26 @@ public class Profile extends BaseTimeEntity {
 	public void updateLinks(List<ProfileLink> links) {
 		this.links = links.isEmpty() ? null : links;
 	}
+
+	/** PROFILE-09: 연락처 이메일은 보여주기용이라 users.email과 별개다. 전화번호는 null이면 삭제. */
+	public void updateContact(String contactEmail, String phone) {
+		this.contactEmail = contactEmail;
+		this.phone = phone;
+	}
+
+	/** PROFILE-10: null인 키는 바꾸지 않는다. */
+	public void updateVisibility(Visibility email, Visibility phone, Visibility links, Visibility company) {
+		if (email != null) {
+			this.emailVisibility = email;
+		}
+		if (phone != null) {
+			this.phoneVisibility = phone;
+		}
+		if (links != null) {
+			this.linksVisibility = links;
+		}
+		if (company != null) {
+			this.companyVisibility = company;
+		}
+	}
 }

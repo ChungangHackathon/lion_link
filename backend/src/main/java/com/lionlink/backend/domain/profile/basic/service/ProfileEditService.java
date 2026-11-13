@@ -3,12 +3,16 @@ package com.lionlink.backend.domain.profile.basic.service;
 import com.lionlink.backend.domain.profile.Interest;
 import com.lionlink.backend.domain.profile.basic.dto.request.BasicInfoUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.BioUpdateRequest;
+import com.lionlink.backend.domain.profile.basic.dto.request.ContactUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.LinksUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.SkillsUpdateRequest;
+import com.lionlink.backend.domain.profile.basic.dto.request.VisibilityUpdateRequest;
 import com.lionlink.backend.domain.profile.basic.dto.response.BasicInfoResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.BioResponse;
+import com.lionlink.backend.domain.profile.basic.dto.response.ContactResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.LinksResponse;
 import com.lionlink.backend.domain.profile.basic.dto.response.SkillsResponse;
+import com.lionlink.backend.domain.profile.basic.dto.response.VisibilityResponse;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
@@ -20,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** PROFILE-04·06·07·08: 내 프로필의 한 부분을 보낸 값으로 통째로 바꾼다. */
+/** PROFILE-04·06~10: 내 프로필의 한 부분을 보낸 값으로 통째로 바꾼다. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -71,6 +75,22 @@ public class ProfileEditService {
 				.toList();
 		profile.updateLinks(links);
 		return LinksResponse.from(profile);
+	}
+
+	/** 가입 이메일(users.email)은 건드리지 않는다. 전화번호가 비어 있으면 null로 저장한다. */
+	@Transactional
+	public ContactResponse updateContact(Long userId, ContactUpdateRequest request) {
+		Profile profile = findMyProfile(userId);
+		profile.updateContact(request.email(), blankToNull(request.phone()));
+		return ContactResponse.from(profile);
+	}
+
+	/** 보낸 키만 바꾼다. 안 보낸 키는 그대로. */
+	@Transactional
+	public VisibilityResponse updateVisibility(Long userId, VisibilityUpdateRequest request) {
+		Profile profile = findMyProfile(userId);
+		profile.updateVisibility(request.email(), request.phone(), request.links(), request.company());
+		return VisibilityResponse.from(profile);
 	}
 
 	/** 허용 경로는 인터셉터가 탈퇴 여부를 보지 않을 수 있어 직접 확인한다. 프로필이 없으면 PROFILE_NOT_COMPLETED. */
