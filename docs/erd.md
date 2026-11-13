@@ -137,7 +137,7 @@ erDiagram
     bigint user_id FK
     varchar company
     varchar title
-    varchar employment_type
+    enum employment_type "FULL_TIME, CONTRACT, INTERN, FREELANCE, FOUNDER, ETC"
     varchar start_ym "YYYY-MM"
     varchar end_ym "YYYY-MM"
     boolean is_current
