@@ -81,4 +81,16 @@ public class ChatRoom extends BaseCreatedEntity {
 		this.requestedBy = requestedBy;
 		this.requestedAt = requestedAt;
 	}
+
+	public void openForCoffeeChat(Long coffeeChatId, LocalDateTime now) {
+		this.coffeeChatId = coffeeChatId;
+		this.status = ChatRoomStatus.ACTIVE;
+		if (acceptedAt == null) {
+			this.acceptedAt = now;
+		}
+	}
+
+	public void touch(LocalDateTime now) {
+		this.lastMessageAt = now;
+	}
 }

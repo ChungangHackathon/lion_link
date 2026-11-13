@@ -12,4 +12,6 @@ public interface CoffeeChatRecruitRepository extends JpaRepository<CoffeeChatRec
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select r from CoffeeChatRecruit r where r.postId = :postId")
 	Optional<CoffeeChatRecruit> findByIdForUpdate(Long postId);
+
+	Optional<CoffeeChatRecruit> findByCoffeeChatId(Long coffeeChatId);
 }
