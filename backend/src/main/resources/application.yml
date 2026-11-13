@@ -1,6 +1,8 @@
 spring:
   application:
     name: backend
+  config:
+    import: optional:classpath:application-secret.yml # 로컬 시크릿(git 제외). 형식은 application-secret.example.yml. 없으면 환경변수 → 아래 기본값
   datasource:
     url: jdbc:mysql://localhost:3306/lionlink?serverTimezone=Asia/Seoul&characterEncoding=UTF-8 # docker-compose.yml의 MySQL
     driver-class-name: com.mysql.cj.jdbc.Driver
