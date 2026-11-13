@@ -27,6 +27,7 @@ import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -152,13 +153,14 @@ class EmailNotificationServiceTest {
 	void 실패하면_10분_뒤에_다시_보내고_3번_실패하면_멈춘다() {
 		doThrow(new MailSendException("smtp down")).when(emailSender).send(anyString(), anyString(), anyString());
 		requestCoffeeChat();
-		LocalDateTime now = later();
+		// 리눅스(CI)처럼 시계가 나노초까지 주는 경우도 같은 시각에 다시 보내는지 확인한다.
+		LocalDateTime now = later().withNano(123_456_789);
 
 		emailNotificationService.sendDue(now);
 		EmailLog first = onlyLog();
 		assertThat(first.getStatus()).isEqualTo(EmailStatus.PENDING);
 		assertThat(first.getAttemptCount()).isEqualTo(1);
-		assertThat(first.getScheduledAt()).isEqualTo(now.plusMinutes(10));
+		assertThat(first.getScheduledAt()).isEqualTo(now.plusMinutes(10).truncatedTo(ChronoUnit.MICROS));
 
 		assertThat(emailNotificationService.sendDue(now.plusMinutes(5))).isZero();
 		emailNotificationService.sendDue(now.plusMinutes(10));

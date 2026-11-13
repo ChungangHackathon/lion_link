@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -69,7 +70,7 @@ public class EmailLog extends BaseCreatedEntity {
 		this.type = type;
 		this.targetIds = targetIds;
 		this.subject = subject;
-		this.scheduledAt = scheduledAt;
+		this.scheduledAt = toDbPrecision(scheduledAt);
 		this.status = EmailStatus.PENDING;
 	}
 
@@ -95,6 +96,12 @@ public class EmailLog extends BaseCreatedEntity {
 			this.status = EmailStatus.FAILED;
 			return;
 		}
-		this.scheduledAt = now.plus(retryDelay);
+		this.scheduledAt = toDbPrecision(now.plus(retryDelay));
+	}
+
+	// DB는 마이크로초까지만 저장하면서 반올림한다. 리눅스처럼 나노초까지 나오는 시계에서는 저장된 값이 원래보다 커져
+	// '보낼 시각이 됐는지' 비교가 어긋나므로, 미리 마이크로초로 잘라 둔다.
+	private static LocalDateTime toDbPrecision(LocalDateTime time) {
+		return time.truncatedTo(ChronoUnit.MICROS);
 	}
 }
