@@ -63,7 +63,7 @@
 | 6. 커뮤니티 | 17 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 8. 채팅 | 14 | 커피챗·채팅·알림 담당 | **미작성** |
-| 9. 알림 | 6 | 커피챗·채팅·알림 담당 | **미작성** |
+| 9. 알림 | 6 | 커피챗·채팅·알림 담당 | 이 문서 9장 |
 
 커피챗·채팅·알림 30개는 노션 표에 행만 있고, 확인한 페이지(커피챗 신청, 첫 메시지 요청, 알림 목록)의 본문은 빈 템플릿이었다.
 
@@ -884,7 +884,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 4 | 기본 정보에서 멋사 파트를 수정하면(PROFILE-04) 자동 생성 멋사 활동 항목의 파트 | 바꾸지 않는다. 두 값은 각자 따로 수정하고 세 화면(2.2 소개 카드, 멋사 활동 섹션)에 각각 보인다. 같이 바꾸고 싶으면 알려줘 | 기획, BE |
 | 5 | 프로필 사진 저장소(S3 등), 원본 보관·리사이즈, 사진을 바꾸거나 지웠을 때 이전 파일 삭제 | 저장소는 팀이 정한 것을 쓰고, 이전 파일은 바로 지운다. `photoUrl`은 공개 주소로 내려준다(만료 없음) | BE |
 | 6 | 연락처 이메일(PROFILE-09)을 다른 주소로 바꿀 때 본인 확인 | 확인 메일 없이 형식만 검사한다(알림 메일은 가입 이메일로만 나가서 위험하지 않다) | BE |
-| 7 | 승인 메일(ADMIN-03)이 알림 설정의 영향을 받는지 | 받지 않는다. 알림 설정에는 커피챗 신청·메시지 요청 두 개뿐이고, 승인 메일은 항상 보낸다 | BE, 알림 담당 |
+| 7 | 승인 메일(ADMIN-03)이 알림 설정의 영향을 받는지 | **변경(2026-11-13)**: 받는다. 알림 설정 화면(N-01)에 맞춰 가입 승인 메일 받기를 설정에 넣었다(NOTI-04) | 완료 |
 | 8 | 관리자 계정이 승인됨 탭에 나오는지 | 나온다(`role`과 관계없이 `status` 기준). 필요하면 제외한다 | BE, FE |
 | 9 | 목록 조회의 정렬·페이지 크기 | 승인 대기는 오래된 순, 나머지 탭은 처리 시각 최신순, 기본 20개(최대 100) | FE |
 | 10 | 클라이언트 입력 기간 형식 | 연월은 `"2024-03"`, 날짜는 `"2026-11-20"`, 시각은 KST ISO-8601 | FE |
@@ -1392,13 +1392,13 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 | `type` | 받는 사람 | 문구 |
 | --- | --- | --- |
-| `MEETUP_INVITED` | 초대받은 회원 | `{작성자}님이 번개에 초대했어요. {제목}` |
+| `MEETUP_INVITED` | 초대받은 회원 | `님이 번개에 초대했어요. {제목}` (보낸 사람: 작성자) |
 | `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
-| `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `{댓글 작성자}님이 내 글에 댓글을 남겼어요. {제목}` |
-| `RECRUIT_JOINED` | 커피챗 모집 작성자 | `{참여자}님이 내 모집글에 참여했어요. {제목}` |
+| `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `님이 내 글에 댓글을 남겼어요. {제목}` (보낸 사람: 댓글 작성자) |
+| `RECRUIT_JOINED` | 커피챗 모집 작성자 | `님이 내 모집글에 참여했어요. {제목}` (보낸 사람: 참여자) |
 | `RECRUIT_CANCELED` | 작성자를 뺀 모집 참여자 | `참여한 커피챗 모집이 취소됐어요. {제목}` |
 
-익명 댓글이면 문구의 이름 자리에 '익명'을 넣어(지금 규칙에선 익명 댓글은 익명 글 작성자만 쓰므로 알림이 가지 않아). 프론트 알림 목록은 보낸 사람의 아바타·이름(`actorId`)을 따로 보여주는데, `notifications`에 보낸 사람 칼럼이 없어서 지금은 문구에 이름을 넣고 있어. 칼럼을 추가할지는 알림 담당과 정한다.
+보낸 사람이 있는 알림은 `actor_id`에 그 회원을 남기고 문구에는 이름 뒤 부분만 저장해. 화면은 이름을 굵게 쓰고 문구를 이어 붙인다(9. 알림의 "보낸 사람과 문구"). 익명 댓글이면 보낸 사람을 남기지 않고 문구 앞에 '익명'을 붙여(지금 규칙에선 익명 댓글은 익명 글 작성자만 쓰므로 알림이 가지 않아).
 
 ### 커뮤니티 확정 필요
 
@@ -1692,3 +1692,162 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | `커피챗 일정이 정해졌어요. {M월 d일 HH:mm}` (변경이면 `바뀌었어요`) |
 | `COFFEE_CHAT_CANCELED` | 나를 뺀 참여자 | `{이름}님이 커피챗을 취소했어요.` |
 | `COFFEE_CHAT_EXPIRED` | 신청자 전원 | `{사자}님에게 보낸 커피챗 신청이 만료됐어요.` |
+
+## 9. 알림
+
+담당: 커피챗, 채팅, 알림. PRD 9.1 인앱 알림과 9.2 이메일 알림이야. 노션 상세가 비어 있어서 프론트 화면(H-07 알림 드롭다운, N-01 알림 설정, N-04 수신 거부 완료)을 기준으로 정했어.
+
+| ID | 기능 | 메서드, 경로 | 쓸 수 있는 회원 |
+| --- | --- | --- | --- |
+| NOTI-01 | 최근 알림 20개 | `GET /notifications` | 승인 회원 |
+| NOTI-02 | 알림 하나 읽음 처리 | `PUT /notifications/{notificationId}/read` | 승인 회원 |
+| NOTI-03 | 알림 모두 읽음 처리 | `PUT /notifications/read-all` | 승인 회원 |
+| NOTI-04 | 이메일 알림 설정 조회 | `GET /me/notification-settings` | 승인 대기, 승인 회원 |
+| NOTI-05 | 이메일 알림 켜기, 끄기 | `PATCH /me/notification-settings` | 승인 대기, 승인 회원 |
+| NOTI-06 | 메일 링크로 수신 거부 | `GET /email-notifications/unsubscribe` | 로그인 없이 |
+
+### 열거값
+
+| 이름 | 값 |
+| --- | --- |
+| `tab` | `COFFEE_CHAT` 커피챗, `CHAT` 채팅, `COMMUNITY` 커뮤니티, `ACCOUNT` 계정(가입 신청, 가입 승인). 드롭다운에 계정 탭이 없어서 `ACCOUNT`는 전체 탭에서만 보여 |
+| `targetType` | `COFFEE_CHAT`, `ROOM`, `POST`, `USER`. FE는 `targetType`과 `targetId`로 이동할 화면을 정해 |
+| `type` | 알림 종류 문자열. 지금 저장되는 값은 아래 "지금 저장되는 알림" 표 |
+| 메일 종류 | `COFFEE_CHAT_REQUEST` 커피챗 신청, `MESSAGE_REQUEST` 메시지 요청, `SIGNUP_APPROVED` 가입 승인 |
+
+### 보낸 사람과 문구
+
+회원이 일으킨 알림은 `notifications.actor_id`에 그 회원을 남기고, `message`에는 이름 뒤에 붙는 문구만 저장해. FE는 `actor.name`을 굵게 쓰고 바로 뒤에 `message`를 이어 붙이면 돼(예: **김사자** + `님이 내 글에 댓글을 남겼어요. 자유 글`). 이름은 조회할 때 `users`에서 읽어서, 이름이 바뀌어도 지금 이름으로 보여.
+
+- `actor`가 `null`이면 시스템 알림이고 `message`가 문장 전체야(예: `가입이 승인됐어요. 이제 모든 기능을 이용할 수 있어요.`).
+- 보낸 사람이 탈퇴했으면 `actor.isDeleted`가 `true`이고 `name`, `photoUrl`은 `null`이야. FE는 '탈퇴한 회원'처럼 따로 표시해.
+
+### NOTI-01 최근 알림 20개
+
+`GET /notifications?tab=ALL` (승인 회원)
+
+`tab`은 `ALL`(기본), `COFFEE_CHAT`, `CHAT`, `COMMUNITY` 중 하나야. 고른 탭의 최근 알림을 최신순으로 20개까지 주고, 탭별 안 읽은 개수는 고른 탭과 상관없이 같이 줘.
+
+```json
+{
+  "items": [
+    {
+      "id": 31,
+      "tab": "COMMUNITY",
+      "type": "COMMENT_CREATED",
+      "targetType": "POST",
+      "targetId": 501,
+      "actor": { "id": 25, "name": "김사자", "photoUrl": null, "isDeleted": false },
+      "message": "님이 내 글에 댓글을 남겼어요. 자유 글",
+      "read": false,
+      "createdAt": "2026-11-13T12:00:00+09:00"
+    },
+    {
+      "id": 30,
+      "tab": "ACCOUNT",
+      "type": "SIGNUP_APPROVED",
+      "targetType": "USER",
+      "targetId": 12,
+      "actor": null,
+      "message": "가입이 승인됐어요. 이제 모든 기능을 이용할 수 있어요.",
+      "read": true,
+      "createdAt": "2026-11-12T09:00:00+09:00"
+    }
+  ],
+  "unreadCounts": { "all": 3, "coffeeChat": 1, "chat": 0, "community": 2 }
+}
+```
+
+| 필드 | 기준 |
+| --- | --- |
+| `read` | `notifications.read_at`이 있으면 `true` |
+| `unreadCounts.all` | 안 읽은 내 알림 전부. 계정 알림도 들어가서 상단 종 배지에 쓰면 돼 |
+| `unreadCounts.coffeeChat`, `chat`, `community` | 탭별 안 읽은 알림 수 |
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | `tab`이 위 네 값이 아님 |
+| 403 | `NOT_APPROVED` | 승인 전 |
+
+### NOTI-02 알림 하나 읽음 처리
+
+`PUT /notifications/{notificationId}/read` (승인 회원)
+
+알림을 눌러 이동할 때 불러. `read_at`을 기록하고 `204`를 줘. 이미 읽은 알림이면 처음 읽은 시각을 그대로 두고 `204`를 줘.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 404 | `NOTIFICATION_NOT_FOUND` | 없는 알림이거나 내 알림이 아님('알림을 찾을 수 없어요.') |
+
+### NOTI-03 알림 모두 읽음 처리
+
+`PUT /notifications/read-all` (승인 회원)
+
+드롭다운의 [모두 읽음]이야. 탭과 상관없이 안 읽은 내 알림을 모두 읽음으로 바꾸고 `204`를 줘.
+
+### NOTI-04 이메일 알림 설정 조회
+
+`GET /me/notification-settings` (승인 대기, 승인 회원)
+
+```json
+{ "emailCoffeeChat": true, "emailMessageRequest": true, "emailSignupApproved": true }
+```
+
+설정이 아직 없으면 모두 켜진 기본값으로 만들어서 돌려줘. 수신 거부 토큰도 이때 같이 만들어지고, 응답에는 넣지 않아.
+
+| 필드 | 화면(N-01) |
+| --- | --- |
+| `emailCoffeeChat` | 커피챗 신청 메일 받기 |
+| `emailMessageRequest` | 메시지 요청 메일 받기 |
+| `emailSignupApproved` | 가입 승인 메일 받기. 승인 대기 중에 끄면 승인 메일을 보내지 않아 |
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `NOT_APPROVED` | 반려된 회원 |
+
+### NOTI-05 이메일 알림 켜기, 끄기
+
+`PATCH /me/notification-settings` (승인 대기, 승인 회원)
+
+```json
+{ "emailCoffeeChat": false }
+```
+
+보낸 항목만 바꾸고, 빠진 항목은 그대로 둬. 응답은 NOTI-04와 같은 형식의 바뀐 설정 전체야.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 값이 `true`, `false`가 아님 |
+| 403 | `NOT_APPROVED` | 반려된 회원 |
+
+### NOTI-06 메일 링크로 수신 거부
+
+`GET /email-notifications/unsubscribe?token={unsubscribeToken}&type=COFFEE_CHAT_REQUEST` (로그인 없이)
+
+메일 아래의 [이 알림 그만 받기] 링크는 FE 수신 거부 페이지로 가고, FE가 주소의 `token`, `type`으로 이 API를 부른 뒤 완료 화면(N-04)을 보여줘. `type`에 해당하는 메일만 끄고 `204`를 줘. 이미 꺼져 있어도 `204`야. 다시 켜는 건 NOTI-05로 해.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `INVALID_UNSUBSCRIBE_TOKEN` | 토큰에 맞는 설정이 없음('수신 거부 링크가 올바르지 않아요.') |
+| 400 | `VALIDATION_ERROR` | `token`이나 `type`이 없거나 `type`이 메일 종류가 아님 |
+
+### 지금 저장되는 알림
+
+| `type` | `tab` | 저장하는 곳 | 보낸 사람 |
+| --- | --- | --- | --- |
+| `SIGNUP_REQUESTED` | `ACCOUNT` | 가입 신청(AUTH-02), 다시 신청(AUTH-07) | 없음 |
+| `SIGNUP_APPROVED` | `ACCOUNT` | 가입 승인(ADMIN-03, 05) | 없음 |
+| `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글 쓴 회원 |
+| `MEETUP_CANCELED`, `RECRUIT_CANCELED` | `COMMUNITY` | 커뮤니티 | 없음 |
+| `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 지금은 없음. 이름이 `message`에 들어 있음 |
+
+채팅(`CHAT`) 알림은 채팅 작업에서 리스너로 추가해. 회원이 일으킨 알림이면 `actorId`를 채우고 `message`는 이름 뒤 문구로 저장해.
+
+### 알림 남은 일
+
+| 번호 | 무엇을 | 지금 | 맞출 사람 |
+| --- | --- | --- | --- |
+| 1 | 실제 메일 발송(발송, 재시도, `email_logs` 기록) | 미구현. 커피챗 신청 메일과 같이 붙어야 해서 커피챗 작업이 머지된 뒤 진행. 보내기 전에 `NotificationSettingService.getOrCreate`로 수신 여부와 수신 거부 토큰을 얻는다 | 알림 담당 |
+| 2 | FE 탭 값 | 목업은 `COFFEE`를 쓰는데 API는 `COFFEE_CHAT`이야. FE가 API 값에 맞춘다 | FE |
+| 3 | 알림을 누를 때 이동할 주소 | API는 `targetType`, `targetId`만 준다. 주소는 FE가 만든다 | FE |
+| 4 | 커피챗 알림의 보낸 사람 | 커피챗 알림은 `actorId` 없이 이름을 `message`에 넣는다. `actor`가 `null`이면 `message`가 문장 전체라 화면은 깨지지 않지만 이름이 굵게 보이지 않는다. 신청자, 받는 사자, 취소한 회원을 `actorId`로 남기도록 맞춘다 | 커피챗 담당 |
