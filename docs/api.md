@@ -1,7 +1,7 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
-> 마지막 갱신: 2026-11-14 (여러 명 커피챗 끄기 때 모집글 마감). 기준: 기능명세서 v1.17, `docs/erd.md`
+> 전체 API 목록(88개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
+> 마지막 갱신: 2026-11-14 (채팅 안 읽은 수 CHAT-15, S3 이전 파일 지우기, 탈퇴 때 정리). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
 
@@ -62,7 +62,7 @@
 | 5. 동문 찾기 | 5 | 조상원 | 이 문서 아래 |
 | 6. 커뮤니티 | 17 | 조상원 | 이 문서 아래 |
 | 7. 홈 | 2 | 조상원 | 이 문서 아래 |
-| 8. 채팅 | 14 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
+| 8. 채팅 | 15 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
 | 9. 알림 | 6 | 차예은 | 이 문서 9장 |
 
 커피챗·채팅·알림 30개는 노션 표에 행만 있고, 확인한 페이지(커피챗 신청, 첫 메시지 요청, 알림 목록)의 본문은 빈 템플릿이었다.
@@ -150,6 +150,7 @@
 | 8. 채팅 | `PUT` | `/chat-rooms/{roomId}/read` | 읽음 처리 | 차예은 |
 | 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/preferences` | 방 고정·알림 끄기 | 차예은 |
 | 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/members/me` | 방 나가기·종료된 요청 숨기기 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-rooms/unread-count` | 안 읽은 메시지 수 (상단 메뉴 배지) | 차예은 |
 | 9. 알림 | `GET` | `/notifications` | 최근 알림 20개 | 차예은 |
 | 9. 알림 | `PUT` | `/notifications/{notificationId}/read` | 알림 하나 읽음 처리 | 차예은 |
 | 9. 알림 | `PUT` | `/notifications/read-all` | 알림 모두 읽음 처리 | 차예은 |
@@ -357,8 +358,9 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 - `deleted_at`을 기록하고 구글 고유 ID 연결을 풀어. 같은 구글 계정으로 다시 가입 신청할 수 있고, 새 회원 행이 만들어져.
 - Refresh Token을 모두 폐기해.
 - 진행 중인 커피챗은 취소(사유 탈퇴)하고 상대에게 알려. 여러 명 커피챗에서 받는 사자나 대표 신청자면 전체를 취소하고, 함께 신청자면 그 사람만 빠진다.
-- 대기 중인 메시지 요청을 삭제해.
-- 모집 중인 번개·커피챗 모집글은 종료하고 참여자에게 알려. 참여 중이던 모집글에서는 빠진다.
+- 대기 중인 메시지 요청은 취소해서 목록·요청함에서 빼. 단체 채팅방에서는 나가고, 1:1 방은 남지만 상대가 더 보낼 수 없어(10장 "탈퇴한 동문").
+- 모집 중인 번개·커피챗 모집글은 종료하고 참여자에게 알려. 참여 중이던 모집글에서는 빠진다. 신청받을 사자로 고른 모집 중인 커피챗 모집은 마감하고 작성자와 참여자에게 알려.
+- 위 정리(커피챗, 번개·모집, 채팅)는 탈퇴 처리 안에서 `UserWithdrawnEvent(userId)`를 보내면 각 영역이 같은 트랜잭션에서 해. 탈퇴 API는 `deleted_at`을 기록한 뒤 이 이벤트만 보내면 돼.
 - 작성한 글·댓글은 남기고 작성자를 '알 수 없음'으로 표시해. 동문 찾기·프로필에서는 바로 빠진다.
 
 | 상태 | code | 언제 |
@@ -1187,7 +1189,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 - 번개·커피챗 모집 글은 작성자 말고 참여자가 없을 때만 다른 카테고리로 바꿀 수 있어. 바꾸면 모집 정보(번개는 초대 기록과 단체 채팅방까지)는 지워져
 - 일반 글을 번개·커피챗 모집으로 바꿀 때는 `meetup`(`meetAt` `place` `capacity`) 또는 `recruit`(`seniorId` `capacity` `deadline`)를 모두 보내야 해. POST-03처럼 검증하고 작성자가 첫 참여자가 돼
 - 마감일을 쓸 수 없는 카테고리로 바꾸면 `deadline`은 지워져
-- `files`를 보내면 파일 목록을 통째로 바꿔(남길 파일도 다시 보내). 안 보내면 그대로, 빈 배열이면 모두 지워
+- `files`를 보내면 파일 목록을 통째로 바꿔(남길 파일도 다시 보내). 안 보내면 그대로, 빈 배열이면 모두 지워. 빠진 파일은 S3에서도 지워(FILE-01)
 - 번개: 시작되거나 취소된 번개는 수정할 수 없고, 정원은 지금 참여 인원보다 줄일 수 없어
 - 커피챗 모집: 커피챗을 신청한 뒤(`APPLIED`)나 사자가 여러 명 커피챗을 꺼서 마감된 뒤(`ENDED`)에는 모집 정보를 못 바꾸고('마감된 모집은 바꿀 수 없어요.'), 참여자가 있으면 신청받을 사자를 못 바꿔
 
@@ -1212,7 +1214,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `DELETE /posts/{postId}` · 작성자 또는 관리자
 
-소프트 삭제(`deleted_at`)이고 `204`야. 댓글도 화면에서 같이 사라져.
+소프트 삭제(`deleted_at`)이고 `204`야. 댓글도 화면에서 같이 사라지고, 글의 파일은 S3에서 지워(FILE-01).
 
 - 번개 글이면 번개도 취소(`meetups.canceled_at`)하고 작성자를 뺀 참여자에게 취소 알림을 저장해. 단체 채팅방에는 '번개가 취소됐어요'(이미 끝난 번개를 관리자가 지우면 '번개 글이 삭제됐어요')를 남기고 닫아. 프론트의 [번개 취소]가 이 API야
 - 커피챗 모집 글은 커피챗을 신청한 뒤(`APPLIED`)에는 지울 수 없어. 마감된 모집은 지울 수 있어. 프론트의 [모집 취소]가 이 API야. 마감 전이면 작성자를 뺀 참여자에게 취소 알림을 저장해
@@ -1384,6 +1386,8 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 2. `uploadUrl`에 파일을 `PUT`으로 올려. 헤더 `Content-Type`은 응답의 `contentType` 그대로 보내고, 파일 크기는 요청한 `size`와 같아야 해(다르면 S3가 거절해)
 3. 글을 쓰거나 고칠 때 `fileUrl`을 `files[].url`로 보내
 
+글에서 빠진 파일과 지운 글의 파일은 저장이 끝난 뒤 S3에서 지워(POST-05·06). 다른 글이나 프로필 사진에서 같은 주소를 쓰면 남기고, 지우다 실패해도 글 수정·삭제는 성공해(로그만 남김). 지우는 건 프로필 사진(PROFILE-05)과 같은 서버 파일 저장소를 써.
+
 | 요청 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
 | `type` | string | O | `IMAGE` 이미지, `ATTACHMENT` 첨부파일 |
@@ -1424,6 +1428,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `RECRUIT_JOINED` | 커피챗 모집 작성자 | `님이 내 모집글에 참여했어요. {제목}` (보낸 사람: 참여자) |
 | `RECRUIT_CANCELED` | 작성자를 뺀 모집 참여자 | `참여한 커피챗 모집이 취소됐어요. {제목}` |
 | `RECRUIT_CLOSED` | 모집 작성자와 참여자 | `님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. {제목}` (보낸 사람: 신청받을 사자) |
+| `RECRUIT_CLOSED` (사자 탈퇴) | 모집 작성자와 참여자 | `신청받을 사자가 탈퇴해서 모집이 마감됐어요. {제목}` (보낸 사람 없음) |
 
 보낸 사람이 있는 알림은 `actor_id`에 그 회원을 남기고 문구에는 이름 뒤 부분만 저장해. 화면은 이름을 굵게 쓰고 문구를 이어 붙인다(9. 알림의 "보낸 사람과 문구"). 익명 댓글이면 보낸 사람을 남기지 않고 문구 앞에 '익명'을 붙여(지금 규칙에선 익명 댓글은 익명 글 작성자만 쓰므로 알림이 가지 않아).
 
@@ -1434,8 +1439,8 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | 1 | 익명 허용 범위 | 글은 `FREE`만, 댓글은 익명 글 작성자만 자동 익명. PRD(6.3·6.6)는 번개·커피챗 모집 빼고 모두 익명 가능 | 기획, FE |
 | 2 | 커피챗 함께 신청 모집(4.11) | RECRUIT-01 참여 구현. 모인 인원으로 신청(`APPLIED`로 변경, `coffee_chat_id` 기록)은 커피챗 신청이 맡는다. 참여 취소를 만들지, 신청 후 커피챗이 거절·만료돼도 '신청 완료'로 남길지 정해야 한다 | 커피챗 담당, 기획 |
 | 3 | 인기 키워드(6-2) | **반영**: POST-08. PRD에 없어서 최근 7일 검색어 기준으로 정했다 | 기획, FE |
-| 4 | 업로드 주소 발급(6-10) | **반영**: FILE-01. 글을 지우거나 파일을 바꿀 때 S3의 이전 파일은 아직 지우지 않는다 | BE |
-| 5 | 탈퇴(AUTH-08)·여러 명 커피챗 끄기(PROFILE-13) 때 모집글 처리 | 여러 명 커피챗 끄기는 **반영**: 설정 저장이 `GroupCoffeeChatDisabledEvent`를 보내고 커뮤니티가 모집 마감·알림을 맡는다(RECRUIT-01). 탈퇴는 미구현이라 탈퇴 API가 생기면 같은 방식으로 이벤트를 받아 처리한다 | 계정·프로필 담당 |
+| 4 | 업로드 주소 발급(6-10) | **반영**: FILE-01. 글에서 빠진 파일과 지운 글의 파일은 커밋 뒤 S3에서 지운다 | BE |
+| 5 | 탈퇴(AUTH-08)·여러 명 커피챗 끄기(PROFILE-13) 때 모집글 처리 | 여러 명 커피챗 끄기는 **반영**: 설정 저장이 `GroupCoffeeChatDisabledEvent`를 보내고 커뮤니티가 모집 마감·알림을 맡는다(RECRUIT-01). 탈퇴 정리도 준비됨: 탈퇴 API가 `UserWithdrawnEvent`를 보내면 번개 취소·모집 종료·참여 정리·알림을 커뮤니티가 맡는다(AUTH-08). 탈퇴 API에서 이벤트 발행만 남음 | 계정·프로필 담당 |
 
 ## 7. 홈
 
@@ -1720,6 +1725,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `COFFEE_CHAT_REJECTED` | 신청자 전원 | 받는 사자 | `님이 이번 커피챗은 어렵다고 했어요.` |
 | `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | 일정을 정한 회원 | `님이 커피챗 일정을 정했어요. {M월 d일 HH:mm}` (변경이면 `바꿨어요`) |
 | `COFFEE_CHAT_CANCELED` | 나를 뺀 참여자 | 취소한 회원 | `님이 커피챗을 취소했어요.` |
+| `COFFEE_CHAT_CANCELED` (탈퇴) | 나를 뺀 참여자 | 없음 | `함께하던 동문이 탈퇴해서 커피챗이 취소됐어요.` |
 | `COFFEE_CHAT_EXPIRED` | 신청자 전원 | 받는 사자 | `님에게 보낸 커피챗 신청이 만료됐어요.` |
 
 ## 9. 알림
@@ -1867,9 +1873,9 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `SIGNUP_REQUESTED` | `ACCOUNT` | 가입 신청(AUTH-02), 다시 신청(AUTH-07) | 없음 |
 | `SIGNUP_APPROVED` | `ACCOUNT` | 가입 승인(ADMIN-03, 05) | 없음 |
 | `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글 쓴 회원 |
-| `RECRUIT_CLOSED` | `COMMUNITY` | 커뮤니티 | 여러 명 커피챗을 끈 사자 |
+| `RECRUIT_CLOSED` | `COMMUNITY` | 커뮤니티 | 여러 명 커피챗을 끈 사자 (사자가 탈퇴했으면 없음) |
 | `MEETUP_CANCELED`, `RECRUIT_CANCELED` | `COMMUNITY` | 커뮤니티 | 없음 |
-| `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 신청자, 받는 사자, 일정을 정한 회원, 취소한 회원 |
+| `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 신청자, 받는 사자, 일정을 정한 회원, 취소한 회원 (탈퇴로 취소되면 없음) |
 | `MESSAGE_REQUESTED`, `MESSAGE_REQUEST_ACCEPTED` | `CHAT` | 채팅(10장 "채팅이 저장하는 알림") | 요청한 회원, 수락한 회원 |
 
 회원이 일으킨 알림은 `actorId`를 채우고 `message`는 이름 뒤 문구로 저장해.
@@ -1925,6 +1931,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | CHAT-12 | 읽음 처리 | `PUT /chat-rooms/{roomId}/read` |
 | CHAT-13 | 상단 고정, 알림 끄기 | `PATCH /chat-rooms/{roomId}/preferences` |
 | CHAT-14 | 나가기, 끝난 요청 숨기기 | `DELETE /chat-rooms/{roomId}/members/me` |
+| CHAT-15 | 안 읽은 메시지 수 | `GET /chat-rooms/unread-count` |
 
 모두 승인 회원만 쓸 수 있어. 방에 참여하지 않았거나 나간 방은 `404 ROOM_NOT_FOUND`야.
 
@@ -2069,7 +2076,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 `GET /chat-rooms/{roomId}`
 
-`{ roomId, type, status, requestedByMe, members(나를 뺀 참여자), coffeeChat({ id, status, scheduledAt } 또는 null), meetup({ postId, title, meetAt, place, status } 또는 null), pinned, muted, canSend }`를 줘. `meetup.status`는 MEETUP-01과 같은 `OPEN` `FULL` `ENDED` `CANCELED`야. `canSend`는 `ACTIVE`이고 닫히지 않은 방(취소된 번개 방이 아님)일 때만 `true`야.
+`{ roomId, type, status, requestedByMe, members(나를 뺀 참여자), coffeeChat({ id, status, scheduledAt } 또는 null), meetup({ postId, title, meetAt, place, status } 또는 null), pinned, muted, canSend }`를 줘. `meetup.status`는 MEETUP-01과 같은 `OPEN` `FULL` `ENDED` `CANCELED`야. `canSend`는 `ACTIVE`이고 닫히지 않은 방(취소된 번개 방이 아님)일 때만 `true`야. 1:1 방 상대가 탈퇴했으면 `false`야.
 
 ### CHAT-10 메시지 목록
 
@@ -2095,7 +2102,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | 글자 수 |
 | 404 | `ROOM_NOT_FOUND` | 없거나 내가 없는 방 |
-| 409 | `INVALID_ROOM_STATUS` | 대화 중이 아니거나 닫힌 방(취소된 번개) |
+| 409 | `INVALID_ROOM_STATUS` | 대화 중이 아니거나 닫힌 방(취소된 번개), 탈퇴한 동문과의 1:1 방('탈퇴한 동문에게는 메시지를 보낼 수 없어요.') |
 
 ### CHAT-12 읽음 처리
 
@@ -2119,6 +2126,24 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 - 거절·취소된 요청: 내 목록에서 숨겨
 - 대기 중인 요청은 나가기 대신 취소(CHAT-07)나 거절(CHAT-05)을 써(`409 INVALID_ROOM_STATUS`)
 
+### CHAT-15 안 읽은 메시지 수
+
+`GET /chat-rooms/unread-count`
+
+상단 메뉴 '채팅' 배지야. `200`에 `{ "unreadMessages": 3, "messageRequests": 1 }`를 줘.
+
+- `unreadMessages`: 나가지 않은 대화 중인 방에서 내가 마지막으로 읽은 뒤에 다른 사람이 보낸 메시지 수. HOME-01의 `counts.unreadMessages`와 같아
+- `messageRequests`: 내가 받은 대기 중인 메시지 요청 수. 요청함(CHAT-02) 개수와 같아
+- 개인 채널에 `ROOM_UPDATED`나 `REQUEST_RECEIVED`가 오면 다시 불러
+
+### 탈퇴한 동문
+
+탈퇴(AUTH-08)하면 채팅은 이렇게 정리돼.
+
+- 그 사람이 보내거나 받은 대기 중인 메시지 요청은 취소(`CANCELED`)돼서 목록·요청함에서 사라져
+- 단체방에서는 '탈퇴한 동문이 나갔어요'를 남기고 나가
+- 1:1 방은 그대로 남고 상대는 `isDeleted: true`로 보여. 메시지는 보낼 수 없어(`canSend: false`, 보내면 `409 INVALID_ROOM_STATUS`)
+
 ### 실시간 (WebSocket STOMP)
 
 | 항목 | 값 |
@@ -2133,8 +2158,8 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | --- | --- | --- |
 | 방 | `MESSAGE` | `{ type, roomId, message(메시지 객체) }` |
 | 방 | `READ` | `{ type, roomId, userId, lastReadMessageId }` |
-| 개인 | `ROOM_UPDATED` | `{ type, roomId, muted }`. 내 방에 새 메시지가 오거나 상태가 바뀜. 목록·안 읽은 수를 다시 불러 |
-| 개인 | `REQUEST_RECEIVED` | `{ type, roomId }`. 새 메시지 요청. 대기 중인 요청은 받는 사람에게 `ROOM_UPDATED` 없이 이것만 가 |
+| 개인 | `ROOM_UPDATED` | `{ type, roomId, muted }`. 내 방에 새 메시지가 오거나 상태가 바뀜. 목록과 안 읽은 수(CHAT-15)를 다시 불러 |
+| 개인 | `REQUEST_RECEIVED` | `{ type, roomId }`. 새 메시지 요청. 대기 중인 요청은 받는 사람에게 `ROOM_UPDATED` 없이 이것만 가. 요청함과 CHAT-15를 다시 불러 |
 
 연결이 끊겼다가 다시 붙으면 CHAT-10의 `after`로 놓친 메시지를 받아.
 
