@@ -830,14 +830,20 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 요청 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| `userIds` | number\[\] | O | 1\~50개, 중복 불가 |
+| `userIds` | number\[\] | O | 1\~50개, 중복 불가(중복이면 `400`) |
 
-한 명씩 ADMIN-03과 같은 규칙으로 따로 처리하고, 일부가 실패해도 나머지는 승인돼. 그래서 `200`에 성공한 사람과 못 한 사람을 나눠서 줘.
+한 명씩 ADMIN-03과 같은 규칙으로 따로 처리하고, 일부가 실패해도 나머지는 승인돼. 그래서 `200`에 성공한 사람과 못 한 사람을 나눠서 줘. `failed.code`는 `ALREADY_PROCESSED`(이미 승인됨) 또는 `NOT_FOUND`(없는 회원·탈퇴한 회원)야.
 
 ```json
 {
-  "approved": [31, 32],
-  "skipped": [{ "userId": 33, "code": "ALREADY_PROCESSED" }, { "userId": 34, "code": "NOT_FOUND" }]
+  "succeeded": [
+    { "userId": 31, "name": "김사자", "status": "APPROVED" },
+    { "userId": 32, "name": "이사자", "status": "APPROVED" }
+  ],
+  "failed": [
+    { "userId": 33, "code": "ALREADY_PROCESSED" },
+    { "userId": 34, "code": "NOT_FOUND" }
+  ]
 }
 ```
 
@@ -864,6 +870,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 400 | `VALIDATION_ERROR` | 이름 길이·기수 범위 오류 |
 | 403 | `FORBIDDEN` | 관리자가 아님 |
 | 404 | `NOT_FOUND` | 없는 회원이거나 탈퇴한 회원 |
+| 409 | `DUPLICATE_ITEM` | 바뀔 기수에 이미 다른 멋사 활동이 있음(확정이 필요한 것들 3번) |
 
 ## 4. 확정이 필요한 것들
 
