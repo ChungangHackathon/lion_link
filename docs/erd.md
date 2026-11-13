@@ -44,7 +44,7 @@
 | 커뮤니티 | `meetups` | 번개 모임. 게시글과 1:1 (post_id가 PK) |
 | 커뮤니티 | `meetup_members` | 번개 참여자 |
 | 커뮤니티 | `meetup_invites` | 번개 초대 |
-| 커뮤니티 | `coffeechat_recruits` | 커피챗 함께 신청 모집. 게시글과 1:1 |
+| 커뮤니티 | `coffeechat_recruits` | 커피챗 함께 신청 모집. 게시글과 1:1. 신청받을 사자가 여러 명 커피챗을 끄면 `status`가 `ENDED`가 됨 |
 | 커뮤니티 | `recruit_members` | 모집 참여자 |
 | 커뮤니티 | `keyword_blocklist` | 금칙어 |
 | 커뮤니티 | `post_search_keywords` | 커뮤니티 검색어 기록(인기 키워드). (user_id, keyword) UNIQUE라 회원별 키워드당 1줄, 7일 지나면 지움 |
