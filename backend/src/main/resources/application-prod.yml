@@ -1,0 +1,5 @@
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false} # 운영은 기본으로 끈다. FE 연동 기간에만 true로 켠다
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
