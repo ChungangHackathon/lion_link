@@ -93,4 +93,39 @@ public class ChatRoom extends BaseCreatedEntity {
 	public void touch(LocalDateTime now) {
 		this.lastMessageAt = now;
 	}
+
+	public boolean isDirect() {
+		return type == ChatRoomType.DIRECT;
+	}
+
+	public boolean isRequestedBy(Long userId) {
+		return userId.equals(requestedBy);
+	}
+
+	public void request(Long requesterId, LocalDateTime now) {
+		this.status = ChatRoomStatus.REQUESTED;
+		this.requestedBy = requesterId;
+		this.requestedAt = now;
+		this.acceptedAt = null;
+		this.declinedAt = null;
+		this.declineReason = null;
+		this.declineMessage = null;
+		this.lastMessageAt = now;
+	}
+
+	public void acceptRequest(LocalDateTime now) {
+		this.status = ChatRoomStatus.ACTIVE;
+		this.acceptedAt = now;
+	}
+
+	public void decline(ChatDeclineReason reason, String message, LocalDateTime now) {
+		this.status = ChatRoomStatus.DECLINED;
+		this.declineReason = reason;
+		this.declineMessage = message;
+		this.declinedAt = now;
+	}
+
+	public void cancelRequest() {
+		this.status = ChatRoomStatus.CANCELED;
+	}
 }
