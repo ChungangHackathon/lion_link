@@ -173,7 +173,7 @@ public class PostService {
 		}
 		if (post.getCategory() == PostCategory.RECRUIT) {
 			CoffeeChatRecruit recruit = findRecruit(postId);
-			if (!admin && !recruit.isOpen()) {
+			if (!admin && recruit.getStatus() == RecruitStatus.APPLIED) {
 				throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED, "커피챗을 신청한 뒤에는 모집을 취소할 수 없어요.");
 			}
 			if (recruit.statusOn(LocalDate.now()) == RecruitStatus.OPEN) {
@@ -249,9 +249,7 @@ public class PostService {
 
 	private void removeRecruit(Post post) {
 		CoffeeChatRecruit recruit = findRecruit(post.getId());
-		if (!recruit.isOpen()) {
-			throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED, "커피챗을 신청한 뒤에는 모집 정보를 바꿀 수 없어요.");
-		}
+		checkRecruitEditable(recruit);
 		if (recruitMemberRepository.countByRecruitPostId(post.getId()) > 1) {
 			throw new BusinessException(CommunityErrorCode.CATEGORY_CHANGE_NOT_ALLOWED);
 		}
@@ -306,11 +304,18 @@ public class PostService {
 		);
 	}
 
-	private void updateRecruit(Long userId, Post post, PostUpdateRequest.RecruitRequest request) {
-		CoffeeChatRecruit recruit = findRecruit(post.getId());
-		if (!recruit.isOpen()) {
+	private void checkRecruitEditable(CoffeeChatRecruit recruit) {
+		if (recruit.getStatus() == RecruitStatus.APPLIED) {
 			throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED, "커피챗을 신청한 뒤에는 모집 정보를 바꿀 수 없어요.");
 		}
+		if (recruit.getStatus() == RecruitStatus.ENDED) {
+			throw new BusinessException(CommunityErrorCode.RECRUIT_CLOSED, "마감된 모집은 바꿀 수 없어요.");
+		}
+	}
+
+	private void updateRecruit(Long userId, Post post, PostUpdateRequest.RecruitRequest request) {
+		CoffeeChatRecruit recruit = findRecruit(post.getId());
+		checkRecruitEditable(recruit);
 		long memberCount = recruitMemberRepository.countByRecruitPostId(post.getId());
 		Long seniorId = Objects.requireNonNullElse(request.seniorId(), recruit.getSeniorId());
 		if (!seniorId.equals(recruit.getSeniorId())) {

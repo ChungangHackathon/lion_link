@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.community.recruit.service;
 
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
+import com.lionlink.backend.domain.community.event.RecruitClosedEvent;
 import com.lionlink.backend.domain.community.event.RecruitJoinedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.post.dto.response.PostMemberResponse;
@@ -16,6 +17,7 @@ import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecrui
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
+import com.lionlink.backend.domain.profile.coffee.event.GroupCoffeeChatDisabledEvent;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +66,18 @@ public class RecruitService {
 		recruitMemberRepository.save(RecruitMember.builder().recruit(recruit).userId(userId).build());
 		eventPublisher.publishEvent(new RecruitJoinedEvent(postId, post.getTitle(), post.getAuthorId(), userId));
 		return participation(post, recruit, userId, today);
+	}
+
+	@EventListener
+	@Transactional
+	public void onGroupCoffeeChatDisabled(GroupCoffeeChatDisabledEvent event) {
+		for (CoffeeChatRecruit recruit : coffeeChatRecruitRepository.findBySeniorForUpdate(event.userId(), RecruitStatus.OPEN, LocalDate.now())) {
+			recruit.close();
+			List<Long> memberIds = recruitMemberRepository.findByRecruitPostIdOrderByJoinedAtAscUserIdAsc(recruit.getPostId()).stream()
+					.map(RecruitMember::getUserId)
+					.toList();
+			eventPublisher.publishEvent(new RecruitClosedEvent(recruit.getPostId(), recruit.getPost().getTitle(), event.userId(), memberIds));
+		}
 	}
 
 	private RecruitParticipationResponse participation(Post post, CoffeeChatRecruit recruit, Long userId, LocalDate today) {
