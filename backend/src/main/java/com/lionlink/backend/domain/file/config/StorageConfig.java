@@ -10,6 +10,8 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
@@ -20,6 +22,19 @@ public class StorageConfig {
 	@Bean(destroyMethod = "close")
 	public S3Presigner s3Presigner(StorageProperties properties) {
 		S3Presigner.Builder builder = S3Presigner.builder()
+				.region(Region.of(properties.region()))
+				.credentialsProvider(credentialsProvider(properties));
+		if (StringUtils.hasText(properties.endpoint())) {
+			builder.endpointOverride(URI.create(properties.endpoint()))
+					.serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
+		}
+		return builder.build();
+	}
+
+	/** 서버가 직접 올리고 지울 때 쓴다 (프로필 사진 PROFILE-05). 업로드 주소 발급과 같은 설정을 쓴다. */
+	@Bean(destroyMethod = "close")
+	public S3Client s3Client(StorageProperties properties) {
+		S3ClientBuilder builder = S3Client.builder()
 				.region(Region.of(properties.region()))
 				.credentialsProvider(credentialsProvider(properties));
 		if (StringUtils.hasText(properties.endpoint())) {

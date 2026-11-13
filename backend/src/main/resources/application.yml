@@ -12,6 +12,10 @@ spring:
     hibernate:
       ddl-auto: update # 엔티티 기준으로 테이블·컬럼 추가 (기존 컬럼 변경·삭제는 하지 않음)
     open-in-view: false # DB 커넥션을 트랜잭션 범위에서만 사용
+  servlet:
+    multipart:
+      max-file-size: 5MB # 프로필 사진(PROFILE-05) 한도. 넘으면 400 FILE_TOO_LARGE
+      max-request-size: 6MB
   mail: # 이메일 알림 SMTP (Gmail, AWS SES 등). app.email.enabled가 true일 때만 실제로 보낸다
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:587}
