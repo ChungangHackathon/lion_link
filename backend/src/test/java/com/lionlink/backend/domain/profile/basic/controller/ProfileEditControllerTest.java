@@ -3,27 +3,35 @@ package com.lionlink.backend.domain.profile.basic.controller;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
+import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
 import com.lionlink.backend.support.AuthIntegrationTest;
+import com.lionlink.backend.support.TestUsers;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** PROFILE-04·06·07·08 */
+/** PROFILE-04·06~10 */
 class ProfileEditControllerTest extends AuthIntegrationTest {
 
 	private static final String BASIC = "/api/v1/me/profile/basic";
 	private static final String BIO = "/api/v1/me/profile/bio";
 	private static final String SKILLS = "/api/v1/me/profile/skills";
 	private static final String LINKS = "/api/v1/me/profile/links";
+	private static final String CONTACT = "/api/v1/me/profile/contact";
+	private static final String VISIBILITY = "/api/v1/me/profile/visibility";
 
 	private static final String STUDENT_BODY = "{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND']}";
 	private static final String EMPLOYED_BODY = """
@@ -366,6 +374,175 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 	}
 
+	// ---------- PROFILE-09 연락처 ----------
+
+	@Test
+	void 연락처를_보낸_값으로_통째로_교체한다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, CONTACT, "{'email':'pub@example.com','phone':'010-1234-5678'}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("pub@example.com"))
+				.andExpect(jsonPath("$.phone").value("010-1234-5678"));
+		putJson(lion, CONTACT, "{'email':'other@example.com'}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("other@example.com"))
+				.andExpect(jsonPath("$.phone").value(nullValue()));
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.contact.email").value("other@example.com"))
+				.andExpect(jsonPath("$.contact.phone").value(nullValue()));
+	}
+
+	@Test
+	void 전화번호가_빈_문자열이면_null로_저장된다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+		putJson(lion, CONTACT, "{'email':'a@example.com','phone':'010-1234-5678'}").andExpect(status().isOk());
+
+		putJson(lion, CONTACT, "{'email':'a@example.com','phone':''}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.phone").value(nullValue()));
+		getMyProfile(lion).andExpect(jsonPath("$.contact.phone").value(nullValue()));
+	}
+
+	@Test
+	void 연락처를_바꿔도_가입_이메일은_그대로다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+		String signupEmail = JsonPath.read(
+				mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, bearer(lion)))
+						.andReturn().getResponse().getContentAsString(), "$.email");
+
+		putJson(lion, CONTACT, "{'email':'show@example.com'}").andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, bearer(lion)))
+				.andExpect(jsonPath("$.email").value(signupEmail));
+	}
+
+	static Stream<Arguments> 잘못된_연락처() {
+		return Stream.of(
+				Arguments.of("이메일 없음", "{'phone':'010-1234-5678'}", "email"),
+				Arguments.of("이메일 빈 값", "{'email':'  '}", "email"),
+				Arguments.of("이메일 형식 오류", "{'email':'not-an-email'}", "email"),
+				Arguments.of("이메일 256자", "{'email':'" + "a".repeat(250) + "@b.com'}", "email"),
+				Arguments.of("전화번호 하이픈 없음", "{'email':'a@example.com','phone':'01012345678'}", "phone"),
+				Arguments.of("전화번호 010이 아님", "{'email':'a@example.com','phone':'011-1234-5678'}", "phone"),
+				Arguments.of("전화번호 자리수 오류", "{'email':'a@example.com','phone':'010-123-5678'}", "phone"));
+	}
+
+	@ParameterizedTest(name = "{0}이면 400")
+	@MethodSource("잘못된_연락처")
+	void 잘못된_연락처는_400_VALIDATION_ERROR(String ignored, String body, String field) throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, CONTACT, body)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value(field));
+	}
+
+	// ---------- PROFILE-10 공개 범위 ----------
+
+	@Test
+	void 공개_범위를_바꾸면_네_값을_모두_돌려준다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		patchJson(lion, "{'email':'PUBLIC','phone':'PRIVATE','links':'CONNECTED','company':'PRIVATE'}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility.email").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.phone").value("PRIVATE"))
+				.andExpect(jsonPath("$.visibility.links").value("CONNECTED"))
+				.andExpect(jsonPath("$.visibility.company").value("PRIVATE"));
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.visibility.email").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.phone").value("PRIVATE"))
+				.andExpect(jsonPath("$.visibility.links").value("CONNECTED"))
+				.andExpect(jsonPath("$.visibility.company").value("PRIVATE"));
+	}
+
+	@Test
+	void 보낸_키만_바꾸고_나머지는_그대로다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		patchJson(lion, "{'phone':'PUBLIC'}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility.email").value("CONNECTED"))
+				.andExpect(jsonPath("$.visibility.phone").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.links").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.company").value("PUBLIC"));
+		patchJson(lion, "{'company':'PRIVATE'}")
+				.andExpect(jsonPath("$.visibility.phone").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.company").value("PRIVATE"));
+		patchJson(lion, "{}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.visibility.phone").value("PUBLIC"))
+				.andExpect(jsonPath("$.visibility.company").value("PRIVATE"));
+	}
+
+	@Test
+	void 회사명에_CONNECTED를_보내면_400() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		patchJson(lion, "{'company':'CONNECTED'}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("company"));
+		getMyProfile(lion).andExpect(jsonPath("$.visibility.company").value("PUBLIC"));
+	}
+
+	@ParameterizedTest(name = "{0}에 없는 값이면 400")
+	@ValueSource(strings = {"email", "phone", "links", "company"})
+	void 없는_공개_범위_값은_400(String key) throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		patchJson(lion, "{'" + key + "':'SECRET'}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void 일부_키가_틀리면_다른_키도_저장되지_않는다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		patchJson(lion, "{'email':'PRIVATE','company':'CONNECTED'}").andExpect(status().isBadRequest());
+
+		getMyProfile(lion).andExpect(jsonPath("$.visibility.email").value("CONNECTED"));
+	}
+
+	// ---------- 다른 동문 조회에 반영 ----------
+
+	@Test
+	void 저장한_연락처와_공개_범위가_다른_동문의_상세_조회에_반영된다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+		setStatus(lion.userId(), "APPROVED");
+		Long viewer = TestUsers.approved(entityManager, "보는사자");
+
+		putJson(lion, CONTACT, "{'email':'show@example.com','phone':'010-1234-5678'}").andExpect(status().isOk());
+		patchJson(lion, "{'email':'PUBLIC','phone':'CONNECTED'}").andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/v1/users/{userId}", lion.userId()).header(DevHeaderCurrentUserProvider.HEADER, viewer))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.contact.email").value("show@example.com"))
+				.andExpect(jsonPath("$.contact.phone").doesNotExist());
+	}
+
+	@Test
+	void 공개_범위를_비공개로_바꾸면_다른_동문에게_연락처가_가려진다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+		setStatus(lion.userId(), "APPROVED");
+		Long viewer = TestUsers.approved(entityManager, "보는사자");
+		putJson(lion, CONTACT, "{'email':'show@example.com','phone':'010-1234-5678'}").andExpect(status().isOk());
+		patchJson(lion, "{'email':'PUBLIC','phone':'PUBLIC'}").andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/users/{userId}", lion.userId()).header(DevHeaderCurrentUserProvider.HEADER, viewer))
+				.andExpect(jsonPath("$.contact.phone").value("010-1234-5678"));
+
+		patchJson(lion, "{'phone':'PRIVATE'}").andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/v1/users/{userId}", lion.userId()).header(DevHeaderCurrentUserProvider.HEADER, viewer))
+				.andExpect(jsonPath("$.contact.email").value("show@example.com"))
+				.andExpect(jsonPath("$.contact.phone").doesNotExist());
+	}
+
 	// ---------- 접근 제어 ----------
 
 	static Stream<Arguments> 모든_수정_API() {
@@ -373,7 +550,9 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 				Arguments.of(BASIC, "{'status':'STUDENT','lionParts':['BACKEND'],'interests':['BACKEND']}"),
 				Arguments.of(BIO, "{'bio':'소개'}"),
 				Arguments.of(SKILLS, "{'skills':['Spring']}"),
-				Arguments.of(LINKS, "{'links':[{'type':'BLOG','url':'https://example.com'}]}"));
+				Arguments.of(LINKS, "{'links':[{'type':'BLOG','url':'https://example.com'}]}"),
+				Arguments.of(CONTACT, "{'email':'a@example.com'}"),
+				Arguments.of(VISIBILITY, "{'phone':'PUBLIC'}"));
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -417,7 +596,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("모든_수정_API")
 	void 토큰이_없으면_401_UNAUTHENTICATED(String path, String body) throws Exception {
-		mockMvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content(json(body)))
+		mockMvc.perform(requestFor(path).contentType(MediaType.APPLICATION_JSON).content(json(body)))
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
 	}
@@ -431,7 +610,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	}
 
 	private ResultActions putJson(Session session, String path, String body) throws Exception {
-		return mockMvc.perform(put(path)
+		return mockMvc.perform(requestFor(path)
 				.header(HttpHeaders.AUTHORIZATION, bearer(session))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(json(body)));
@@ -440,5 +619,17 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	private ResultActions getMyProfile(Session session) throws Exception {
 		return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 				.get("/api/v1/me/profile").header(HttpHeaders.AUTHORIZATION, bearer(session)));
+	}
+
+	/** 공개 범위만 PATCH, 나머지는 PUT. */
+	private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder requestFor(String path) {
+		return path.equals(VISIBILITY) ? patch(path) : put(path);
+	}
+
+	private ResultActions patchJson(Session session, String body) throws Exception {
+		return mockMvc.perform(patch(VISIBILITY)
+				.header(HttpHeaders.AUTHORIZATION, bearer(session))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json(body)));
 	}
 }
