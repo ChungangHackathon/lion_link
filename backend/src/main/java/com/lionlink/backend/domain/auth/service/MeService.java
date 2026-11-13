@@ -6,8 +6,7 @@ import com.lionlink.backend.domain.auth.event.SignupRequestedEvent;
 import com.lionlink.backend.domain.auth.exception.AuthErrorCode;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
-import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
-import com.lionlink.backend.domain.profile.section.lionactivity.LionActivityRepository;
+import com.lionlink.backend.domain.profile.section.lionactivity.DefaultLionActivitySyncer;
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserRepository;
@@ -25,7 +24,7 @@ public class MeService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final LionActivityRepository lionActivityRepository;
+	private final DefaultLionActivitySyncer defaultLionActivitySyncer;
 	private final ApplicationEventPublisher eventPublisher;
 
 	/** AUTH-05: 승인 대기·반려 회원도 부를 수 있다. 탈퇴한 회원의 남은 accessToken은 401. */
@@ -44,7 +43,7 @@ public class MeService {
 			throw new BusinessException(AuthErrorCode.ALREADY_APPROVED);
 		}
 
-		syncDefaultLionActivity(userId, request.generation());
+		defaultLionActivitySyncer.sync(userId, request.generation());
 		user.updateSignupInfo(request.name().trim(), request.generation());
 		return toResponse(user);
 	}
@@ -57,7 +56,7 @@ public class MeService {
 			throw new BusinessException(AuthErrorCode.NOT_REJECTED);
 		}
 
-		syncDefaultLionActivity(userId, request.generation());
+		defaultLionActivitySyncer.sync(userId, request.generation());
 		user.reapply(request.name().trim(), request.generation());
 		eventPublisher.publishEvent(new SignupRequestedEvent(user.getId(), user.getName(), user.getGeneration()));
 		return toResponse(user);
@@ -73,20 +72,5 @@ public class MeService {
 		return userRepository.findById(userId)
 				.filter(user -> user.getDeletedAt() == null)
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.UNAUTHENTICATED));
-	}
-
-	/**
-	 * 가입 때 자동 생성된 멋사 활동 항목(isDefault)의 기수를 가입 기수에 맞춘다.
-	 * 바뀔 기수에 이미 다른 멋사 활동이 있으면 합치지 않고 409 (api.md 확정 사항 3).
-	 */
-	private void syncDefaultLionActivity(Long userId, Integer generation) {
-		lionActivityRepository.findByUserIdAndIsDefaultTrue(userId)
-				.filter(activity -> !activity.getGeneration().equals(generation))
-				.ifPresent(activity -> {
-					if (lionActivityRepository.existsByUserIdAndGeneration(userId, generation)) {
-						throw new BusinessException(ProfileErrorCode.DUPLICATE_ITEM);
-					}
-					activity.changeGeneration(generation);
-				});
 	}
 }
