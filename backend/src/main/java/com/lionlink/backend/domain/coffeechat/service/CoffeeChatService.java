@@ -34,6 +34,7 @@ import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRep
 import com.lionlink.backend.domain.profile.CoffeeAvailability;
 import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.user.entity.UserStatus;
+import com.lionlink.backend.domain.user.event.UserWithdrawnEvent;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.CommonErrorCode;
@@ -47,6 +48,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -64,6 +66,7 @@ public class CoffeeChatService {
 	private static final int AUTO_COMPLETE_AFTER_ACCEPT_DAYS = 30;
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("M월 d일");
 	private static final DateTimeFormatter DAY_TIME = DateTimeFormatter.ofPattern("M월 d일 HH:mm");
+	private static final String WITHDRAWN_MESSAGE = "함께하던 동문이 탈퇴해서 커피챗이 취소됐어요.";
 
 	private final CoffeeChatRepository coffeeChatRepository;
 	private final CoffeeChatMemberRepository coffeeChatMemberRepository;
@@ -232,6 +235,23 @@ public class CoffeeChatService {
 		}
 		member.leave(now);
 		coffeeChatRoomService.leave(coffeeChatId, userId, now);
+	}
+
+	@EventListener
+	public void onUserWithdrawn(UserWithdrawnEvent event) {
+		Long userId = event.userId();
+		LocalDateTime now = LocalDateTime.now();
+		for (Long id : coffeeChatRepository.findOpenIdsOf(userId)) {
+			CoffeeChat chat = coffeeChatRepository.findByIdForUpdate(id).orElseThrow();
+			if (!chat.isOpen()) {
+				continue;
+			}
+			List<Long> others = othersThan(userId, chat);
+			chat.cancel(userId, "회원 탈퇴", now);
+			coffeeChatRoomService.postSystemMessage(chat.getId(), WITHDRAWN_MESSAGE, now);
+			notify(others, CoffeeChatNotificationType.COFFEE_CHAT_CANCELED, chat.getId(), null, WITHDRAWN_MESSAGE);
+		}
+		coffeeChatMemberRepository.findOpenMemberships(userId, CoffeeChatMemberRole.MEMBER).forEach(member -> member.leave(now));
 	}
 
 	public int expireOverdue(LocalDateTime now) {

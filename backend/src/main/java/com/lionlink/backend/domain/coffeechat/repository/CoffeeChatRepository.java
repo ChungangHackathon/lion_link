@@ -22,6 +22,9 @@ public interface CoffeeChatRepository extends JpaRepository<CoffeeChat, Long> {
 			""")
 	boolean existsOpenChat(Long userId, Long otherUserId);
 
+	@Query("select c.id from CoffeeChat c where c.openFlag = 1 and (c.requesterId = :userId or c.receiverId = :userId) order by c.id")
+	List<Long> findOpenIdsOf(Long userId);
+
 	@Query("""
 			select count(c) > 0
 			from CoffeeChat c

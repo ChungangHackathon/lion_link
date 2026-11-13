@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.community.recruit.service;
 
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
+import com.lionlink.backend.domain.community.event.RecruitCanceledEvent;
 import com.lionlink.backend.domain.community.event.RecruitClosedEvent;
 import com.lionlink.backend.domain.community.event.RecruitJoinedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
@@ -18,6 +19,7 @@ import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRep
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.profile.coffee.event.GroupCoffeeChatDisabledEvent;
+import com.lionlink.backend.domain.user.event.UserWithdrawnEvent;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -73,11 +75,34 @@ public class RecruitService {
 	public void onGroupCoffeeChatDisabled(GroupCoffeeChatDisabledEvent event) {
 		for (CoffeeChatRecruit recruit : coffeeChatRecruitRepository.findBySeniorForUpdate(event.userId(), RecruitStatus.OPEN, LocalDate.now())) {
 			recruit.close();
-			List<Long> memberIds = recruitMemberRepository.findByRecruitPostIdOrderByJoinedAtAscUserIdAsc(recruit.getPostId()).stream()
-					.map(RecruitMember::getUserId)
-					.toList();
-			eventPublisher.publishEvent(new RecruitClosedEvent(recruit.getPostId(), recruit.getPost().getTitle(), event.userId(), memberIds));
+			eventPublisher.publishEvent(new RecruitClosedEvent(recruit.getPostId(), recruit.getPost().getTitle(), event.userId(),
+					memberIds(recruit)));
 		}
+	}
+
+	@EventListener
+	@Transactional
+	public void onUserWithdrawn(UserWithdrawnEvent event) {
+		Long userId = event.userId();
+		LocalDate today = LocalDate.now();
+		for (CoffeeChatRecruit recruit : coffeeChatRecruitRepository.findByAuthorForUpdate(userId, RecruitStatus.OPEN, today)) {
+			recruit.close();
+			List<Long> memberIds = memberIds(recruit).stream().filter(memberId -> !memberId.equals(userId)).toList();
+			if (!memberIds.isEmpty()) {
+				eventPublisher.publishEvent(new RecruitCanceledEvent(recruit.getPostId(), recruit.getPost().getTitle(), memberIds));
+			}
+		}
+		for (CoffeeChatRecruit recruit : coffeeChatRecruitRepository.findBySeniorForUpdate(userId, RecruitStatus.OPEN, today)) {
+			recruit.close();
+			eventPublisher.publishEvent(new RecruitClosedEvent(recruit.getPostId(), recruit.getPost().getTitle(), null, memberIds(recruit)));
+		}
+		recruitMemberRepository.deleteAll(recruitMemberRepository.findJoined(userId, RecruitStatus.OPEN));
+	}
+
+	private List<Long> memberIds(CoffeeChatRecruit recruit) {
+		return recruitMemberRepository.findByRecruitPostIdOrderByJoinedAtAscUserIdAsc(recruit.getPostId()).stream()
+				.map(RecruitMember::getUserId)
+				.toList();
 	}
 
 	private RecruitParticipationResponse participation(Post post, CoffeeChatRecruit recruit, Long userId, LocalDate today) {

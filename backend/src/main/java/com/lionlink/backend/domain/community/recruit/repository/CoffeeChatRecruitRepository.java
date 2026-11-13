@@ -25,4 +25,12 @@ public interface CoffeeChatRecruitRepository extends JpaRepository<CoffeeChatRec
 			order by r.postId
 			""")
 	List<CoffeeChatRecruit> findBySeniorForUpdate(Long seniorId, RecruitStatus status, LocalDate today);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select r from CoffeeChatRecruit r join fetch r.post p
+			where p.authorId = :userId and r.status = :status and r.deadline >= :today and p.deletedAt is null
+			order by r.postId
+			""")
+	List<CoffeeChatRecruit> findByAuthorForUpdate(Long userId, RecruitStatus status, LocalDate today);
 }
