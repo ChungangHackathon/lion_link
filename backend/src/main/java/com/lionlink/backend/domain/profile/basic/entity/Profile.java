@@ -126,4 +126,32 @@ public class Profile extends BaseTimeEntity {
 				.filter(Objects::nonNull)
 				.toList();
 	}
+
+	/** PROFILE-04: 기본 정보를 받은 값으로 통째로 바꾼다. 경력·멋사 활동 같은 다른 테이블은 건드리지 않는다. */
+	public void updateBasic(String headline, String major, String minor, String region, ProfileStatus status,
+			List<LionPart> lionParts, List<String> interests) {
+		this.headline = headline;
+		this.major = major;
+		this.minor = minor;
+		this.region = region;
+		this.status = status;
+		this.lionPart1 = lionParts.get(0);
+		this.lionPart2 = lionParts.size() > 1 ? lionParts.get(1) : null;
+		this.interests = interests;
+	}
+
+	/** PROFILE-06: 비우면 null. */
+	public void updateBio(String bio) {
+		this.bio = bio;
+	}
+
+	/** PROFILE-07: 비어 있으면 null로 저장해 섹션이 사라지게 한다. */
+	public void updateSkills(List<String> skills) {
+		this.skills = skills.isEmpty() ? null : skills;
+	}
+
+	/** PROFILE-08: 비어 있으면 null로 저장해 섹션이 사라지게 한다. */
+	public void updateLinks(List<ProfileLink> links) {
+		this.links = links.isEmpty() ? null : links;
+	}
 }
