@@ -16,6 +16,7 @@ import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMember;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMemberRole;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
+import com.lionlink.backend.domain.coffeechat.entity.PreferredMode;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
 import com.lionlink.backend.domain.community.post.service.PostService;
 import com.lionlink.backend.domain.home.dto.response.GuideDismissResponse;
@@ -223,7 +224,7 @@ class HomeServiceTest {
 				.topic("CAREER")
 				.reason("이야기 나누고 싶어요.")
 				.questions(List.of())
-				.preferredMode(MeetingMode.ONLINE)
+				.preferredMode(PreferredMode.ONLINE)
 				.expiresAt(LocalDateTime.now().plusDays(7))
 				.build();
 		entityManager.persist(coffeeChat);
