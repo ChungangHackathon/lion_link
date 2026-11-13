@@ -5,6 +5,7 @@ import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeePeriod;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeSetting;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
+import com.lionlink.backend.domain.coffeechat.entity.PreferredMode;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.ProfileStatus;
@@ -64,7 +65,7 @@ public final class TestProfiles {
 				.topic("CAREER")
 				.reason("이야기 나누고 싶어요.")
 				.questions(List.of())
-				.preferredMode(MeetingMode.ONLINE)
+				.preferredMode(PreferredMode.ONLINE)
 				.expiresAt(LocalDateTime.now().plusDays(7))
 				.build();
 		entityManager.persist(coffeeChat);
