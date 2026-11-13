@@ -6,11 +6,13 @@ import com.lionlink.backend.domain.community.post.dto.request.PostSearchConditio
 import com.lionlink.backend.domain.community.post.dto.request.PostSearchCondition.PostSort;
 import com.lionlink.backend.domain.community.post.dto.request.PostUpdateRequest;
 import com.lionlink.backend.domain.community.post.dto.response.CategoryCountResponse;
+import com.lionlink.backend.domain.community.post.dto.response.PopularKeywordResponse;
 import com.lionlink.backend.domain.community.post.dto.response.PostCreateResponse;
 import com.lionlink.backend.domain.community.post.dto.response.PostDetailResponse;
 import com.lionlink.backend.domain.community.post.dto.response.PostSummaryResponse;
 import com.lionlink.backend.domain.community.post.dto.response.PostUpdateResponse;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
+import com.lionlink.backend.domain.community.post.service.PopularKeywordService;
 import com.lionlink.backend.domain.community.post.service.PostQueryService;
 import com.lionlink.backend.domain.community.post.service.PostService;
 import com.lionlink.backend.global.error.ErrorResponse;
@@ -49,9 +51,11 @@ public class PostController {
 
 	private final PostService postService;
 	private final PostQueryService postQueryService;
+	private final PopularKeywordService popularKeywordService;
 
 	@Operation(summary = "게시글 목록 조회 및 검색",
-			description = "recruiting=true면 모집 중인 번개·커피챗 모집 글만, period=WEEK면 최근 7일 글만 조회한다.")
+			description = "recruiting=true면 모집 중인 번개·커피챗 모집 글만, period=WEEK면 최근 7일 글만 조회한다. "
+					+ "첫 페이지에서 결과가 있는 검색어는 인기 키워드에 기록한다.")
 	@ApiResponse(responseCode = "200")
 	@ApiResponse(responseCode = "400", description = "잘못된 조회 조건 (VALIDATION_ERROR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -75,7 +79,11 @@ public class PostController {
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
 		PostSearchCondition condition = new PostSearchCondition(categories, q, sort, recruiting, period);
-		return postQueryService.search(condition, PageRequest.of(page, size));
+		PageResponse<PostSummaryResponse> response = postQueryService.search(condition, PageRequest.of(page, size));
+		if (page == 0 && response.totalElements() > 0) {
+			popularKeywordService.record(userId, q);
+		}
+		return response;
 	}
 
 	@Operation(summary = "카테고리별 게시글 수", description = "글이 없는 카테고리도 0으로 반환한다.")
@@ -83,6 +91,22 @@ public class PostController {
 	@GetMapping("/category-counts")
 	public CategoryCountResponse countByCategory(@CurrentUser Long userId) {
 		return postQueryService.countByCategory();
+	}
+
+	@Operation(summary = "인기 키워드",
+			description = "최근 7일 동안 커뮤니티 검색에 많이 쓰인 키워드. 같은 회원이 여러 번 검색해도 한 번으로 세고, 금칙어가 들어간 키워드는 뺀다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "400", description = "잘못된 개수 (VALIDATION_ERROR)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@GetMapping("/popular-keywords")
+	public PopularKeywordResponse getPopularKeywords(
+			@CurrentUser Long userId,
+			@Parameter(description = "개수 (1~20)")
+			@RequestParam(defaultValue = "10")
+			@Min(value = 1, message = "개수는 1~20이어야 합니다.")
+			@Max(value = 20, message = "개수는 1~20이어야 합니다.") int size
+	) {
+		return popularKeywordService.getPopular(size);
 	}
 
 	@Operation(summary = "게시글 작성",
