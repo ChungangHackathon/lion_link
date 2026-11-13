@@ -751,7 +751,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
       "reviewedAt": null, "reviewedBy": null
     }
   ],
-  "page": 0, "size": 20, "totalElements": 1
+  "page": 0, "size": 20, "totalElements": 1, "hasNext": false
 }
 ```
 
@@ -763,7 +763,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `sameNameGeneration` | 이미 승인된 회원 중 이름·기수가 같은 사람이 있으면 `true`(주황 '같은 이름·기수 있음') |
 | `reapplied` | 반려된 뒤 다시 신청했으면 `true`(회색 '재신청'). `reapplyAt`은 그 시각 |
 | `rejectReason` | 반려됨 탭이거나 재신청한 사람이면 이전 반려 사유, 아니면 `null` |
-| `reviewedAt`, `reviewedBy` | 승인됨·반려됨 탭에서 처리한 시각과 관리자 이름. 승인 대기면 `null` |
+| `reviewedAt`, `reviewedBy` | 승인됨·반려됨 탭에서 처리한 시각과 관리자 이름. 승인 대기면 `null`(재신청자도 마찬가지). 승인 절차 없이 `APPROVED`로 시작한 계정(관리자 등)도 `null`이고, 승인됨 탭에서 맨 뒤에 나와 |
 
 자동 표시(`sameNameGeneration`, `reapplied`)는 참고용이야. 자동 승인은 없고 최종 판단은 관리자가 해.
 
