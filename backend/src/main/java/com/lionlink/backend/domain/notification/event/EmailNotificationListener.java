@@ -1,6 +1,8 @@
 package com.lionlink.backend.domain.notification.event;
 
 import com.lionlink.backend.domain.admin.event.SignupApprovedEvent;
+import com.lionlink.backend.domain.chat.event.ChatNotificationEvent;
+import com.lionlink.backend.domain.chat.service.ChatRequestService;
 import com.lionlink.backend.domain.coffeechat.event.CoffeeChatNotificationEvent;
 import com.lionlink.backend.domain.coffeechat.event.CoffeeChatNotificationType;
 import com.lionlink.backend.domain.notification.entity.EmailType;
@@ -26,6 +28,13 @@ public class EmailNotificationListener {
 		}
 		event.userIds().forEach(userId ->
 				emailNotificationService.enqueue(userId, EmailType.COFFEE_CHAT_REQUEST, event.coffeeChatId()));
+	}
+
+	@EventListener
+	public void onChatRequested(ChatNotificationEvent event) {
+		if (ChatRequestService.MESSAGE_REQUESTED.equals(event.type())) {
+			emailNotificationService.enqueue(event.userId(), EmailType.MESSAGE_REQUEST, event.roomId());
+		}
 	}
 
 	@EventListener
