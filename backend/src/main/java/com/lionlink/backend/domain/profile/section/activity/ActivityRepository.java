@@ -1,9 +1,9 @@
 package com.lionlink.backend.domain.profile.section.activity;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ActivityRepository extends JpaRepository<Activity, Long> {
+public interface ActivityRepository extends SectionItemRepository<Activity> {
 
 	List<Activity> findByUserIdOrderByStartYmDescIdDesc(Long userId);
 }

@@ -1,10 +1,10 @@
 package com.lionlink.backend.domain.profile.section.career;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.Collection;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CareerRepository extends JpaRepository<Career, Long> {
+public interface CareerRepository extends SectionItemRepository<Career> {
 
 	List<Career> findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(Long userId);
 

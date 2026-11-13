@@ -1,9 +1,9 @@
 package com.lionlink.backend.domain.profile.section.education;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface EducationRepository extends JpaRepository<Education, Long> {
+public interface EducationRepository extends SectionItemRepository<Education> {
 
 	List<Education> findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(Long userId);
 }

@@ -1,9 +1,9 @@
 package com.lionlink.backend.domain.profile.section.lionproject;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LionProjectRepository extends JpaRepository<LionProject, Long> {
+public interface LionProjectRepository extends SectionItemRepository<LionProject> {
 
 	List<LionProject> findByUserIdOrderByGenerationDescIdDesc(Long userId);
 }

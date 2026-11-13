@@ -1,9 +1,9 @@
 package com.lionlink.backend.domain.profile.section.certification;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CertificationRepository extends JpaRepository<Certification, Long> {
+public interface CertificationRepository extends SectionItemRepository<Certification> {
 
 	List<Certification> findByUserIdOrderByDateDescIdDesc(Long userId);
 }

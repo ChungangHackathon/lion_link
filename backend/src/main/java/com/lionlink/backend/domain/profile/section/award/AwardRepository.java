@@ -1,9 +1,9 @@
 package com.lionlink.backend.domain.profile.section.award;
 
+import com.lionlink.backend.domain.profile.section.SectionItemRepository;
 import java.util.List;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface AwardRepository extends JpaRepository<Award, Long> {
+public interface AwardRepository extends SectionItemRepository<Award> {
 
 	List<Award> findByUserIdOrderByDateDescIdDesc(Long userId);
 }
