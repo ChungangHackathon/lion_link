@@ -1,5 +1,6 @@
 package com.lionlink.backend.global.error;
 
+import com.lionlink.backend.domain.file.exception.FileErrorCode;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
@@ -53,10 +57,18 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler({
 			MissingServletRequestParameterException.class,
-			HttpMessageNotReadableException.class
+			MissingServletRequestPartException.class,
+			HttpMessageNotReadableException.class,
+			MultipartException.class
 	})
 	public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception e) {
 		return toResponse(CommonErrorCode.VALIDATION_ERROR);
+	}
+
+	/** multipart 한도(application.yml)를 넘은 업로드. 컨트롤러에 닿기 전에 나는 예외라 여기서 FILE_TOO_LARGE로 바꾼다. */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException e) {
+		return toResponse(FileErrorCode.FILE_TOO_LARGE);
 	}
 
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
