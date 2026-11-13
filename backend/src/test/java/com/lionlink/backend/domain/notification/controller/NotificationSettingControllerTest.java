@@ -89,6 +89,11 @@ class NotificationSettingControllerTest {
 		mockMvc.perform(get(SETTINGS).header(USER_HEADER, rejected))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.code").value("NOT_APPROVED"));
+		mockMvc.perform(patch(SETTINGS).header(USER_HEADER, rejected)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"emailSignupApproved\":false}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("NOT_APPROVED"));
 	}
 
 	@Test

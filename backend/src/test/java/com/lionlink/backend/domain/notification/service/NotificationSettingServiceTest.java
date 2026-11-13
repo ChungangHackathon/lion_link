@@ -11,7 +11,6 @@ import com.lionlink.backend.domain.notification.exception.NotificationErrorCode;
 import com.lionlink.backend.domain.notification.repository.NotificationSettingRepository;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.error.BusinessException;
-import com.lionlink.backend.global.error.CommonErrorCode;
 import com.lionlink.backend.global.error.ErrorCode;
 import com.lionlink.backend.support.TestUsers;
 import jakarta.persistence.EntityManager;
@@ -73,15 +72,6 @@ class NotificationSettingServiceTest {
 				new NotificationSettingUpdateRequest(null, null, false));
 
 		assertThat(response.emailSignupApproved()).isFalse();
-	}
-
-	@Test
-	void 반려된_회원은_설정을_쓸_수_없다() {
-		Long rejected = TestUsers.create(entityManager, "반려사자", UserStatus.REJECTED);
-
-		assertError(() -> notificationSettingService.getSettings(rejected), CommonErrorCode.NOT_APPROVED);
-		assertError(() -> notificationSettingService.updateSettings(rejected,
-				new NotificationSettingUpdateRequest(false, null, null)), CommonErrorCode.NOT_APPROVED);
 	}
 
 	@Test

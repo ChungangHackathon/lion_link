@@ -5,6 +5,7 @@ import com.lionlink.backend.domain.notification.dto.response.NotificationSetting
 import com.lionlink.backend.domain.notification.entity.EmailType;
 import com.lionlink.backend.domain.notification.service.NotificationSettingService;
 import com.lionlink.backend.global.error.ErrorResponse;
+import com.lionlink.backend.global.security.AllowPendingMember;
 import com.lionlink.backend.global.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +34,7 @@ public class NotificationSettingController {
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "403", description = "반려된 회원 (NOT_APPROVED)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@AllowPendingMember
 	@GetMapping("/me/notification-settings")
 	public NotificationSettingResponse getSettings(@CurrentUser Long userId) {
 		return notificationSettingService.getSettings(userId);
@@ -46,6 +48,7 @@ public class NotificationSettingController {
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "403", description = "반려된 회원 (NOT_APPROVED)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@AllowPendingMember
 	@PatchMapping("/me/notification-settings")
 	public NotificationSettingResponse updateSettings(
 			@CurrentUser Long userId,
