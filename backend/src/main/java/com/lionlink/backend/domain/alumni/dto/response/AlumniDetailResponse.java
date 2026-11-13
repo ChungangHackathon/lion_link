@@ -144,7 +144,8 @@ public record AlumniDetailResponse(
 		AVAILABLE,
 		RESTING,
 		NOT_ACCEPTING,
-		IN_PROGRESS
+		IN_PROGRESS,
+		COOLDOWN
 	}
 
 	public record Chat(ChatStatus status, LocalDate requestAvailableDate) {
