@@ -10,8 +10,11 @@ spring:
     password: ${DB_PASSWORD:lionlink}
   jpa:
     hibernate:
-      ddl-auto: update # 엔티티 기준으로 테이블·컬럼 추가 (기존 컬럼 변경·삭제는 하지 않음)
+      ddl-auto: validate # 테이블은 Flyway(db/migration)가 만들고, 엔티티와 다르면 서버가 뜨지 않는다
     open-in-view: false # DB 커넥션을 트랜잭션 범위에서만 사용
+  flyway:
+    baseline-on-migrate: true # 이미 테이블이 있는 DB는 V1을 적용한 것으로 보고 시작
+    baseline-version: 1
   servlet:
     multipart:
       max-file-size: 5MB # 프로필 사진(PROFILE-05) 한도. 넘으면 400 FILE_TOO_LARGE
@@ -35,6 +38,24 @@ spring:
             client-id: ${GOOGLE_CLIENT_ID:local-google-client-id} # 실제 값은 환경변수로만 주입
             client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret} # 절대 커밋하지 않음
             scope: openid, profile, email
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # 서버 상태 확인(/actuator/health)만 연다
+  endpoint:
+    health:
+      show-details: never
+  health:
+    mail:
+      enabled: false # 상태 확인 때마다 SMTP에 접속하지 않는다
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
 
 app:
   auth:
