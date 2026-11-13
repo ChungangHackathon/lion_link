@@ -53,4 +53,17 @@ public class Project extends ProfileSectionItem {
 		this.link = link;
 		this.tags = tags;
 	}
+
+	/** PROFILE-11 PUT: 보낸 값으로 통째로 바꾼다. 진행 중이면 종료 년월은 비운다. */
+	public void update(String name, YearMonth startYm, YearMonth endYm, boolean isCurrent,
+			String role, String description, String link, List<String> tags) {
+		this.name = name;
+		this.startYm = startYm;
+		this.endYm = isCurrent ? null : endYm;
+		this.isCurrent = isCurrent;
+		this.role = role;
+		this.description = description;
+		this.link = link;
+		this.tags = tags;
+	}
 }
