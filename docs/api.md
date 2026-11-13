@@ -567,13 +567,13 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- | --- | --- |
 | 경력 | `careers` | 10 | `company` O 1\~30자, `jobTitle` O 1\~30자, `employmentType` O (`FULL_TIME` `CONTRACT` `INTERN` `FREELANCE` `FOUNDER` `ETC`), `startYm` O, `endYm` 또는 `isCurrent: true` 중 하나 O, `description` 0\~300자 |
 | 학력 | `educations` | 5 | `school` O 1\~30자, `major` 0\~30자, `degree` (`BACHELOR` `MASTER` `DOCTOR` `EXCHANGE_ETC`), `startYm`, `endYm` 또는 `isCurrent: true`, `description` 0\~200자 |
-| 멋사 활동 | `lion-activities` | 6 | `generation` O 1\~14, `role` O (`LION` 아기사자, `STAFF` 운영진, `LEADER` 대표·부대표, `PART_LEADER` 파트장, `ETC`), `parts` O `lionPart` 1\~2개 |
-| 멋사 프로젝트·해커톤 | `lion-projects` | 5 | `name` O 1\~30자, `eventType` O (`REGULAR` 정기 프로젝트, `JUNGKATHON` 중커톤, `JOINT_HACKATHON` 연합 해커톤, `ETC`), `generation` O 1\~14, `myRole` 0\~30자, `description` 0\~200자, `link` URL |
+| 멋사 활동 | `lion-activities` | 6 | `generation` O 1\~14, `role` O (`LION` 아기사자, `STAFF` 운영진, `PRESIDENT` 대표·부대표, `PART_LEAD` 파트장, `ETC`), `parts` O `lionPart` 1\~2개 |
+| 멋사 프로젝트·해커톤 | `lion-projects` | 5 | `name` O 1\~30자, `eventType` O (`REGULAR` 정기 프로젝트, `JUNGKATHON` 중커톤, `UNION_HACKATHON` 연합 해커톤, `ETC`), `generation` O 1\~14, `myRole` 0\~30자, `description` 0\~200자, `link` URL |
 | 프로젝트 | `projects` | 10 | `name` O 1\~30자, `startYm`, `endYm` 또는 `isCurrent: true`, `role` 0\~30자, `description` 0\~300자, `link` URL, `tags` string\[\] 0\~5개 |
 | 자격증 | `certifications` | 10 | `name` O 1\~30자, `issuer` 0\~30자, `acquiredYm` |
 | 수상 | `awards` | 10 | `name` O 1\~30자, `host` 0\~30자, `awardedYm`, `description` 0\~100자 |
 | 대외활동 | `activities` | 10 | `name` O 1\~30자, `organization` 0\~30자, `startYm`, `endYm`, `description` 0\~200자 |
-| 언어 | `languages` | 5 | `language` O 1\~20자, `level` O (`BASIC` 기초, `CONVERSATIONAL` 일상 회화, `BUSINESS` 비즈니스, `NATIVE` 원어민) |
+| 언어 | `languages` | 5 | `language` O 1\~20자, `level` O (`BASIC` 기초, `DAILY` 일상 회화, `BUSINESS` 비즈니스, `NATIVE` 원어민) |
 
 공통 검증 규칙이야.
 
