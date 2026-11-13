@@ -6,6 +6,7 @@ public record CoffeeChatNotificationEvent(
 		List<Long> userIds,
 		CoffeeChatNotificationType type,
 		Long coffeeChatId,
+		Long actorId,
 		String message
 ) {
 }

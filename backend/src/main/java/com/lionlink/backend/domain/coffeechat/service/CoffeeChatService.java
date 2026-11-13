@@ -33,8 +33,6 @@ import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecrui
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.profile.CoffeeAvailability;
 import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
-import com.lionlink.backend.domain.profile.UserSummary;
-import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
@@ -75,7 +73,6 @@ public class CoffeeChatService {
 	private final CoffeeChatRoomService coffeeChatRoomService;
 	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 	private final UserRepository userRepository;
-	private final UserSummaryReader userSummaryReader;
 	private final PostRepository postRepository;
 	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
 	private final RecruitMemberRepository recruitMemberRepository;
@@ -134,11 +131,10 @@ public class CoffeeChatService {
 			recruit.apply(chat.getId());
 		}
 
-		String requesterName = name(userId);
 		String message = memberIds.isEmpty()
-				? requesterName + "님이 커피챗을 신청했어요."
-				: requesterName + "님 외 " + memberIds.size() + "명이 커피챗을 신청했어요.";
-		notify(List.of(receiverId), CoffeeChatNotificationType.COFFEE_CHAT_REQUESTED, chat.getId(), message);
+				? "님이 커피챗을 신청했어요."
+				: "님 외 " + memberIds.size() + "명이 커피챗을 신청했어요.";
+		notify(List.of(receiverId), CoffeeChatNotificationType.COFFEE_CHAT_REQUESTED, chat.getId(), userId, message);
 		return CoffeeChatCreateResponse.from(chat);
 	}
 
@@ -152,8 +148,8 @@ public class CoffeeChatService {
 		List<Long> memberIds = activeMemberIds(chat);
 		coffeeChatRoomService.open(chat, memberIds, now);
 		coffeeChatRoomService.postSystemMessage(chat.getId(), "커피챗이 수락됐어요. 채팅으로 일정을 정해보세요.", now);
-		notify(applicants(chat, memberIds), CoffeeChatNotificationType.COFFEE_CHAT_ACCEPTED, chat.getId(),
-				name(chat.getReceiverId()) + "님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.");
+		notify(applicants(chat, memberIds), CoffeeChatNotificationType.COFFEE_CHAT_ACCEPTED, chat.getId(), chat.getReceiverId(),
+				"님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.");
 		return coffeeChatQueryService.toDetail(userId, chat);
 	}
 
@@ -165,7 +161,7 @@ public class CoffeeChatService {
 
 		chat.reject(request.rejectReason(), trimToNull(request.responseMessage()), now);
 		notify(applicants(chat, activeMemberIds(chat)), CoffeeChatNotificationType.COFFEE_CHAT_REJECTED, chat.getId(),
-				name(chat.getReceiverId()) + "님이 이번 커피챗은 어렵다고 했어요.");
+				chat.getReceiverId(), "님이 이번 커피챗은 어렵다고 했어요.");
 		return coffeeChatQueryService.toDetail(userId, chat);
 	}
 
@@ -193,8 +189,8 @@ public class CoffeeChatService {
 		String when = request.scheduledAt().format(DAY_TIME);
 		coffeeChatRoomService.postSystemMessage(chat.getId(), (changed ? "일정이 바뀌었어요. " : "일정이 확정됐어요. ") + when
 				+ " · " + (offline ? chat.getMeetingPlace() : "온라인"), now);
-		notify(othersThan(userId, chat), CoffeeChatNotificationType.COFFEE_CHAT_SCHEDULED, chat.getId(),
-				(changed ? "커피챗 일정이 바뀌었어요. " : "커피챗 일정이 정해졌어요. ") + when);
+		notify(othersThan(userId, chat), CoffeeChatNotificationType.COFFEE_CHAT_SCHEDULED, chat.getId(), userId,
+				(changed ? "님이 커피챗 일정을 바꿨어요. " : "님이 커피챗 일정을 정했어요. ") + when);
 		return coffeeChatQueryService.toDetail(userId, chat);
 	}
 
@@ -206,8 +202,8 @@ public class CoffeeChatService {
 
 		chat.cancel(userId, request.cancelReason().trim(), now);
 		coffeeChatRoomService.postSystemMessage(chat.getId(), "커피챗이 취소됐어요.", now);
-		notify(othersThan(userId, chat), CoffeeChatNotificationType.COFFEE_CHAT_CANCELED, chat.getId(),
-				name(userId) + "님이 커피챗을 취소했어요.");
+		notify(othersThan(userId, chat), CoffeeChatNotificationType.COFFEE_CHAT_CANCELED, chat.getId(), userId,
+				"님이 커피챗을 취소했어요.");
 		return coffeeChatQueryService.toDetail(userId, chat);
 	}
 
@@ -247,7 +243,7 @@ public class CoffeeChatService {
 			}
 			chat.expire();
 			notify(applicants(chat, activeMemberIds(chat)), CoffeeChatNotificationType.COFFEE_CHAT_EXPIRED, chat.getId(),
-					name(chat.getReceiverId()) + "님에게 보낸 커피챗 신청이 만료됐어요.");
+					chat.getReceiverId(), "님에게 보낸 커피챗 신청이 만료됐어요.");
 			count++;
 		}
 		return count;
@@ -383,20 +379,13 @@ public class CoffeeChatService {
 				.toList();
 	}
 
-	private String name(Long userId) {
-		return userSummaryReader.getSummary(userId)
-				.filter(summary -> !summary.deleted())
-				.map(UserSummary::name)
-				.orElse("동문");
-	}
-
 	private String trimToNull(String value) {
 		return StringUtils.hasText(value) ? value.trim() : null;
 	}
 
-	private void notify(List<Long> userIds, CoffeeChatNotificationType type, Long coffeeChatId, String message) {
+	private void notify(List<Long> userIds, CoffeeChatNotificationType type, Long coffeeChatId, Long actorId, String message) {
 		if (!userIds.isEmpty()) {
-			eventPublisher.publishEvent(new CoffeeChatNotificationEvent(userIds, type, coffeeChatId, message));
+			eventPublisher.publishEvent(new CoffeeChatNotificationEvent(userIds, type, coffeeChatId, actorId, message));
 		}
 	}
 }
