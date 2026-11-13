@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.lionlink.backend.domain.admin.event.SignupApprovedEvent;
+import com.lionlink.backend.domain.chat.dto.request.ChatRequestCreateRequest;
+import com.lionlink.backend.domain.chat.service.ChatRequestService;
 import com.lionlink.backend.domain.coffeechat.dto.request.CoffeeChatCreateRequest;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeSetting;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
@@ -54,6 +56,9 @@ class EmailNotificationServiceTest {
 
 	@Autowired
 	private CoffeeChatService coffeeChatService;
+
+	@Autowired
+	private ChatRequestService chatRequestService;
 
 	@Autowired
 	private EmailLogRepository emailLogRepository;
@@ -198,12 +203,29 @@ class EmailNotificationServiceTest {
 	}
 
 	@Test
-	void 메시지_요청_메일은_채팅에서_바로_쌓을_수_있다() {
-		emailNotificationService.enqueue(senior, EmailType.MESSAGE_REQUEST, 7L);
+	void 메시지_요청을_보내면_받는_사람에게_메일이_쌓이고_스케줄러가_보낸다() {
+		Long roomId = chatRequestService.create(me, new ChatRequestCreateRequest(senior, "안녕하세요! 이야기 나눠요.")).roomId();
+
+		EmailLog queued = onlyLog();
+		assertThat(queued.getUserId()).isEqualTo(senior);
+		assertThat(queued.getType()).isEqualTo(EmailType.MESSAGE_REQUEST);
+		assertThat(queued.getTargetIds()).containsExactly(roomId);
+
 		emailNotificationService.sendDue(later());
 
 		verify(emailSender).send(eq(email(senior)), eq("[LION:LINK] 새 메시지 요청이 왔어요"), anyString());
-		assertThat(onlyLog().getTargetIds()).containsExactly(7L);
+		assertThat(onlyLog().getStatus()).isEqualTo(EmailStatus.SENT);
+	}
+
+	@Test
+	void 보내기_전에_메시지_요청이_처리됐으면_보내지_않는다() {
+		Long roomId = chatRequestService.create(me, new ChatRequestCreateRequest(senior, "안녕하세요! 이야기 나눠요.")).roomId();
+		chatRequestService.accept(senior, roomId);
+
+		emailNotificationService.sendDue(later());
+
+		assertThat(onlyLog().getStatus()).isEqualTo(EmailStatus.SKIPPED);
+		verify(emailSender, never()).send(anyString(), anyString(), anyString());
 	}
 
 	@Test

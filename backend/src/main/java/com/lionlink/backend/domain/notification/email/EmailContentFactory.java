@@ -1,5 +1,7 @@
 package com.lionlink.backend.domain.notification.email;
 
+import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
+import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMemberRole;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
@@ -40,13 +42,14 @@ public class EmailContentFactory {
 
 	private final CoffeeChatRepository coffeeChatRepository;
 	private final CoffeeChatMemberRepository coffeeChatMemberRepository;
+	private final ChatRoomRepository chatRoomRepository;
 	private final UserRepository userRepository;
 	private final EmailProperties properties;
 
 	public Optional<EmailContent> render(EmailType type, Long targetId, String unsubscribeUrl) {
 		return switch (type) {
 			case COFFEE_CHAT_REQUEST -> coffeeChatRequest(targetId, unsubscribeUrl);
-			case MESSAGE_REQUEST -> Optional.of(messageRequest(unsubscribeUrl));
+			case MESSAGE_REQUEST -> messageRequest(targetId, unsubscribeUrl);
 			case SIGNUP_APPROVED -> signupApproved(targetId, unsubscribeUrl);
 		};
 	}
@@ -78,11 +81,17 @@ public class EmailContentFactory {
 	}
 
 	/** 메시지 요청 내용은 채팅에서 정해지므로 지금은 요청함으로 안내만 한다. */
-	private EmailContent messageRequest(String unsubscribeUrl) {
+	private Optional<EmailContent> messageRequest(Long roomId, String unsubscribeUrl) {
+		boolean waiting = chatRoomRepository.findById(roomId)
+				.filter(room -> room.getStatus() == ChatRoomStatus.REQUESTED)
+				.isPresent();
+		if (!waiting) {
+			return Optional.empty();
+		}
 		String body = paragraph("새 메시지 요청이 왔어요.")
 				+ note("요청함에서 메시지를 확인하고 수락하거나 거절할 수 있어요.")
 				+ button("요청함 열기", link("/chat/requests"));
-		return new EmailContent(PREFIX + "새 메시지 요청이 왔어요", layout(body, "메시지 요청 메일", unsubscribeUrl));
+		return Optional.of(new EmailContent(PREFIX + "새 메시지 요청이 왔어요", layout(body, "메시지 요청 메일", unsubscribeUrl)));
 	}
 
 	private Optional<EmailContent> signupApproved(Long userId, String unsubscribeUrl) {
