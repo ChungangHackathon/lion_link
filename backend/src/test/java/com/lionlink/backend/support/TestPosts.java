@@ -15,18 +15,18 @@ public final class TestPosts {
 	}
 
 	public static PostCreateRequest general(PostCategory category, String title) {
-		return new PostCreateRequest(category, title, "본문 내용입니다.", null, false, null, null, null);
+		return new PostCreateRequest(category, title, "본문 내용입니다.", null, false, null, null, null, null);
 	}
 
 	public static PostCreateRequest meetup(String title, int capacity, List<Long> companionIds) {
 		return new PostCreateRequest(PostCategory.MEETUP, title, "같이 저녁 먹어요.", null, false, null,
 				new PostCreateRequest.MeetupRequest(LocalDateTime.now().plusDays(2), "흑석역 2번 출구", capacity, companionIds),
-				null);
+				null, null);
 	}
 
 	public static PostCreateRequest recruit(String title, Long seniorId, int capacity) {
 		return new PostCreateRequest(PostCategory.RECRUIT, title, "함께 신청할 동문을 찾아요.", null, false, null, null,
-				new PostCreateRequest.RecruitRequest(seniorId, capacity, LocalDate.now().plusDays(3)));
+				new PostCreateRequest.RecruitRequest(seniorId, capacity, LocalDate.now().plusDays(3)), null);
 	}
 
 	public static void acceptGroupCoffeeChat(EntityManager entityManager, Long userId) {
