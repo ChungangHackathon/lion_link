@@ -52,6 +52,9 @@ class MeetupConcurrencyTest {
 	@AfterEach
 	void tearDown() {
 		if (postId != null) {
+			jdbcTemplate.update("delete from chat_messages where room_id in (select id from chat_rooms where meetup_id = ?)", postId);
+			jdbcTemplate.update("delete from chat_room_members where room_id in (select id from chat_rooms where meetup_id = ?)", postId);
+			jdbcTemplate.update("delete from chat_rooms where meetup_id = ?", postId);
 			jdbcTemplate.update("delete from meetup_members where meetup_id = ?", postId);
 			jdbcTemplate.update("delete from meetups where post_id = ?", postId);
 			jdbcTemplate.update("delete from posts where id = ?", postId);

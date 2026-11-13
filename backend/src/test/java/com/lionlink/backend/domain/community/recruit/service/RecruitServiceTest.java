@@ -3,6 +3,9 @@ package com.lionlink.backend.domain.community.recruit.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMember;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMemberRole;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.post.dto.response.PostMemberResponse;
@@ -143,6 +146,20 @@ class RecruitServiceTest {
 
 		assertError(() -> recruitService.join(kim, postId), CommunityErrorCode.OPEN_COFFEE_CHAT_EXISTS);
 		assertThat(recruitService.join(lee, postId).joined()).isTrue();
+	}
+
+	@Test
+	void 그_사자에게_함께_신청한_진행_중인_커피챗이_있어도_참여할_수_없다() {
+		Long lee = TestUsers.approved(entityManager, "이사자");
+		Long coffeeChatId = TestProfiles.coffeeChat(entityManager, lee, senior, CoffeeChatStatus.PENDING);
+		entityManager.persist(CoffeeChatMember.builder()
+				.coffeeChat(entityManager.find(CoffeeChat.class, coffeeChatId))
+				.userId(kim)
+				.role(CoffeeChatMemberRole.MEMBER)
+				.build());
+		entityManager.flush();
+
+		assertError(() -> recruitService.join(kim, postId), CommunityErrorCode.OPEN_COFFEE_CHAT_EXISTS);
 	}
 
 	private List<Notification> joinedNotifications() {
