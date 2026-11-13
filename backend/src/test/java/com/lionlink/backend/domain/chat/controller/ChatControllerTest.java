@@ -79,6 +79,31 @@ class ChatControllerTest {
 	}
 
 	@Test
+	void 안_읽은_메시지와_받은_요청_수를_준다() throws Exception {
+		Long roomId = request();
+		mockMvc.perform(get("/api/v1/chat-rooms/unread-count").header(USER_HEADER, kim))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.unreadMessages").value(0))
+				.andExpect(jsonPath("$.messageRequests").value(1));
+
+		mockMvc.perform(post("/api/v1/chat-requests/{roomId}/accept", roomId).header(USER_HEADER, kim))
+				.andExpect(status().isOk());
+		for (String content : List.of("반가워요", "잘 부탁해요")) {
+			mockMvc.perform(post("/api/v1/chat-rooms/{roomId}/messages", roomId)
+							.header(USER_HEADER, me)
+							.contentType(MediaType.APPLICATION_JSON)
+							.content("{ \"content\": \"%s\" }".formatted(content)))
+					.andExpect(status().isCreated());
+		}
+
+		mockMvc.perform(get("/api/v1/chat-rooms/unread-count").header(USER_HEADER, kim))
+				.andExpect(jsonPath("$.unreadMessages").value(2))
+				.andExpect(jsonPath("$.messageRequests").value(0));
+		mockMvc.perform(get("/api/v1/chat-rooms/unread-count").header(USER_HEADER, me))
+				.andExpect(jsonPath("$.unreadMessages").value(0));
+	}
+
+	@Test
 	void 메시지_요청을_보내고_받은_요청을_확인한다() throws Exception {
 		Long roomId = request();
 
