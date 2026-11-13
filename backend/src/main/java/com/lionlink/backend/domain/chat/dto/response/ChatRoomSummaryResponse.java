@@ -13,6 +13,8 @@ public record ChatRoomSummaryResponse(
 		List<ChatUserResponse> members,
 		int memberCount,
 		Long coffeeChatId,
+		Long meetupId,
+		String title,
 		ChatMessageResponse lastMessage,
 		long unreadCount,
 		boolean pinned,

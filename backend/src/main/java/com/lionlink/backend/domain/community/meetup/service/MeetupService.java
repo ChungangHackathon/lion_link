@@ -1,5 +1,6 @@
 package com.lionlink.backend.domain.community.meetup.service;
 
+import com.lionlink.backend.domain.chat.service.MeetupChatRoomService;
 import com.lionlink.backend.domain.community.event.MeetupInvitedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.dto.request.MeetupInviteRequest;
@@ -44,6 +45,7 @@ public class MeetupService {
 	private final MeetupInviteRepository meetupInviteRepository;
 	private final UserRepository userRepository;
 	private final UserSummaryReader userSummaryReader;
+	private final MeetupChatRoomService meetupChatRoomService;
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional(isolation = Isolation.READ_COMMITTED)
@@ -61,6 +63,7 @@ public class MeetupService {
 			throw new BusinessException(CommunityErrorCode.MEETUP_FULL);
 		}
 		meetupMemberRepository.save(MeetupMember.builder().meetup(meetup).userId(userId).build());
+		meetupChatRoomService.join(postId, userId, LocalDateTime.now());
 		return participation(post, meetup, userId);
 	}
 
@@ -78,6 +81,7 @@ public class MeetupService {
 			throw new BusinessException(CommunityErrorCode.MEETUP_CLOSED, "종료되거나 취소된 모임은 참여를 취소할 수 없어요.");
 		}
 		meetupMemberRepository.deleteById(memberId);
+		meetupChatRoomService.leave(postId, userId, LocalDateTime.now());
 		return participation(post, meetup, userId);
 	}
 

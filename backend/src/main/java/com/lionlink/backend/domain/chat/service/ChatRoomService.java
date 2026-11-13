@@ -22,6 +22,11 @@ import com.lionlink.backend.domain.chat.repository.ChatQueryRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomMemberRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
+import com.lionlink.backend.domain.community.meetup.entity.MeetupStatus;
+import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
+import com.lionlink.backend.domain.community.meetup.repository.MeetupRepository;
+import com.lionlink.backend.domain.community.post.entity.Post;
+import com.lionlink.backend.domain.community.post.repository.PostRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.global.error.BusinessException;
@@ -55,6 +60,9 @@ public class ChatRoomService {
 	private final ChatQueryRepository chatQueryRepository;
 	private final ChatMessageWriter chatMessageWriter;
 	private final CoffeeChatRepository coffeeChatRepository;
+	private final MeetupRepository meetupRepository;
+	private final MeetupMemberRepository meetupMemberRepository;
+	private final PostRepository postRepository;
 	private final UserSummaryReader userSummaryReader;
 	private final ApplicationEventPublisher eventPublisher;
 
@@ -68,6 +76,9 @@ public class ChatRoomService {
 		Set<Long> userIds = new HashSet<>();
 		membersByRoom.values().forEach(members -> members.forEach(member -> userIds.add(member.getUserId())));
 		Map<Long, UserSummary> summaries = userSummaryReader.getSummaries(userIds);
+		List<Long> meetupIds = mine.getContent().stream().map(member -> member.getRoom().getMeetupId()).filter(Objects::nonNull).toList();
+		Map<Long, String> titles = meetupIds.isEmpty() ? Map.of()
+				: postRepository.findAllById(meetupIds).stream().collect(Collectors.toMap(Post::getId, Post::getTitle));
 
 		return SliceResponse.from(mine, member -> {
 			ChatRoom room = member.getRoom();
@@ -86,6 +97,8 @@ public class ChatRoomService {
 					room.isDirect() ? List.of() : others,
 					(int) members.stream().filter(ChatRoomMember::isActive).count(),
 					room.getCoffeeChatId(),
+					room.getMeetupId(),
+					room.isMeetupRoom() ? titles.get(room.getMeetupId()) : null,
 					lastMessage,
 					unreadCount(room.getId(), member, userId),
 					member.isPinned(),
@@ -134,7 +147,7 @@ public class ChatRoomService {
 		}
 		ChatRoomMember member = findActiveMember(userId, roomId);
 		ChatRoom room = member.getRoom();
-		if (room.getStatus() != ChatRoomStatus.ACTIVE) {
+		if (!room.isOpen()) {
 			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS);
 		}
 		if (room.isDirect()) {
@@ -171,9 +184,14 @@ public class ChatRoomService {
 		if (room.getStatus() == ChatRoomStatus.REQUESTED) {
 			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS, "대기 중인 요청은 취소하거나 거절해 주세요.");
 		}
-		if (room.isDirect() || room.getStatus() != ChatRoomStatus.ACTIVE) {
+		if (room.isDirect() || !room.isOpen()) {
 			member.hide(chatMessageRepository.findLastMessageId(roomId), now);
 			return;
+		}
+		if (room.isMeetupRoom() && meetupRepository.findById(room.getMeetupId())
+				.filter(meetup -> !meetup.isCanceled() && !meetup.isEnded(now))
+				.isPresent()) {
+			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS, "번개가 끝나기 전에는 나갈 수 없어요. 번개 참여를 취소하면 방에서도 나가요.");
 		}
 		member.leave(now);
 		String name = userSummaryReader.getSummary(userId).filter(summary -> !summary.deleted()).map(UserSummary::name).orElse("동문");
@@ -200,10 +218,23 @@ public class ChatRoomService {
 				room.isRequestedBy(userId),
 				others(userId, members, summaries),
 				coffeeChat,
+				room.isMeetupRoom() ? meetup(room.getMeetupId()) : null,
 				member.isPinned(),
 				member.isMuted(),
-				room.getStatus() == ChatRoomStatus.ACTIVE
+				room.isOpen()
 		);
+	}
+
+	private ChatRoomDetailResponse.Meetup meetup(Long postId) {
+		LocalDateTime now = LocalDateTime.now();
+		return meetupRepository.findById(postId)
+				.map(meetup -> new ChatRoomDetailResponse.Meetup(
+						meetup.getPostId(),
+						meetup.getPost().getTitle(),
+						meetup.getMeetAt(),
+						meetup.getPlace(),
+						MeetupStatus.of(meetup, meetupMemberRepository.countByMeetupPostId(postId), now)))
+				.orElse(null);
 	}
 
 	ChatRoomMember findActiveMember(Long userId, Long roomId) {
