@@ -1,7 +1,7 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE) — 담당 조상원. 채팅·알림 상세는 아직 없다(노션 페이지가 빈 템플릿).
-> 마지막 갱신: 2026-11-12 (구글 로그인 Authorization Code 방식 반영). 기준: 기능명세서 v1.17, `docs/erd.md`
+> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
+> 마지막 갱신: 2026-11-13 (채팅 10장 추가, 커피챗 알림에 보낸 사람 저장, 메시지 요청 메일 연결). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
 
@@ -62,7 +62,7 @@
 | 5. 동문 찾기 | 5 | 조상원 | 이 문서 아래 |
 | 6. 커뮤니티 | 17 | 조상원 | 이 문서 아래 |
 | 7. 홈 | 2 | 조상원 | 이 문서 아래 |
-| 8. 채팅 | 14 | 차예은 | **미작성** |
+| 8. 채팅 | 14 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
 | 9. 알림 | 6 | 차예은 | 이 문서 9장 |
 
 커피챗·채팅·알림 30개는 노션 표에 행만 있고, 확인한 페이지(커피챗 신청, 첫 메시지 요청, 알림 목록)의 본문은 빈 템플릿이었다.
@@ -471,7 +471,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `coffeeChat` | object | 남의 커피챗 설정 요약 `{ availability, nextAvailableDate, acceptGroup, topics, modes, availableSlots, preferredArea }`. 오른쪽 고정 카드에 쓰여 |
 | `coffeeChat.availability` | string | `AVAILABLE` 신청 가능, `RESTING` 쉼는 중, `NOT_ACCEPTING` 안 받는 중, `IN_PROGRESS` 이미 진행 중(내가 함께 신청자인 건 포함), `COOLDOWN` 재신청 대기 중 |
 | `coffeeChat.nextAvailableDate` | date / null | `RESTING`·`COOLDOWN`일 때 '날짜부터 신청할 수 있어요'에 쓰는 날짜 |
-| `chat` | object | `{ status, requestAvailableDate }`. `status`는 `NONE` `REQUESTED` `ACTIVE`, 거절된 지 7일 안이면 `requestAvailableDate`에 다시 보낼 수 있는 날짜 |
+| `chat` | object | `{ status, requestAvailableDate }`. `status`는 `NONE` `REQUESTED` `ACTIVE`, 거절된 날짜 + 7일 전이면 `requestAvailableDate`에 다시 보낼 수 있는 날짜 |
 | `commonalities` | object\[\] | 나와의 공통점 `{ type, label }`이 정해진 순서대로 오고 FE가 최대 3개를 보여줘. `type`은 `SAME_LION_PROJECT` `SAME_COMPANY` `SAME_GENERATION` `SAME_PART` `SHARED_INTEREST`. 상대의 비공개 회사명은 계산에서 빼 |
 | `mutualCount` | number | 함께 아는 동문 수. 누구인지는 내려주지 않고 숫자만 내려줘. 탈퇴한 회원은 세지 않아 |
 | `bookmarked` | boolean | 내가 관심 동문으로 저장했는지 |
@@ -986,7 +986,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `isStaff` (추가) | 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`. 이름 옆 '운영진' 태그 |
 | `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. 거절되거나 만료된 지 7일이 안 됐으면 `COOLDOWN`이고 `nextAvailableDate`는 다시 신청할 수 있는 날이야(COFFEE-01과 같은 규칙) |
 | `coffeeChat.pendingCoffeeChatId` (추가) | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
-| `chat` | 둘 사이의 1:1 방 기준. `REQUESTED`는 누가 보냈든 대기 중인 요청이 있을 때야. 내가 보낸 요청이 거절된 지 7일 안이면 `status: NONE`과 `requestAvailableDate`(거절 시각 + 7일의 날짜) |
+| `chat` | 둘 사이의 1:1 방 기준. `REQUESTED`는 누가 보냈든 대기 중인 요청이 있을 때야. 내가 보낸 요청이 거절된 날짜 + 7일 전이면 `status: NONE`과 `requestAvailableDate`(거절된 날짜 + 7일) |
 | `commonalities` | `SAME_LION_PROJECT` 같은 기수에 이름이 같은 멋사 프로젝트(`13기 라이언링크`), `SAME_COMPANY` 둘 다 지금 다니는 회사(`라이온컴퍼니`), `SAME_GENERATION`(`13기`), `SAME_PART`(`백엔드 파트`), `SHARED_INTEREST`(`데이터·AI`) 순서야. 한 종류가 여러 개면 각각 들어가 |
 | `mutualCount` | 나와 연결된 동문 중 이 사자와도 연결된 사람 수. 탈퇴 회원은 빼 |
 | 내 프로필을 볼 때 | 공개 범위 없이 모두 보이고 `commonalities: []`, `mutualCount: 0`, `chat.status: NONE`, `pendingCoffeeChatId: null` |
@@ -1684,14 +1684,16 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 `notifications`에 커피챗 탭(`COFFEE_CHAT`)·`COFFEE_CHAT` 대상으로 저장해. 메일(9.2)은 알림 이슈에서 만들어.
 
-| `type` | 받는 사람 | 문구 |
-| --- | --- | --- |
-| `COFFEE_CHAT_REQUESTED` | 받는 사자 | `{신청자}님이 커피챗을 신청했어요.` (여러 명이면 `{신청자}님 외 {N}명이 …`) |
-| `COFFEE_CHAT_ACCEPTED` | 신청자 전원 | `{사자}님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.` |
-| `COFFEE_CHAT_REJECTED` | 신청자 전원 | `{사자}님이 이번 커피챗은 어렵다고 했어요.` |
-| `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | `커피챗 일정이 정해졌어요. {M월 d일 HH:mm}` (변경이면 `바뀌었어요`) |
-| `COFFEE_CHAT_CANCELED` | 나를 뺀 참여자 | `{이름}님이 커피챗을 취소했어요.` |
-| `COFFEE_CHAT_EXPIRED` | 신청자 전원 | `{사자}님에게 보낸 커피챗 신청이 만료됐어요.` |
+`message`는 이름 뒤 문구야. 화면은 `actor.name` + `message`로 보여줘.
+
+| `type` | 받는 사람 | 보낸 사람(`actor`) | `message` |
+| --- | --- | --- | --- |
+| `COFFEE_CHAT_REQUESTED` | 받는 사자 | 신청자 | `님이 커피챗을 신청했어요.` (여러 명이면 `님 외 {N}명이 커피챗을 신청했어요.`) |
+| `COFFEE_CHAT_ACCEPTED` | 신청자 전원 | 받는 사자 | `님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.` |
+| `COFFEE_CHAT_REJECTED` | 신청자 전원 | 받는 사자 | `님이 이번 커피챗은 어렵다고 했어요.` |
+| `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | 일정을 정한 회원 | `님이 커피챗 일정을 정했어요. {M월 d일 HH:mm}` (변경이면 `바꿨어요`) |
+| `COFFEE_CHAT_CANCELED` | 나를 뺀 참여자 | 취소한 회원 | `님이 커피챗을 취소했어요.` |
+| `COFFEE_CHAT_EXPIRED` | 신청자 전원 | 받는 사자 | `님에게 보낸 커피챗 신청이 만료됐어요.` |
 
 ## 9. 알림
 
@@ -1839,9 +1841,10 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `SIGNUP_APPROVED` | `ACCOUNT` | 가입 승인(ADMIN-03, 05) | 없음 |
 | `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글 쓴 회원 |
 | `MEETUP_CANCELED`, `RECRUIT_CANCELED` | `COMMUNITY` | 커뮤니티 | 없음 |
-| `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 지금은 없음. 이름이 `message`에 들어 있음 |
+| `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 신청자, 받는 사자, 일정을 정한 회원, 취소한 회원 |
+| `MESSAGE_REQUESTED`, `MESSAGE_REQUEST_ACCEPTED` | `CHAT` | 채팅(10장 "채팅이 저장하는 알림") | 요청한 회원, 수락한 회원 |
 
-채팅(`CHAT`) 알림은 채팅 작업에서 리스너로 추가해. 회원이 일으킨 알림이면 `actorId`를 채우고 `message`는 이름 뒤 문구로 저장해.
+회원이 일으킨 알림은 `actorId`를 채우고 `message`는 이름 뒤 문구로 저장해.
 
 ### 이메일 발송
 
@@ -1850,27 +1853,254 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | 메일 종류 | 언제 | 받는 사람 | 제목 | 버튼 |
 | --- | --- | --- | --- | --- |
 | `COFFEE_CHAT_REQUEST` | 커피챗 신청(COFFEE-01) | 받는 사자 | `[LION:LINK] {이름}({기수}기)님이 커피챗을 신청했어요` (여러 명이면 `님 외 N명이`) | `{FE}/coffee/{coffeeChatId}` |
-| `MESSAGE_REQUEST` | 메시지 요청(채팅) | 요청받은 회원 | `[LION:LINK] 새 메시지 요청이 왔어요` | `{FE}/chat/requests` |
+| `MESSAGE_REQUEST` | 메시지 요청(CHAT-01) | 요청받은 회원 | `[LION:LINK] 새 메시지 요청이 왔어요` | `{FE}/chat/requests` |
 | `SIGNUP_APPROVED` | 가입 승인(ADMIN-03, 05) | 승인된 회원 | `[LION:LINK] 가입이 승인됐어요` | `{FE}/home` |
 
 - **쌓기**: 요청과 같은 트랜잭션에서 `email_logs`에 `PENDING`으로 저장해. 요청이 롤백되면 메일도 남지 않고, 메일 서버가 느려도 API 응답은 기다리지 않아.
 - **보내기**: 스케줄러가 10초마다 보낼 시각(`scheduled_at`)이 된 메일을 꺼내 보내고 `SENT`로 바꿔.
-- **건너뛰기**: 보내는 시점에 받는 사람이 탈퇴했거나, 그 종류를 꺼 뒀거나(NOTI-05, NOTI-06), 커피챗 신청이 이미 대기 중이 아니면 보내지 않고 `SKIPPED`로 남겨.
+- **건너뛰기**: 보내는 시점에 받는 사람이 탈퇴했거나, 그 종류를 꺼 뒀거나(NOTI-05, NOTI-06), 커피챗 신청이나 메시지 요청이 이미 대기 중이 아니면 보내지 않고 `SKIPPED`로 남겨.
 - **다시 보내기**: 실패하면 10분 뒤에 다시 보내고, 3번 실패하면 `FAILED`로 멈춰(`attempt_count`).
 - **본문**: 보내는 시점의 데이터로 만들고, 아래에 해당 종류의 수신 거부 링크를 넣어.
 - **설정**: SMTP 접속 정보는 `spring.mail.*`(환경변수 `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`), 보내는 사람은 `MAIL_FROM`이야. `MAIL_ENABLED`가 `false`(기본값)면 실제로 보내지 않고 로그만 남겨.
-- **채팅에서 메시지 요청 메일 보내기**: 요청을 만들 때 `EmailNotificationService.enqueue(받는 사람 ID, EmailType.MESSAGE_REQUEST, roomId)`를 불러.
 
 ### 알림 남은 일
 
 | 번호 | 무엇을 | 지금 | 맞출 사람 |
 | --- | --- | --- | --- |
-| 1 | 실제 메일 발송(발송, 재시도, `email_logs` 기록) | **반영(2026-11-13)**: 커피챗 신청, 가입 승인 메일 발송. 위 "이메일 발송" 참고 | 완료 |
+| 1 | 실제 메일 발송(발송, 재시도, `email_logs` 기록) | **반영(2026-11-13)**: 커피챗 신청, 메시지 요청, 가입 승인 메일 발송. 위 "이메일 발송" 참고 | 완료 |
 | 2 | FE 탭 값 | 목업은 `COFFEE`를 쓰는데 API는 `COFFEE_CHAT`이야. FE가 API 값에 맞춘다 | FE |
 | 3 | 알림을 누를 때 이동할 주소 | API는 `targetType`, `targetId`만 준다. 주소는 FE가 만든다 | FE |
-| 4 | 커피챗 알림의 보낸 사람 | 커피챗 알림은 `actorId` 없이 이름을 `message`에 넣는다. `actor`가 `null`이면 `message`가 문장 전체라 화면은 깨지지 않지만 이름이 굵게 보이지 않는다. 신청자, 받는 사자, 취소한 회원을 `actorId`로 남기도록 맞춘다 | 커피챗 담당 |
-| 5 | 메시지 요청 메일 | 보내는 기능은 준비됐다. 채팅에서 메시지 요청을 만들 때 `enqueue`를 부른다 | 채팅 담당 |
+| 4 | 커피챗 알림의 보낸 사람 | 해결. 커피챗 알림도 `actorId`를 남기고 `message`는 이름 뒤 문구로 저장한다(8장 표) | - |
+| 5 | 메시지 요청 메일 | 해결. 메시지 요청(CHAT-01)을 만들면 받는 사람에게 메일을 쌓는다 | - |
 | 6 | 발송 수단과 보내는 주소 | Gmail SMTP와 AWS SES(SMTP) 어느 쪽이든 설정만 바꾸면 된다. 운영에서 쓸 계정과 주소를 정한다 | BE |
 | 7 | 묶어 보내기 | 지금은 한 건에 한 통을 바로 보낸다. 짧은 시간에 신청이 여러 건 오면 한 통으로 묶을지 정한다(`target_ids`, `scheduled_at`으로 확장 가능) | 기획, BE |
 | 8 | FE 수신 거부 페이지 | `{FE}/email-notifications/unsubscribe?token=...&type=...` 페이지에서 NOTI-06을 부르고 N-04 완료 화면을 보여준다 | FE |
 | 9 | 반송(`BOUNCED`) 처리 | 미구현. 메일 서비스의 반송 알림 연동이 필요하다 | BE |
+
+## 10. 채팅
+
+담당: 커피챗, 채팅, 알림. PRD 5장(5.1~5.8)이야. 노션 상세가 비어 있어서 프론트 화면(T-17 1:1 채팅방, T-27 단체 채팅방, 메시지 요청함, 메시지 요청 팝업)을 기준으로 정했어. 보내기와 조회는 REST이고, 새 메시지와 읽음은 WebSocket(STOMP)으로 바로 알려줘.
+
+| ID | 기능 | 메서드, 경로 |
+| --- | --- | --- |
+| CHAT-01 | 메시지 요청 보내기 | `POST /chat-requests` |
+| CHAT-02 | 받은 요청함 | `GET /chat-requests` |
+| CHAT-03 | 요청 보기 | `GET /chat-requests/{roomId}` |
+| CHAT-04 | 요청 수락 | `POST /chat-requests/{roomId}/accept` |
+| CHAT-05 | 요청 거절 | `POST /chat-requests/{roomId}/decline` |
+| CHAT-06 | 수락 전 첫 메시지 수정 | `PATCH /chat-requests/{roomId}/messages/{messageId}` |
+| CHAT-07 | 수락 전 요청 취소 | `DELETE /chat-requests/{roomId}/messages/{messageId}` |
+| CHAT-08 | 내 채팅방 목록 | `GET /chat-rooms` |
+| CHAT-09 | 채팅방 정보 | `GET /chat-rooms/{roomId}` |
+| CHAT-10 | 메시지 목록 | `GET /chat-rooms/{roomId}/messages` |
+| CHAT-11 | 메시지 보내기 | `POST /chat-rooms/{roomId}/messages` |
+| CHAT-12 | 읽음 처리 | `PUT /chat-rooms/{roomId}/read` |
+| CHAT-13 | 상단 고정, 알림 끄기 | `PATCH /chat-rooms/{roomId}/preferences` |
+| CHAT-14 | 나가기, 끝난 요청 숨기기 | `DELETE /chat-rooms/{roomId}/members/me` |
+
+모두 승인 회원만 쓸 수 있어. 방에 참여하지 않았거나 나간 방은 `404 ROOM_NOT_FOUND`야.
+
+### 방의 종류와 상태
+
+| 종류 (`type`) | 언제 생기나 |
+| --- | --- |
+| `DIRECT` 1:1 | 메시지 요청(CHAT-01) 또는 1:1 커피챗 수락(COFFEE-04). 두 사람 사이에 1개만 있고 다시 쓰여 |
+| `GROUP` 단체 | 여러 명 커피챗 수락(COFFEE-04). 받는 사자와 신청자 전원 |
+
+| 상태 (`status`) | 뜻 | 메시지 보내기 |
+| --- | --- | --- |
+| `REQUESTED` | 메시지 요청을 보냈고 아직 답이 없음 | 안 돼 (첫 메시지만 있음) |
+| `ACTIVE` | 대화 중 | 돼 |
+| `DECLINED` | 요청이 거절됨 | 안 돼 |
+| `CANCELED` | 보낸 사람이 요청을 취소함 | 안 돼 |
+
+### 사용자 요약 객체
+
+`{ id, name, generation, lionParts, photoUrl, isDeleted }`야. 탈퇴한 사람은 `isDeleted: true`이고 나머지는 `null`이야.
+
+### 메시지 객체
+
+```json
+{ "id": 501, "type": "TEXT", "senderId": 12, "content": "안녕하세요!", "deleted": false,
+  "createdAt": "2026-11-13T19:00:00+09:00", "editedAt": null, "unreadCount": 1 }
+```
+
+- `type`은 `TEXT` 일반 메시지, `SYSTEM` 안내(커피챗 수락·일정 확정 등). `SYSTEM`은 `senderId`가 `null`이야
+- `unreadCount`는 보낸 사람을 뺀 참여자 중 아직 이 메시지를 안 읽은 사람 수야. 단체방에서 내 메시지 옆에 숫자로 보여줘. `SYSTEM`은 `0`
+
+### CHAT-01 메시지 요청 보내기
+
+`POST /chat-requests`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `receiverId` | number | O | 받을 동문. 본인 불가 |
+| `content` | string | O | 첫 메시지 5\~300자 |
+
+- 두 사람의 1:1 방이 이미 대화 중(`ACTIVE`)이거나 요청 중(`REQUESTED`, 누가 보냈든)이면 새로 만들지 않고 그 방을 `200`으로 돌려줘(`created: false`). FE는 그 방으로 이동하거나 '이미 요청이 와 있어요'를 보여줘
+- 내가 보낸 요청이 거절된 날짜 + 7일 전이면 `409 REQUEST_COOLDOWN`('11월 20일부터 다시 요청할 수 있어요.'). 동문 상세(ALUMNI-02)의 `chat.requestAvailableDate`와 같은 규칙이야
+- 그 밖에는 요청을 보내고 `201`이야. 받는 사람에게 `MESSAGE_REQUESTED` 알림과 메시지 요청 메일(9장 "이메일 발송")을 쌓고, 받는 사람의 개인 채널에 `REQUEST_RECEIVED`를 보내
+
+```json
+{ "roomId": 55, "status": "REQUESTED", "requestedByMe": true, "created": true }
+```
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수 |
+| 400 | `CANNOT_CHAT_SELF` | 나에게 요청 |
+| 404 | `USER_NOT_FOUND` | 없는 회원, 승인 전, 탈퇴 |
+| 409 | `REQUEST_COOLDOWN` | 거절된 지 7일 안 |
+
+### CHAT-02 받은 요청함
+
+`GET /chat-requests?page=0&size=20`
+
+나에게 온 대기 중 요청을 최근 순서로 줘. 형식은 `{ items, page, size, hasNext }`이고 항목은 `{ roomId, requester(사용자 요약), firstMessage(메시지 객체), requestedAt }`야.
+
+### CHAT-03 요청 보기
+
+`GET /chat-requests/{roomId}` · 보낸 사람, 받는 사람
+
+`{ roomId, status, requester, receiver, firstMessage, requestedAt, declinedAt, declineReason, declineMessage }`를 줘.
+
+### CHAT-04 요청 수락
+
+`POST /chat-requests/{roomId}/accept` · 받는 사람, `REQUESTED`
+
+방이 `ACTIVE`가 되고 안내 메시지가 남아. 받는 사람은 요청 메시지까지 읽은 것으로 처리해. 보낸 사람에게 `MESSAGE_REQUEST_ACCEPTED` 알림을 저장하고 `200`에 CHAT-09 형식을 돌려줘.
+
+### CHAT-05 요청 거절
+
+`POST /chat-requests/{roomId}/decline` · 받는 사람, `REQUESTED`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `reason` | string | O | `BUSY` 요즘 바빠서 대화가 어려워요, `NOT_MY_FIELD` 제가 도움드리기 어려운 분야예요, `PREFER_COFFEE_CHAT` 커피챗으로 신청해주세요, `ETC` 기타 |
+| `message` | string | `ETC`면 O | 5\~100자 |
+
+방이 `DECLINED`가 되고 `204`야. 받는 사람의 요청함에서 사라지고, 보낸 사람 목록에는 '거절됨'으로 남아(숨기기는 CHAT-14).
+
+### CHAT-06 수락 전 첫 메시지 수정
+
+`PATCH /chat-requests/{roomId}/messages/{messageId}` · 보낸 사람, `REQUESTED`
+
+`{ "content": "5~300자" }`를 받고 `200`에 메시지 객체(`editedAt` 채워짐)를 돌려줘.
+
+### CHAT-07 수락 전 요청 취소
+
+`DELETE /chat-requests/{roomId}/messages/{messageId}` · 보낸 사람, `REQUESTED`
+
+첫 메시지를 지우고 방을 `CANCELED`로 바꿔. `204`야.
+
+### CHAT-04~07 공통 에러
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수, 기타인데 사유 없음 |
+| 403 | `FORBIDDEN_ACTION` | 보낸 사람이 수락·거절하거나, 받는 사람이 수정·취소 |
+| 404 | `ROOM_NOT_FOUND`, `MESSAGE_NOT_FOUND` | 없는 방이나 메시지, 메시지 요청 방이 아님 |
+| 409 | `INVALID_ROOM_STATUS` | 이미 답한 요청 |
+
+### CHAT-08 내 채팅방 목록
+
+`GET /chat-rooms?page=0&size=20`
+
+대화 중인 방, 내가 보낸 요청(대기 중, 거절됨)을 보여줘. 상단 고정한 방이 먼저고, 그다음 최근 대화순이야. 받은 요청은 요청함(CHAT-02)에 있어.
+
+```json
+{
+  "items": [{
+    "roomId": 55, "type": "DIRECT", "status": "ACTIVE", "requestedByMe": false,
+    "partner": { "id": 12, "name": "김사자", "...": "사용자 요약" },
+    "members": [], "memberCount": 2, "coffeeChatId": 31,
+    "lastMessage": { "...": "메시지 객체" }, "unreadCount": 3,
+    "pinned": false, "muted": false
+  }],
+  "page": 0, "size": 20, "hasNext": false
+}
+```
+
+- `partner`는 1:1 방의 상대, `members`는 단체방의 나를 뺀 참여자야
+- `unreadCount`는 내가 마지막으로 읽은 뒤에 다른 사람이 보낸 메시지 수야
+
+### CHAT-09 채팅방 정보
+
+`GET /chat-rooms/{roomId}`
+
+`{ roomId, type, status, requestedByMe, members(나를 뺀 참여자), coffeeChat({ id, status, scheduledAt } 또는 null), pinned, muted, canSend }`를 줘. `canSend`는 `ACTIVE`일 때만 `true`야.
+
+### CHAT-10 메시지 목록
+
+`GET /chat-rooms/{roomId}/messages?before={messageId}&size=30` · `GET …/messages?after={messageId}`
+
+- `before`: 그 메시지보다 오래된 메시지(처음 열 때는 비워서 최신 메시지). 더 위로 올릴 때 써
+- `after`: 그 메시지 다음부터. 연결이 끊긴 동안 온 메시지를 이어 받을 때 써
+- 항상 오래된 것부터 정렬해서 `{ items, hasMore }`로 줘. `size`는 1\~100, 기본 30
+- 내가 나간 뒤 다시 들어온 1:1 방은 나가기 전 메시지를 안 보여줘
+
+### CHAT-11 메시지 보내기
+
+`POST /chat-rooms/{roomId}/messages` · `ACTIVE` 방의 참여자
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `content` | string | O | 1\~1000자 |
+| `clientMsgId` | string | X | FE가 만든 UUID. 같은 값으로 다시 보내면 새로 저장하지 않고 처음 메시지를 돌려줘(재전송 중복 방지) |
+
+`201`에 메시지 객체를 돌려주고, 방 채널에 `MESSAGE`를 보내. 1:1 방에서 상대가 방을 나가 있었으면 다시 목록에 나타나(이전 대화는 안 보임). 보낸 메시지는 내가 읽은 것으로 쳐.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수 |
+| 404 | `ROOM_NOT_FOUND` | 없거나 내가 없는 방 |
+| 409 | `INVALID_ROOM_STATUS` | 대화 중이 아닌 방 |
+
+### CHAT-12 읽음 처리
+
+`PUT /chat-rooms/{roomId}/read`
+
+`{ "lastMessageId": 501 }`(비우면 방의 최신 메시지)까지 읽은 것으로 기록하고 방 채널에 `READ`를 보내. 이전보다 앞으로 되돌리지는 않아. `200`에 `{ "roomId": 55, "lastReadMessageId": 501 }`이야.
+
+### CHAT-13 상단 고정, 알림 끄기
+
+`PATCH /chat-rooms/{roomId}/preferences`
+
+`{ "pinned": true, "muted": false }` 중 보낸 값만 바꾸고 `200`에 `{ roomId, pinned, muted }`를 돌려줘. 알림을 끄면 개인 채널의 `ROOM_UPDATED`에 `muted: true`가 실려서 FE가 소리·토스트를 안 띄우면 돼.
+
+### CHAT-14 나가기, 끝난 요청 숨기기
+
+`DELETE /chat-rooms/{roomId}/members/me` · `204`
+
+- 1:1 방: 내 목록에서 숨기고 지금까지의 대화를 내 화면에서 지워. 상대가 새 메시지를 보내면 다시 나타나
+- 단체방: 방을 나가고 '{이름}님이 나갔어요' 안내가 남아. 다시 들어올 수 없어
+- 거절·취소된 요청: 내 목록에서 숨겨
+- 대기 중인 요청은 나가기 대신 취소(CHAT-07)나 거절(CHAT-05)을 써(`409 INVALID_ROOM_STATUS`)
+
+### 실시간 (WebSocket STOMP)
+
+| 항목 | 값 |
+| --- | --- |
+| 연결 주소 | `ws(s)://{서버}/ws` (SockJS 없이 순수 WebSocket) |
+| 로그인 | STOMP `CONNECT` 프레임 헤더 `Authorization: Bearer {accessToken}`. 개발 서버는 REST처럼 `X-User-Id`도 받아 |
+| 방 채널 | `/topic/chat-rooms/{roomId}` 구독. 참여 중인 방만 구독할 수 있어 |
+| 개인 채널 | `/user/queue/chat` 구독 |
+| 보내기 | STOMP로 보내지 않고 REST(CHAT-11)로 보내 |
+
+| 채널 | `type` | 내용 |
+| --- | --- | --- |
+| 방 | `MESSAGE` | `{ type, roomId, message(메시지 객체) }` |
+| 방 | `READ` | `{ type, roomId, userId, lastReadMessageId }` |
+| 개인 | `ROOM_UPDATED` | `{ type, roomId, muted }`. 내 방에 새 메시지가 오거나 상태가 바뀜. 목록·안 읽은 수를 다시 불러 |
+| 개인 | `REQUEST_RECEIVED` | `{ type, roomId }`. 새 메시지 요청. 대기 중인 요청은 받는 사람에게 `ROOM_UPDATED` 없이 이것만 가 |
+
+연결이 끊겼다가 다시 붙으면 CHAT-10의 `after`로 놓친 메시지를 받아.
+
+### 채팅이 저장하는 알림
+
+채팅 탭(`CHAT`)·`ROOM` 대상으로 저장해. 일반 메시지는 알림을 만들지 않고, 안 읽은 수와 개인 채널로 알려.
+
+| `type` | 받는 사람 | 보낸 사람(`actor`) | `message` |
+| --- | --- | --- | --- |
+| `MESSAGE_REQUESTED` | 받는 사람 | 요청한 회원 | `님이 메시지를 보냈어요.` |
+| `MESSAGE_REQUEST_ACCEPTED` | 보낸 사람 | 수락한 회원 | `님이 메시지 요청을 수락했어요.` |
