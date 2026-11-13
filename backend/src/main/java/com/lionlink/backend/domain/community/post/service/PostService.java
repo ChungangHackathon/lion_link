@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.community.post.service;
 
 import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
+import com.lionlink.backend.domain.chat.service.MeetupChatRoomService;
 import com.lionlink.backend.domain.community.event.MeetupCanceledEvent;
 import com.lionlink.backend.domain.community.event.RecruitCanceledEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
@@ -56,6 +57,7 @@ public class PostService {
 	private final MeetupRepository meetupRepository;
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final MeetupInviteRepository meetupInviteRepository;
+	private final MeetupChatRoomService meetupChatRoomService;
 	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
 	private final RecruitMemberRepository recruitMemberRepository;
 	private final UserRepository userRepository;
@@ -161,10 +163,13 @@ public class PostService {
 			if (!admin && !meetup.isCanceled() && meetup.isEnded(LocalDateTime.now())) {
 				throw new BusinessException(CommunityErrorCode.MEETUP_CLOSED, "종료된 번개는 취소할 수 없어요.");
 			}
-			if (!meetup.isCanceled() && !meetup.isEnded(LocalDateTime.now())) {
+			boolean inProgress = !meetup.isCanceled() && !meetup.isEnded(LocalDateTime.now());
+			if (inProgress) {
 				notifyCanceled(post);
 			}
 			meetup.cancel();
+			meetupChatRoomService.close(postId, inProgress ? MeetupChatRoomService.CANCELED : MeetupChatRoomService.DELETED,
+					LocalDateTime.now());
 		}
 		if (post.getCategory() == PostCategory.RECRUIT) {
 			CoffeeChatRecruit recruit = findRecruit(postId);
@@ -236,6 +241,7 @@ public class PostService {
 		if (meetupMemberRepository.countByMeetupPostId(post.getId()) > 1) {
 			throw new BusinessException(CommunityErrorCode.CATEGORY_CHANGE_NOT_ALLOWED);
 		}
+		meetupChatRoomService.delete(post.getId());
 		meetupInviteRepository.deleteByMeetupPostId(post.getId());
 		meetupMemberRepository.deleteByMeetupPostId(post.getId());
 		meetupRepository.delete(meetup);
@@ -266,6 +272,7 @@ public class PostService {
 		members.add(MeetupMember.builder().meetup(meetup).userId(userId).build());
 		companionIds.forEach(companionId -> members.add(MeetupMember.builder().meetup(meetup).userId(companionId).build()));
 		meetupMemberRepository.saveAll(members);
+		meetupChatRoomService.open(post.getId(), LocalDateTime.now());
 	}
 
 	private void createRecruit(Post post, Long userId, Long seniorId, Integer capacity, LocalDate deadline) {

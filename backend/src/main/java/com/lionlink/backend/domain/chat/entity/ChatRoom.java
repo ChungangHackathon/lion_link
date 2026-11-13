@@ -24,7 +24,8 @@ import org.hibernate.type.SqlTypes;
 		name = "chat_rooms",
 		uniqueConstraints = {
 				@UniqueConstraint(name = "uk_chat_rooms_direct", columnNames = {"user_a_id", "user_b_id"}),
-				@UniqueConstraint(name = "uk_chat_rooms_coffee_chat", columnNames = "coffee_chat_id")
+				@UniqueConstraint(name = "uk_chat_rooms_coffee_chat", columnNames = "coffee_chat_id"),
+				@UniqueConstraint(name = "uk_chat_rooms_meetup", columnNames = "meetup_id")
 		}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -46,6 +47,8 @@ public class ChatRoom extends BaseCreatedEntity {
 	private Long userBId;
 
 	private Long coffeeChatId;
+
+	private Long meetupId;
 
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
@@ -70,13 +73,16 @@ public class ChatRoom extends BaseCreatedEntity {
 
 	private LocalDateTime lastMessageAt;
 
+	private LocalDateTime closedAt;
+
 	@Builder
-	private ChatRoom(ChatRoomType type, Long userAId, Long userBId, Long coffeeChatId, ChatRoomStatus status,
+	private ChatRoom(ChatRoomType type, Long userAId, Long userBId, Long coffeeChatId, Long meetupId, ChatRoomStatus status,
 			Long requestedBy, LocalDateTime requestedAt) {
 		this.type = type;
 		this.userAId = userAId;
 		this.userBId = userBId;
 		this.coffeeChatId = coffeeChatId;
+		this.meetupId = meetupId;
 		this.status = status;
 		this.requestedBy = requestedBy;
 		this.requestedAt = requestedAt;
@@ -96,6 +102,20 @@ public class ChatRoom extends BaseCreatedEntity {
 
 	public boolean isDirect() {
 		return type == ChatRoomType.DIRECT;
+	}
+
+	public boolean isOpen() {
+		return status == ChatRoomStatus.ACTIVE && closedAt == null;
+	}
+
+	public boolean isMeetupRoom() {
+		return meetupId != null;
+	}
+
+	public void close(LocalDateTime now) {
+		if (closedAt == null) {
+			this.closedAt = now;
+		}
 	}
 
 	public boolean isRequestedBy(Long userId) {
