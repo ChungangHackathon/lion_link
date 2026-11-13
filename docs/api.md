@@ -1,6 +1,6 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME) — 동문·커뮤니티·홈 담당. 커피챗·채팅·알림 상세는 팀 노션 API 명세서가 원본이다.
+> 전체 API 목록(87개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE) — 동문·커뮤니티·홈 담당. 채팅·알림 상세는 아직 없다(노션 페이지가 빈 템플릿).
 > 마지막 갱신: 2026-11-12 (구글 로그인 Authorization Code 방식 반영). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
@@ -58,7 +58,7 @@
 | 1. 계정·인증 | 9 | 이시형 | 이 문서 아래 |
 | 2. 프로필 | 18 | 이시형 | 이 문서 아래 |
 | 3. 관리자 | 6 | 이시형 | 이 문서 아래 |
-| 4. 커피챗 | 10 | 커피챗·채팅·알림 담당 | **미작성** |
+| 4. 커피챗 | 10 | 커피챗·채팅·알림 담당 (동문·커뮤니티·홈 담당이 함께 맡음) | 이 문서 8장 |
 | 5. 동문 찾기 | 5 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 6. 커뮤니티 | 17 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
 | 7. 홈 | 2 | 동문·커뮤니티·홈 담당 | 이 문서 아래 |
@@ -166,7 +166,7 @@
 | 3 | 커뮤니티가 `POST /files`(업로드 주소 발급)를 쓴다 | **반영(2026-11-13)**: S3 업로드 주소 발급으로 구현(FILE-01). 프로필 사진(PROFILE-05)도 같은 API를 쓰면 된다 |
 | 4 | 커피챗·채팅·알림 상세 명세가 비어 있다 | 커피챗 신청(4.1)·수락은 프로필의 커피챗 설정(PROFILE-12~15)과 맞물린다. 담당자에게 작성 일정 확인 |
 | 5 | 실시간 채팅(5.3)의 WebSocket 연결·구독 경로, 커피챗 함께 신청 모집(4.11) API가 목록에 없다 | 채팅 담당 확인. 커피챗 함께 신청 모집은 모집 참여를 커뮤니티가, 모인 인원으로 신청을 커피챗 신청(`fromRecruitId`)이 맡는다 ('커뮤니티 확정 필요' 2번) |
-| 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | **반영(2026-11-12)**: PROFILE-03 형식으로 맞췄다. `COOLDOWN`만 재신청 제한 규칙이 정해진 뒤 추가 (ALUMNI-02 참고) |
+| 6 | PROFILE-03(`GET /users/{userId}`)의 응답 형식과 지금 구현(ALUMNI-02)이 다르다 | **반영(2026-11-12)**: PROFILE-03 형식으로 맞췄다. `COOLDOWN`은 커피챗 구현(8장)과 함께 반영 (ALUMNI-02 참고) |
 
 ## 1. 계정·인증
 
@@ -984,7 +984,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 섹션 항목 필드 | PROFILE-11 이름을 써. 자격증 `issuer`·`acquiredYm`, 수상 `host`·`awardedYm` |
 | 섹션 순서 | 경력·학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |
 | `isStaff` (추가) | 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`. 이름 옆 '운영진' 태그 |
-| `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. `COOLDOWN`은 재신청 제한 규칙이 정해지면 추가 (구현 예정) |
+| `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. 거절되거나 만료된 지 7일이 안 됐으면 `COOLDOWN`이고 `nextAvailableDate`는 다시 신청할 수 있는 날이야(COFFEE-01과 같은 규칙) |
 | `coffeeChat.pendingCoffeeChatId` (추가) | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
 | `chat` | 둘 사이의 1:1 방 기준. `REQUESTED`는 누가 보냈든 대기 중인 요청이 있을 때야. 내가 보낸 요청이 거절된 지 7일 안이면 `status: NONE`과 `requestAvailableDate`(거절 시각 + 7일의 날짜) |
 | `commonalities` | `SAME_LION_PROJECT` 같은 기수에 이름이 같은 멋사 프로젝트(`13기 라이언링크`), `SAME_COMPANY` 둘 다 지금 다니는 회사(`라이온컴퍼니`), `SAME_GENERATION`(`13기`), `SAME_PART`(`백엔드 파트`), `SHARED_INTEREST`(`데이터·AI`) 순서야. 한 종류가 여러 개면 각각 들어가 |
@@ -1461,3 +1461,234 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 `POST /home/coffee-guide/dismiss` · 승인 회원
 
 승인 후 첫 방문 환영 배너의 [닫기]야. `users.guide_dismissed_at`을 기록하고 `200`에 `{ "visible": false, "dismissedAt": "..." }`를 돌려줘. 여러 번 불러도 처음 닫은 시각을 유지해.
+
+## 8. 커피챗
+
+담당: 커피챗·채팅·알림 (지금은 동문·커뮤니티·홈 담당이 함께 맡음). 노션 명세가 비어 있어서 PRD 4장·상태 흐름(0.2)과 프론트 화면(M-01·M-02, 신청·수락·거절·일정·취소 팝업)을 기준으로 정했어.
+
+| ID | 기능 | 메서드·경로 | PRD |
+| --- | --- | --- | --- |
+| COFFEE-01 | 커피챗 신청 | `POST /coffee-chats` | 4.1, 4.11 |
+| COFFEE-02 | 내 커피챗 목록 | `GET /coffee-chats` | 4.2 |
+| COFFEE-03 | 커피챗 상세 | `GET /coffee-chats/{coffeeChatId}` | 4.3 |
+| COFFEE-04 | 수락 | `POST /coffee-chats/{coffeeChatId}/accept` | 4.4 |
+| COFFEE-05 | 거절 | `POST /coffee-chats/{coffeeChatId}/reject` | 4.5 |
+| COFFEE-06 | 신청 취소 (대기 중) | `POST /coffee-chats/{coffeeChatId}/withdraw` | 4.6 |
+| COFFEE-07 | 일정 확정·변경 | `PUT /coffee-chats/{coffeeChatId}/schedule` | 4.8 |
+| COFFEE-08 | 커피챗 취소 (수락 이후) | `POST /coffee-chats/{coffeeChatId}/cancel` | 4.9 |
+| COFFEE-09 | 만남 완료 | `POST /coffee-chats/{coffeeChatId}/complete` | 4.10 |
+| COFFEE-10 | 함께 신청자 빠지기 | `DELETE /coffee-chats/{coffeeChatId}/members/me` | 4.9 |
+
+모두 승인 회원만 쓸 수 있어.
+
+### 역할과 상태
+
+| 역할 (`myRole`) | 누구 |
+| --- | --- |
+| `RECEIVER` | 받는 사자 |
+| `REQUESTER` | 대표 신청자 (신청한 사람) |
+| `MEMBER` | 함께 신청자 (여러 명 커피챗) |
+
+상태는 PRD 흐름 그대로야. 진행 중은 `PENDING`(대기 중)·`ACCEPTED`(수락됨)·`SCHEDULED`(일정 확정), 종료는 `COMPLETED`·`REJECTED`·`CANCELED`·`EXPIRED`. 아래 표 밖의 변경은 `409 INVALID_STATUS`야.
+
+| 지금 상태 | 할 수 있는 동작 (`actions`) |
+| --- | --- |
+| `PENDING` | 받는 사자 `ACCEPT` `REJECT`, 대표 신청자 `WITHDRAW`, 함께 신청자 `LEAVE` |
+| `ACCEPTED` | 받는 사자·대표 신청자 `SCHEDULE` `CANCEL`, 함께 신청자 `LEAVE` |
+| `SCHEDULED` | 받는 사자·대표 신청자 `SCHEDULE`(변경) `CANCEL`, 만남 시각이 지나면 `COMPLETE`. 함께 신청자 `LEAVE` |
+| 종료 | 없음 |
+
+자동으로 바뀌는 경우도 있어(1시간마다 확인).
+
+- `PENDING`이 14일 동안 답이 없으면 `EXPIRED`
+- `SCHEDULED`는 만남 시각 7일 뒤 `COMPLETED`
+- `ACCEPTED`는 수락 30일 동안 일정이 없으면 `COMPLETED`
+
+### 사용자 요약 객체
+
+목록·상세의 사람 정보는 `{ id, name, generation, lionParts, photoUrl, isDeleted }`야. 탈퇴한 사람은 `isDeleted: true`이고 나머지는 `null`이야.
+
+### COFFEE-01 커피챗 신청
+
+`POST /coffee-chats`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `receiverId` | number | 모집글이 아니면 O | 받는 사자 |
+| `topic` | string | O | 받는 사자의 커피챗 주제(PROFILE-12 `topics`) 중 하나, 또는 `ETC` |
+| `topicCustom` | string | `ETC`면 O | 1\~30자 |
+| `reason` | string | O | 이 사자에게 신청하는 이유 10\~500자 |
+| `questions` | string\[\] | X | 0\~3개, 각 5\~200자 |
+| `preferredMode` | string | O | `ONLINE` `OFFLINE` `ANY`(상관없음) |
+| `scheduleNote` | string | X | 희망 일정 메모 0\~100자 |
+| `memberIds` | number\[\] | X | 함께 신청할 동문 0\~4명. 승인 회원, 본인·받는 사자·중복 불가 |
+| `fromRecruitId` | number | X | 커뮤니티 커피챗 모집글(4.11)에서 신청할 때 모집글 ID |
+
+- 받는 사자가 오늘 커피챗을 받는 중(`AVAILABLE`)이어야 해. 함께 신청자가 있으면 여러 명 신청도 받아야 해
+- 나와 함께 신청자 중 누구라도 그 사자와 진행 중인 커피챗이 있으면 막아
+- 거절되거나 만료된 지 7일이 안 됐으면 막아(`COOLDOWN`). 대표 신청자 기준이야
+- `fromRecruitId`가 있으면 모집글 작성자만 신청할 수 있고, 받는 사자는 모집글의 사자, 함께 신청자는 모집 참여자(작성자 제외)로 정해져(`receiverId`·`memberIds`는 무시). 참여자가 작성자 외 1명 이상이어야 하고, 신청하면 모집은 `APPLIED`가 돼
+- 신청 후 14일이 지나면 만료돼(`expiresAt`)
+- 받는 사자에게 `COFFEE_CHAT_REQUESTED` 알림을 저장해
+
+`201`에 `{ "id": 31, "status": "PENDING", "createdAt": "...", "expiresAt": "..." }`를 돌려줘.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수, 질문 개수, 함께 신청자 5명 이상 |
+| 400 | `CANNOT_REQUEST_SELF` | 나에게 신청 |
+| 400 | `INVALID_TOPIC` | 사자가 받지 않는 주제, `ETC`인데 `topicCustom` 없음 |
+| 400 | `INVALID_MEMBERS` | 함께 신청자에 본인·받는 사자·중복·없는 회원, 모집 참여자가 작성자뿐 |
+| 403 | `NOT_OWNER` | 모집글 작성자가 아님 |
+| 404 | `USER_NOT_FOUND` | 받는 사자가 없거나 승인 전·탈퇴 |
+| 404 | `RECRUIT_NOT_FOUND` | 없는 모집글 |
+| 409 | `NOT_ACCEPTING` | 받는 사자가 지금 커피챗을 받지 않음 |
+| 409 | `GROUP_COFFEE_CHAT_NOT_ALLOWED` | 함께 신청자가 있는데 여러 명 신청을 안 받음 |
+| 409 | `OPEN_COFFEE_CHAT_EXISTS` | 그 사자와 진행 중인 커피챗이 있음 |
+| 409 | `COOLDOWN` | 거절·만료 후 7일 안. 문구에 다시 신청할 수 있는 날짜가 들어가('11월 20일부터 다시 신청할 수 있어요.') |
+| 409 | `RECRUIT_CLOSED` | 이미 신청했거나 끝난 모집 |
+
+### COFFEE-02 내 커피챗 목록
+
+`GET /coffee-chats?box=RECEIVED&filter=ALL&page=0&size=20`
+
+| 쿼리 | 설명 |
+| --- | --- |
+| `box` | `RECEIVED` 받은 신청(내가 받는 사자), `SENT` 보낸 신청(내가 대표 신청자이거나 함께 신청자). 기본 `RECEIVED` |
+| `filter` | `ALL`, `PENDING` 대기 중, `ACTIVE` 만남 준비 중(`ACCEPTED`·`SCHEDULED`), `ENDED` 종료. 기본 `ALL` |
+
+최근 신청순이야.
+
+```json
+{
+  "items": [{
+    "id": 31, "status": "PENDING", "myRole": "RECEIVER",
+    "counterpart": { "id": 12, "name": "김사자", "generation": 14, "lionParts": ["BACKEND"], "photoUrl": null, "isDeleted": false },
+    "members": [],
+    "topic": "CAREER", "topicCustom": null, "reason": "...",
+    "createdAt": "...", "expiresAt": "...", "scheduledAt": null
+  }],
+  "page": 0, "size": 20, "hasNext": false,
+  "pendingReceivedCount": 1, "activeCount": 2
+}
+```
+
+- `counterpart`는 받은 신청이면 대표 신청자, 보낸 신청이면 받는 사자
+- `members`는 함께 신청자(빠진 사람 제외)
+- `pendingReceivedCount`·`activeCount`는 상단 '받은 대기 N · 만남 준비 중 N'이야
+
+### COFFEE-03 커피챗 상세
+
+`GET /coffee-chats/{coffeeChatId}`
+
+받는 사자·대표 신청자·함께 신청자(빠지지 않은)만 볼 수 있고, 그 밖에는 `404`야.
+
+```json
+{
+  "id": 31, "status": "ACCEPTED", "myRole": "REQUESTER",
+  "receiver": { "id": 7, "name": "선배사자", "...": "사용자 요약" },
+  "requester": { "id": 12, "name": "김사자", "...": "사용자 요약" },
+  "members": [],
+  "topic": "CAREER", "topicCustom": null, "reason": "...", "questions": ["..."],
+  "preferredMode": "ANY", "scheduleNote": "평일 저녁 좋아요",
+  "proposedSlots": ["2026-11-20T19:00:00+09:00"], "responseMessage": "반가워요!",
+  "rejectReason": null,
+  "meetingMode": null, "scheduledAt": null, "meetingPlace": null, "meetingLink": null,
+  "cancelReason": null, "canceledBy": null,
+  "roomId": 55, "recruitPostId": null,
+  "createdAt": "...", "expiresAt": "...", "acceptedAt": "...", "rejectedAt": null, "canceledAt": null, "completedAt": null,
+  "actions": ["SCHEDULE", "CANCEL"]
+}
+```
+
+- `responseMessage`는 수락하거나 거절할 때 받는 사자가 남긴 말이야
+- `roomId`는 수락 후 열린 채팅방, `recruitPostId`는 모집글에서 신청했을 때 그 글이야
+- `actions`는 위 '역할과 상태' 표대로 지금 내가 할 수 있는 동작이야. FE는 이걸로 버튼을 보여줘
+
+### COFFEE-04 수락
+
+`POST /coffee-chats/{coffeeChatId}/accept` · 받는 사자, `PENDING`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `proposedSlots` | datetime\[\] | O | 가능한 시간 후보 1\~3개. 지금 이후 |
+| `responseMessage` | string | X | 한마디 0\~200자 |
+
+- 수락하면 채팅방이 열려. 1:1이면 두 사람의 1:1 방(이미 있으면 그 방을 다시 열어), 여러 명이면 받는 사자와 신청자 전원의 단체방이야
+- 대표 신청자와 함께 신청자에게 `COFFEE_CHAT_ACCEPTED` 알림을 저장해
+- `200`에 COFFEE-03 형식을 돌려줘
+
+### COFFEE-05 거절
+
+`POST /coffee-chats/{coffeeChatId}/reject` · 받는 사자, `PENDING`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `rejectReason` | string | O | `SCHEDULE` 일정이 맞지 않아요, `HARD_TOPIC` 답하기 어려운 주제예요, `NO_TIME` 당분간 여유가 없어요, `ETC` 기타 |
+| `responseMessage` | string | X | 0\~200자 |
+
+신청자들에게 `COFFEE_CHAT_REJECTED` 알림을 저장하고 `200`에 COFFEE-03 형식을 돌려줘. 거절 팝업의 '당분간 커피챗 쉬기'는 FE가 PROFILE-15를 따로 불러.
+
+### COFFEE-06 신청 취소
+
+`POST /coffee-chats/{coffeeChatId}/withdraw` · 대표 신청자, `PENDING`
+
+`CANCELED`로 바꾸고 `200`에 COFFEE-03 형식을 돌려줘.
+
+### COFFEE-07 일정 확정·변경
+
+`PUT /coffee-chats/{coffeeChatId}/schedule` · 받는 사자·대표 신청자, `ACCEPTED`·`SCHEDULED`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `scheduledAt` | datetime | O | 지금 이후 |
+| `meetingMode` | string | O | `ONLINE` `OFFLINE` |
+| `meetingPlace` | string | `OFFLINE`이면 O | 1\~50자 |
+| `meetingLink` | string | X | `ONLINE`일 때 화상 링크, http(s) URL |
+
+`SCHEDULED`로 바꾸고 채팅방에 '일정이 확정됐어요' 안내를 남겨. 나 말고 다른 참여자에게 `COFFEE_CHAT_SCHEDULED` 알림을 저장하고 `200`에 COFFEE-03 형식을 돌려줘.
+
+### COFFEE-08 커피챗 취소
+
+`POST /coffee-chats/{coffeeChatId}/cancel` · 받는 사자·대표 신청자, `ACCEPTED`·`SCHEDULED`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `cancelReason` | string | O | 5\~200자. 상대에게 보여 |
+
+`CANCELED`로 바꾸고 채팅방에 안내를 남겨. 다른 참여자에게 `COFFEE_CHAT_CANCELED` 알림을 저장하고 `200`에 COFFEE-03 형식을 돌려줘. 채팅방은 그대로 남아.
+
+### COFFEE-09 만남 완료
+
+`POST /coffee-chats/{coffeeChatId}/complete` · 받는 사자·대표 신청자, `SCHEDULED`이고 만남 시각이 지난 뒤
+
+`COMPLETED`로 바꾸고 `200`에 COFFEE-03 형식을 돌려줘. 완료된 사이도 채팅은 계속할 수 있어.
+
+### COFFEE-10 함께 신청자 빠지기
+
+`DELETE /coffee-chats/{coffeeChatId}/members/me` · 함께 신청자, 진행 중일 때
+
+빠지면 단체 채팅방에서도 나가고 `204`야. 커피챗은 남은 사람끼리 그대로 진행돼.
+
+### COFFEE-04\~10 공통 에러
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 필수값 누락, 글자 수, 지난 시각, 후보 개수 |
+| 403 | `FORBIDDEN_ACTION` | 내 역할로는 할 수 없는 동작 |
+| 404 | `COFFEE_CHAT_NOT_FOUND` | 없거나 내가 참여하지 않은 커피챗 |
+| 409 | `INVALID_STATUS` | 지금 상태에서는 할 수 없음, 대기 시간이 지나 만료된 신청 |
+| 409 | `MEETING_NOT_PASSED` | 만남 시각 전에 완료 |
+
+### 커피챗이 저장하는 알림
+
+`notifications`에 커피챗 탭(`COFFEE_CHAT`)·`COFFEE_CHAT` 대상으로 저장해. 메일(9.2)은 알림 이슈에서 만들어.
+
+| `type` | 받는 사람 | 문구 |
+| --- | --- | --- |
+| `COFFEE_CHAT_REQUESTED` | 받는 사자 | `{신청자}님이 커피챗을 신청했어요.` (여러 명이면 `{신청자}님 외 {N}명이 …`) |
+| `COFFEE_CHAT_ACCEPTED` | 신청자 전원 | `{사자}님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.` |
+| `COFFEE_CHAT_REJECTED` | 신청자 전원 | `{사자}님이 이번 커피챗은 어렵다고 했어요.` |
+| `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | `커피챗 일정이 정해졌어요. {M월 d일 HH:mm}` (변경이면 `바뀌었어요`) |
+| `COFFEE_CHAT_CANCELED` | 나를 뺀 참여자 | `{이름}님이 커피챗을 취소했어요.` |
+| `COFFEE_CHAT_EXPIRED` | 신청자 전원 | `{사자}님에게 보낸 커피챗 신청이 만료됐어요.` |
