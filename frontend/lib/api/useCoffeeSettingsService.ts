@@ -8,6 +8,7 @@ import { COFFEE_TOPIC_LABEL } from "./coffee";
 import * as api from "./coffeeSettings";
 import type { CoffeePeriod, CoffeeSettings, CoffeeSettingsInput } from "./coffeeSettings";
 import { addDays, todayKst } from "./coffeeSettings";
+import { REST_DAYS, switchCoffee, type SwitchRequest } from "./home";
 
 /**
  * 커피챗 받기 설정 화면이 쓰는 API 묶음.
@@ -18,6 +19,8 @@ export interface CoffeeSettingsService {
   save: (body: CoffeeSettingsInput) => Promise<CoffeeSettings>;
   addPeriod: (body: { startDate: string; endDate: string }) => Promise<CoffeePeriod>;
   removePeriod: (id: CoffeePeriod["id"]) => Promise<void>;
+  /** PROFILE-14 홈 스위치 (받기·쉬기) */
+  switchReceive: (body: SwitchRequest) => Promise<CoffeeSettings>;
 }
 
 const apiService: CoffeeSettingsService = {
@@ -25,6 +28,7 @@ const apiService: CoffeeSettingsService = {
   save: api.saveCoffeeSettings,
   addPeriod: api.addPeriod,
   removePeriod: api.removePeriod,
+  switchReceive: switchCoffee,
 };
 
 // ---------------------------------------------------------------------------
@@ -116,6 +120,30 @@ export function useCoffeeSettingsService(): CoffeeSettingsService {
       removePeriod: (id) => {
         write({ periods: store.settings.periods.filter((p) => p.id !== String(id)) });
         return delay(undefined);
+      },
+      // 서버의 PROFILE-14 표와 같은 규칙
+      switchReceive: (body) => {
+        const today = todayKst();
+        const yesterday = addDays(today, -1);
+        const available = current.status.availability === "AVAILABLE";
+        if (body.on === available) return delay(current); // 이미 원하는 상태
+        const all = store.settings.periods;
+        const kind = current.periodKind;
+        const activeId = current.periods.find((p) => p.startDate <= today && today <= p.endDate)?.id;
+        /** 진행 중인 기간을 어제까지로 줄인다. 오늘 시작했으면 지운다 */
+        const endActive = () => all.flatMap((p) => (p.id !== String(activeId) ? [p] : p.from >= today ? [] : [{ ...p, to: yesterday }]));
+        const changeDefault = (mode: "OPEN" | "CLOSED") => {
+          if (current.periods.length && !body.confirmClearPeriods) return Promise.reject(new ApiError(409, "PERIODS_WILL_BE_CLEARED", "등록한 기간이 모두 지워져요. 바꿀까요?"));
+          return delay(write({ mode, periods: [] }));
+        };
+        if (body.on) return current.defaultMode === "ON" ? delay(write({ periods: endActive() })) : changeDefault("OPEN");
+        if (current.defaultMode === "OFF") return delay(write({ periods: endActive() }));
+        if (!body.restFor) return Promise.reject(new ApiError(400, "VALIDATION_ERROR", "얼마나 쉴지 골라주세요"));
+        if (body.restFor === "UNTIL_RESUME") return changeDefault("CLOSED");
+        if (current.periods.length >= api.PERIOD_LIMIT) return Promise.reject(new ApiError(409, "PERIOD_LIMIT", "쉬는 기간이 이미 5개예요. '다시 켤 때까지'로 쉬거나 기간을 정리해주세요."));
+        const from = body.restFor === "CUSTOM" ? body.startDate! : today;
+        const to = body.restFor === "CUSTOM" ? body.endDate! : addDays(today, REST_DAYS[body.restFor] - 1);
+        return delay(write({ periods: [...all, { id: Math.random().toString(36).slice(2), from, to, kind }] }));
       },
     };
   }, [store]);

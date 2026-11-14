@@ -28,19 +28,3 @@ export function useAlumniActions() {
   const onMessage = API_ENABLED ? undefined : (p: AlumniSummary) => setMessage(alumni.find((a) => a.id === String(p.id)) ?? null);
   return { onRequest, onMessage, modals };
 }
-
-/**
- * 홈처럼 아직 mock 동문 데이터를 그대로 그리는 화면용 (HOME API 연결 전).
- * mock 동문을 받아 커피챗 신청·메시지 모달을 연다.
- */
-export function useMockAlumniActions() {
-  const [request, setRequest] = useState<Alumni | null>(null);
-  const [message, setMessage] = useState<Alumni | null>(null);
-  const modals = (
-    <>
-      {request && <CoffeeRequestModal open onClose={() => setRequest(null)} target={{ id: request.id, name: request.name }} />}
-      {message && <MessageRequestModal open onClose={() => setMessage(null)} target={message} />}
-    </>
-  );
-  return { onRequest: setRequest, onMessage: setMessage, modals };
-}
