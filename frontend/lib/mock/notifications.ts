@@ -4,9 +4,9 @@ import type { AppNotification, PendingSignup, Invite } from "@/lib/types";
 const ago = (min: number) => new Date(MOCK_NOW - min * 60_000).toISOString();
 
 export const notifications: AppNotification[] = [
-  { id: "n-1", tab: "COFFEE", actorId: "u-5", text: "님이 커피챗을 신청했어요", at: ago(1), read: false, href: "/coffee/c-1", quick: "coffee-request", targetId: "c-1" },
-  { id: "n-2", tab: "COFFEE", actorId: "u-10", text: "님이 커피챗을 신청했어요", at: ago(180), read: false, href: "/coffee/c-2", quick: "coffee-request", targetId: "c-2" },
-  { id: "n-3", tab: "COFFEE", actorId: "u-4", text: "님이 커피챗을 수락했어요", at: ago(60 * 24), read: false, href: "/coffee/c-7" },
+  { id: "n-1", tab: "COFFEE", actorId: "u-5", text: "님이 커피챗을 신청했어요", at: ago(1), read: false, href: "/coffee?id=c-1", quick: "coffee-request", targetId: "c-1" },
+  { id: "n-2", tab: "COFFEE", actorId: "u-10", text: "님이 커피챗을 신청했어요", at: ago(180), read: false, href: "/coffee?id=c-2", quick: "coffee-request", targetId: "c-2" },
+  { id: "n-3", tab: "COFFEE", actorId: "u-4", text: "님이 커피챗을 수락했어요", at: ago(60 * 24), read: false, href: "/coffee?id=c-7" },
   { id: "n-4", tab: "CHAT", actorId: "u-1", text: "님이 메시지를 보냈어요", at: ago(30), read: false, href: "/chat/r-1" },
   { id: "n-5", tab: "CHAT", actorId: "u-11", text: "님이 메시지 요청을 보냈어요", at: ago(240), read: false, href: "/chat/requests" },
   { id: "n-6", tab: "CHAT", actorId: "u-10", text: "님이 단체 채팅방에 메시지를 보냈어요", at: ago(180), read: true, href: "/chat/r-3" },

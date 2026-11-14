@@ -19,7 +19,7 @@ type Filter = "ALL" | "PENDING" | "ACTIVE" | "ENDED";
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "ALL", label: "전체" },
   { value: "PENDING", label: "대기 중" },
-  { value: "ACTIVE", label: "만남 준비 중" },
+  { value: "ACTIVE", label: "일정 확정" },
   { value: "ENDED", label: "종료" },
 ];
 const ACTIVE: CoffeeChatStatus[] = ["ACCEPTED", "SCHEDULED"];
@@ -75,17 +75,17 @@ function CoffeeList() {
         ]}
       />
 
-      <div className="grid grid-cols-[440px_1fr] gap-6 pt-2">
-        <Card className="h-fit overflow-hidden">
-          <div className="flex gap-2 border-b border-line-200 p-4">
+      <div className="grid grid-cols-[440px_minmax(0,1fr)] gap-6 pt-2">
+        <Card className="h-fit overflow-hidden rounded-[10px]">
+          <div className="flex gap-2 border-b border-line-200 px-4 py-[14px]">
             {FILTERS.map((f) => (
-              <Chip key={f.value} size="M" selected={filter === f.value} onClick={() => setFilter(f.value)}>
+              <Chip key={f.value} selected={filter === f.value} onClick={() => setFilter(f.value)}>
                 {f.label}
               </Chip>
             ))}
           </div>
           {list.length === 0 ? (
-            <EmptyState compact title={tab === "received" ? "받은 신청이 없어요" : "보낸 신청이 없어요"} description={tab === "received" ? "커피챗 받기를 켜두면 후배들이 신청할 수 있어요" : "동문 찾기에서 선배에게 커피챗을 신청해보세요"} action={tab === "received" ? { label: "커피챗 설정", href: "/me/coffee-settings" } : { label: "동문 찾기", href: "/alumni" }} />
+            <EmptyState compact title={tab === "received" ? "받은 신청이 없어요" : "보낸 신청이 없어요"} description={tab === "received" ? "커피챗 받기를 켜두면 사자들이 신청할 수 있어요" : "동문 찾기에서 사자에게 커피챗을 신청해보세요"} action={tab === "received" ? { label: "커피챗 설정", href: "/me/coffee-settings" } : { label: "동문 찾기", href: "/alumni" }} />
           ) : (
             <ul>
               {list.map((c) => (
@@ -95,7 +95,7 @@ function CoffeeList() {
           )}
         </Card>
 
-        <Card className="h-fit p-6">
+        <Card className="h-fit rounded-[10px] p-7">
           {selected ? <CoffeeChatDetail key={selected.id} chat={selected} compact initialAction={params.get("id") === selected.id ? (params.get("action") as "accept" | "reject" | null) : null} /> : <EmptyState title="신청을 선택해주세요" />}
         </Card>
       </div>
