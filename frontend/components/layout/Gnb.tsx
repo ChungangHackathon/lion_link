@@ -46,7 +46,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
 
         {mode !== "logo" && (
           <>
-            <nav className="ml-[57px] flex items-center gap-[41px]" aria-label="주 메뉴">
+            <nav className="ml-[72px] flex items-center gap-[41px]" aria-label="주 메뉴">
               {NAV.map((n) => {
                 const active = pathname.startsWith(n.href);
                 const disabled = mode === "pending";
@@ -59,20 +59,20 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
                     className={cn("relative flex h-16 items-center gap-1 text-[16px] leading-6 tracking-[-0.01em]", disabled ? "cursor-not-allowed font-medium text-ink-400" : active ? "font-extrabold text-navy" : "font-semibold text-navy hover:opacity-80")}
                   >
                     {n.label}
-                    {!disabled && <CountBadge count={n.count} className="-mt-3" />}
-                    {active && !disabled && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-navy" />}
+                    {!disabled && <CountBadge count={n.count} className="-ml-0.5 -mt-[14px]" />}
+                    {active && !disabled && <span className="absolute inset-x-0 bottom-px h-0.5 bg-navy" />}
                   </Link>
                 );
               })}
             </nav>
 
-            <div className="ml-auto flex items-center gap-[14px]">
+            <div className="ml-auto flex items-center gap-[5px]">
               <div className="relative">
-                <button type="button" aria-label="알림" disabled={mode === "pending"} onClick={() => setOpen(open === "bell" ? null : "bell")} className={cn("relative grid size-9 place-items-center rounded-full hover:bg-bg-100", mode === "pending" && "opacity-50")}>
-                  <Icon name="bell" />
-                  {mode !== "pending" && <CountBadge count={unreadNoti} className="absolute -right-0.5 -top-0.5" />}
+                <button type="button" aria-label="알림" disabled={mode === "pending"} onClick={() => setOpen(open === "bell" ? null : "bell")} className={cn("relative grid size-10 place-items-center rounded-full hover:bg-bg-100", mode === "pending" && "opacity-60")}>
+                  <Icon name="bell" size={24} className="text-ink-700" />
+                  {mode !== "pending" && <CountBadge count={unreadNoti} className="absolute left-[22px] top-[4px]" />}
                 </button>
-                <Popover open={open === "bell"} onClose={() => setOpen(null)} className="w-[360px]">
+                <Popover open={open === "bell"} onClose={() => setOpen(null)} className="w-[380px]">
                   <NotificationDropdown
                     onNavigate={(href) => {
                       setOpen(null);
@@ -85,7 +85,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
               <div className="relative">
                 <button type="button" aria-label="프로필 메뉴" onClick={() => setOpen(open === "me" ? null : "me")} className="flex items-center gap-1 rounded-full hover:bg-bg-100">
                   {mode === "pending" ? <Avatar size={32} /> : <Avatar name={user?.name} part={user?.part} size={40} />}
-                  <Icon name="chevron-down" />
+                  <Icon name="chevron-down" size={16} className="text-ink-700" />
                 </button>
                 <Popover open={open === "me"} onClose={() => setOpen(null)} className="w-[240px]">
                   <ProfileMenu onNavigate={() => setOpen(null)} />
