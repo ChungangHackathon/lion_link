@@ -28,18 +28,17 @@ export default function RequestsPage() {
   );
 }
 
-/** ◇ T-12 메시지 요청함 / 목록 · ◇ T-14 메시지 요청 / 상세 · T-15 거절 사유 · CF-10 차단 */
+/** ◇ T-12 메시지 요청함 / 목록 · ◇ T-14 메시지 요청 / 상세 · T-15 거절 사유 */
 function Requests() {
   const router = useRouter();
   const toast = useToast();
   const params = useSearchParams();
-  const { rooms, alumni, acceptMessageRequest, declineMessageRequest, block } = useStore();
+  const { rooms, alumni, acceptMessageRequest, declineMessageRequest } = useStore();
   const me = alumni.find((a) => a.id === ME_ID)!;
   const list = rooms.filter((r) => r.isRequest && r.status === "REQUESTED" && r.memberIds[0] !== ME_ID);
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
   const selected = list.find((r) => r.id === selectedId) ?? list[0];
   const [decline, setDecline] = useState(false);
-  const [blockOpen, setBlockOpen] = useState(false);
   const [reason, setReason] = useState(DECLINE_REASONS[0]);
   const [etc, setEtc] = useState("");
 
@@ -58,7 +57,7 @@ function Requests() {
             const active = selected?.id === r.id;
             return (
               <li key={r.id} className="border-b border-line-200">
-                <button type="button" onClick={() => setSelectedId(r.id)} className={cn("flex w-full flex-col gap-2 px-4 py-4 text-left hover:bg-bg-50", active && "bg-light-card")}>
+                <button type="button" onClick={() => setSelectedId(r.id)} className={cn("flex w-full flex-col gap-2 px-4 py-4 text-left hover:bg-bg-50", active && "bg-blue-100 hover:bg-blue-100")}>
                   <span className="flex items-center gap-2.5">
                     <Avatar name={a.name} part={a.part} size={32} />
                     <span className="flex flex-col">
@@ -116,9 +115,6 @@ function Requests() {
             </div>
           </div>
           <footer className="flex items-center justify-end gap-2 border-t border-line-200 px-6 py-4">
-            <button type="button" onClick={() => setBlockOpen(true)} className="mr-2 text-[13px] text-ink-500 hover:text-orange">
-              차단
-            </button>
             <Button variant="secondary" onClick={() => setDecline(true)}>
               거절
             </Button>
@@ -171,22 +167,6 @@ function Requests() {
           {reason === "기타" && <Input placeholder="직접 입력 (5~100자)" value={etc} onChange={(e) => setEtc(e.target.value)} counter={{ value: etc.length, max: 100 }} />}
         </div>
       </Modal>
-
-      <ConfirmModal
-        open={blockOpen}
-        onClose={() => setBlockOpen(false)}
-        onConfirm={() => {
-          if (!from) return;
-          block(from.id);
-          setBlockOpen(false);
-          setSelectedId(null);
-          toast(`${from.name}님을 차단했어요`);
-        }}
-        title={`${from?.name}님을 차단할까요?`}
-        description="차단하면 서로의 프로필·게시글이 보이지 않고, 커피챗·메시지를 주고받을 수 없어요."
-        confirmLabel="차단하기"
-        danger
-      />
     </div>
   );
 }
