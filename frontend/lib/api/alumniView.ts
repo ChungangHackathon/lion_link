@@ -80,16 +80,13 @@ export function slotsText(slots: { day: Weekday; times: TimeSlot[] }[]): string 
 // API → 화면
 // ---------------------------------------------------------------------------
 
-export function viewFromApi(d: AlumniDetail): AlumniProfileView {
-  const part: LionPart = d.lionParts[0] ?? "ETC";
-  const staff = [...d.lionActivities].filter((a) => a.role !== "LION" && a.role !== "ETC").sort((a, b) => b.generation - a.generation)[0];
-  const current = d.careers.find((c) => c.isCurrent);
-  const badge = receiveBadge(d.coffeeChat);
+type SectionSource = Pick<AlumniDetail, "careers" | "lionActivities" | "lionProjects" | "projects" | "certifications" | "awards" | "activities" | "languages">;
 
-  const detail: ProfileDetail = {
-    location: d.region ?? undefined,
-    about: d.bio ?? "",
+/** 목록형 섹션(PROFILE-11 형식) → ProfileSections가 그리는 모양. 동문 상세와 내 프로필이 같이 쓴다 */
+export function sectionsToDetail(d: SectionSource): Pick<ProfileDetail, "careers" | "lion" | "projects" | "certs" | "educations" | "skills"> {
+  return {
     educations: [],
+    skills: [],
     careers: d.careers.map((c) => ({
       company: c.companyHidden ? "비공개 회사" : c.company ?? "",
       role: c.jobTitle,
@@ -109,14 +106,36 @@ export function viewFromApi(d: AlumniDetail): AlumniProfileView {
           .map((p) => ({ event: `${EVENT_LABEL[p.eventType] ?? ""} · ${p.generation}기`, name: p.name, desc: p.description ?? "", role: p.myRole ?? "", link: p.link ? stripScheme(p.link) : undefined })),
       })),
     projects: d.projects.map((p) => ({ name: p.name, type: p.role ?? "", from: ym(p.startYm), to: p.isCurrent ? "현재" : ym(p.endYm), skills: p.tags ?? [] })),
-    repSkills: d.skills,
-    skills: [],
     certs: [
       ...d.certifications.map((c) => ({ kind: "자격증" as const, text: [c.name, c.issuer, ym(c.acquiredYm)].filter(Boolean).join(" · ") })),
       ...d.awards.map((a) => ({ kind: "수상" as const, text: [a.name, a.host, ym(a.awardedYm)].filter(Boolean).join(" · ") })),
       ...d.activities.map((a) => ({ kind: "대외활동" as const, text: [a.name, a.organization, a.startYm && `${ym(a.startYm)} ~ ${ym(a.endYm)}`].filter(Boolean).join(" · ") })),
       ...d.languages.map((l) => ({ kind: "언어" as const, text: `${l.language} · ${LEVEL_LABEL[l.level] ?? l.level}` })),
     ],
+  };
+}
+
+/** 학력 → 헤더 오른쪽 학력 줄 */
+export function educationRows(d: Pick<AlumniDetail, "educations">) {
+  return d.educations.map((e) => ({ school: e.school, major: e.major ?? "", degree: e.degree ? DEGREE_LABEL[e.degree] ?? "" : "", from: ym(e.startYm), to: e.isCurrent ? "재학 중" : ym(e.endYm) }));
+}
+
+// ---------------------------------------------------------------------------
+// 동문 상세 API → 화면
+// ---------------------------------------------------------------------------
+
+export function viewFromApi(d: AlumniDetail): AlumniProfileView {
+  const part: LionPart = d.lionParts[0] ?? "ETC";
+  const staff = [...d.lionActivities].filter((a) => a.role !== "LION" && a.role !== "ETC").sort((a, b) => b.generation - a.generation)[0];
+  const current = d.careers.find((c) => c.isCurrent);
+  const badge = receiveBadge(d.coffeeChat);
+
+  const sections = sectionsToDetail(d);
+  const detail: ProfileDetail = {
+    ...sections,
+    location: d.region ?? undefined,
+    about: d.bio ?? "",
+    repSkills: d.skills,
     // 서버가 공개 범위를 적용해서, 받은 값은 모두 볼 수 있는 값이다. 빠진 값은 '비공개'로 보인다.
     links: (d.links ?? []).map((l) => ({ label: LINK_LABEL[l.type] ?? "링크", url: stripScheme(l.url), visibility: "ALL" as const })),
     email: d.contact.email ? { value: d.contact.email, visibility: "ALL" } : undefined,
@@ -145,7 +164,7 @@ export function viewFromApi(d: AlumniDetail): AlumniProfileView {
     requestBlockedReason: cannotRequestReason(d.coffeeChat),
     pendingCoffeeChatId: d.coffeeChat.pendingCoffeeChatId,
     coffee: { topics: detail.coffeeTopics, acceptGroup: d.coffeeChat.acceptGroup, modes: detail.coffeeModes, times: detail.coffeeTimes, regions: detail.coffeeRegions },
-    educations: d.educations.map((e) => ({ school: e.school, major: e.major ?? "", degree: e.degree ? DEGREE_LABEL[e.degree] ?? "" : "", from: ym(e.startYm), to: e.isCurrent ? "재학 중" : ym(e.endYm) })),
+    educations: educationRows(d),
     detail,
     connected: true,
   };
