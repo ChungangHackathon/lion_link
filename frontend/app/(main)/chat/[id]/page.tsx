@@ -52,7 +52,7 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
   const isDeclined = room.status === "DECLINED";
   const isBlocked = others.some((o) => blocked.includes(o.id));
   const canSend = !isRequestPending && !isDeclined && !isBlocked;
-  // 선배·대표 신청자는 커피챗 진행 중 나갈 수 없음 (T-31)
+  // 사자·대표 신청자는 커피챗 진행 중 나갈 수 없음 (T-31)
   const lockedLeave = chat && ["ACCEPTED", "SCHEDULED"].includes(chat.status) && (chat.receiverId === ME_ID || chat.requesterId === ME_ID);
   const isMemberOfGroup = chat && chat.memberIds.includes(ME_ID);
 
@@ -116,7 +116,7 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
               📅 {formatDateTime(chat.scheduledAt)}
               {chat.mode !== "ONLINE" && " · 강남역 ○○카페"}
             </span>
-            <Link href={`/coffee/${chat.id}`} className="text-ink-700 hover:underline">
+            <Link href={`/coffee?id=${chat.id}`} className="text-ink-700 hover:underline">
               변경
             </Link>
           </div>
@@ -151,7 +151,7 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
                     <div className={cn("flex max-w-[70%] flex-col gap-1", mine && "items-end")}>
                       {!mine && <span className="text-[13px] text-ink-700">{sender?.name}</span>}
                       <div className={cn("flex items-end gap-1.5", mine && "flex-row-reverse")}>
-                        <p className={cn("whitespace-pre-line rounded-[8px] px-3.5 py-2.5 text-[14px] leading-5", mine ? "bg-primary text-white" : "border border-line-200 bg-white text-ink-900")}>{m.text}</p>
+                        <p className={cn("whitespace-pre-line rounded-[8px] px-3.5 py-2.5 text-[14px] leading-5", mine ? "bg-primary-strong text-white" : "border border-line-200 bg-white text-ink-900")}>{m.text}</p>
                         <span className="flex flex-col items-end text-[11px] text-ink-400">
                           {mine && room.type === "GROUP" && <span className="text-orange">{Math.max(0, room.memberIds.length - 1 - (m.readBy?.length ?? 0))}</span>}
                           {formatTime(m.at)}
@@ -204,7 +204,7 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
                       </span>
                       <span className="text-[14px] font-semibold text-ink-900">
                         {a.name}
-                        {isHost && " (선배)"}
+                        {isHost && " (사자)"}
                       </span>
                     </Link>
                     <span className="text-[12px] text-ink-500">{a.generation}기</span>
@@ -245,7 +245,7 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
             <>
               <div className="flex items-center gap-2">
                 <StatusBadge tone={statusTone(chat.status)}>{COFFEE_STATUS_LABEL[chat.status]}</StatusBadge>
-                {chat.status === "SCHEDULED" && chat.scheduledAt && <span className="text-[12px] text-ink-500">D-{Math.max(0, Math.ceil((new Date(chat.scheduledAt).getTime() - Date.now()) / 86_400_000))}</span>}
+                {chat.status === "SCHEDULED" && chat.scheduledAt && <span className="rounded-[4px] bg-primary px-2 py-0.5 text-[12px] font-bold text-white">D-{Math.max(0, Math.ceil((new Date(chat.scheduledAt).getTime() - Date.now()) / 86_400_000))}</span>}
                 {chat.status === "ACCEPTED" && <span className="text-[12px] text-ink-500">일정 미정</span>}
               </div>
               {chat.status === "SCHEDULED" && chat.scheduledAt ? (
@@ -257,11 +257,11 @@ function ChatRoomInner({ params }: { params: Promise<{ id: string }> }) {
                 <p className="text-[13px] text-ink-700">일정 후보 {chat.candidates.map(formatDateTime).join(" · ") || "없음"}</p>
               ) : null}
               <div className="flex gap-2">
-                <Button size="M" variant="secondary" className="flex-1" href={`/coffee/${chat.id}`}>
+                <Button size="M" variant="secondary" className="flex-1" href={`/coffee?id=${chat.id}`}>
                   상세 보기
                 </Button>
                 {(chat.status === "ACCEPTED" || chat.status === "SCHEDULED") && (
-                  <Button size="M" variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} className="flex-1" href={`/coffee/${chat.id}`}>
+                  <Button size="M" variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} className="flex-1" href={`/coffee?id=${chat.id}`}>
                     {chat.status === "ACCEPTED" ? "일정 확정" : "일정 변경"}
                   </Button>
                 )}

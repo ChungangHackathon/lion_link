@@ -62,7 +62,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
             const declined = r.status === "DECLINED";
             return (
               <li key={r.id} className="border-b border-line-200">
-                <Link href={`/chat/${r.id}`} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-bg-50", active && "bg-light-card")}>
+                <Link href={`/chat/${r.id}`} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-bg-50", active && "bg-blue-100 hover:bg-blue-100")}>
                   {r.type === "GROUP" ? <AvatarGroup people={others} size={32} /> : <Avatar name={others[0]?.name} part={others[0]?.part} size={48} />}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-baseline justify-between gap-2">
