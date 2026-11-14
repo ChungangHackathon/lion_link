@@ -39,7 +39,7 @@ export function AvailabilityBadge({ mode, note, className, small }: { mode: Rece
   };
   const m = map[mode];
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full font-bold whitespace-nowrap", small ? "h-[21px] px-1.5 text-[9px]" : "h-[26px] px-2 text-[13px]", m.box, m.text, className)}>
+    <span className={cn("relative z-[1] inline-flex items-center gap-1 rounded-full font-bold whitespace-nowrap", small ? "h-[21px] px-1.5 text-[9px]" : "h-[26px] px-2 text-[13px]", m.box, m.text, className)}>
       <span className={cn("rounded-[3px]", small ? "size-1" : "size-1.5", m.dot)} />
       {m.label}
     </span>
