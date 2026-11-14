@@ -1,10 +1,16 @@
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
+import { Icon, type IconName } from "./Icon";
 
 /** EmptyState (문구 표) */
-export function EmptyState({ title, description, action, className, compact }: { title: string; description?: string; action?: { label: string; href?: string; onClick?: () => void }; className?: string; compact?: boolean }) {
+export function EmptyState({ title, description, action, className, compact, icon }: { title: string; description?: string; action?: { label: string; href?: string; onClick?: () => void }; className?: string; compact?: boolean; icon?: IconName }) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-2 text-center", compact ? "py-6" : "py-16", className)}>
+      {icon && (
+        <span className="mb-3 grid size-20 place-items-center rounded-full bg-bg-100 text-ink-500">
+          <Icon name={icon} size={30} />
+        </span>
+      )}
       <p className="t-body-bold text-ink-700">{title}</p>
       {description && <p className="t-caption1 text-ink-500 whitespace-pre-line">{description}</p>}
       {action && (
@@ -106,11 +112,11 @@ export function Tabs<T extends string>({ items, value, onChange, variant = "unde
 }
 
 /** Tooltip (hover) */
-export function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+export function Tooltip({ text, children, className }: { text: string; children: React.ReactNode; className?: string }) {
   return (
-    <span className="group relative inline-flex">
+    <span className={cn("group/tip relative inline-flex", className)}>
       {children}
-      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-[6px] bg-ink-900 px-2.5 py-1.5 text-[12px] text-white opacity-0 transition-opacity group-hover:opacity-100">{text}</span>
+      <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-[6px] bg-ink-900 px-2.5 py-1.5 text-[12px] text-white opacity-0 transition-opacity group-hover/tip:opacity-100">{text}</span>
     </span>
   );
 }

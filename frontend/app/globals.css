@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Design tokens from Figma "먼크강 멋사동네" (05 Desktop v2) */
+/* Design tokens from Figma "먼크강 멋사동네" (수정 화면 · 디자인 1차) */
 :root {
   --background: #ffffff;
   --foreground: #111827;
@@ -11,13 +11,20 @@
   --color-foreground: var(--foreground);
 
   /* Brand */
-  --color-primary: #2155a4; /* CAU BLUE */
-  --color-primary-hover: #1b4a90;
+  --color-primary: #4f6fa8; /* buttons, links */
+  --color-primary-hover: #43609a;
+  --color-primary-strong: #2155a4; /* progress bar, 백엔드 글자 */
+  --color-cau: #004c97; /* real CAU BLUE – 강조 숫자·체크 */
+  --color-blue-100: #cce4ff; /* blue/약간 연한 */
+  --color-blue-50: #f1f5fc;
+  --color-text-dark: #1a1200;
   --color-navy: #00245e; /* blue/navy – GNB nav text */
   --color-navy-2: #002e71;
   --color-orange: #ff6000; /* LION ORANGE – count badge, danger, error */
   --color-orange-over: #e85600;
   --color-orange-back: #fff4f0;
+  --color-orange-badge: #cb4b00;
+  --color-green-back: #e9f7ef;
   --color-green: #22a45d; /* green/main – availability */
   --color-red: #ef4444;
 
@@ -46,8 +53,10 @@
   --color-part-be-line: #d3e2f7;
   --color-part-design-bg: #fcebf3;
   --color-part-design-text: #a8326a;
+  --color-part-design-line: #f7d3e4;
   --color-part-plan-bg: #eeebfb;
   --color-part-plan-text: #5b4bb7;
+  --color-part-plan-line: #dcd6f7;
 
   --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-logo: var(--font-nanum), "Nanum Gothic", sans-serif;
@@ -56,9 +65,11 @@
   --shadow-dropdown: 0 8px 24px rgba(17, 24, 39, 0.08);
 }
 
-html,
-body {
+html {
   height: 100%;
+}
+body {
+  min-height: 100%;
 }
 
 body {

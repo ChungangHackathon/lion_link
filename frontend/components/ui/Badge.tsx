@@ -50,8 +50,8 @@ export function AvailabilityBadge({ mode, note, className, small }: { mode: Rece
 export const PART_STYLE: Record<LionPart, { bg: string; text: string; ring: string }> = {
   FRONTEND: { bg: "bg-part-fe-bg", text: "text-part-fe-text", ring: "bg-part-fe-line" },
   BACKEND: { bg: "bg-part-be-bg", text: "text-part-be-text", ring: "bg-part-be-line" },
-  DESIGN: { bg: "bg-part-design-bg", text: "text-part-design-text", ring: "bg-part-design-bg" },
-  PLANNING: { bg: "bg-part-plan-bg", text: "text-part-plan-text", ring: "bg-part-plan-bg" },
+  DESIGN: { bg: "bg-part-design-bg", text: "text-part-design-text", ring: "bg-part-design-line" },
+  PLANNING: { bg: "bg-part-plan-bg", text: "text-part-plan-text", ring: "bg-part-plan-line" },
   ETC: { bg: "bg-bg-100", text: "text-ink-700", ring: "bg-light-layout" },
 };
 
@@ -68,7 +68,7 @@ export function PartTag({ part, generation, className }: { part: LionPart; gener
 export function Tag({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
   const Comp = onClick ? "button" : "span";
   return (
-    <Comp type={onClick ? "button" : undefined} onClick={onClick} className={cn("inline-flex items-center rounded-[4px] bg-bg-100 px-2 py-0.5 text-[12px] text-ink-700 whitespace-nowrap", onClick && "hover:bg-line-200", className)}>
+    <Comp type={onClick ? "button" : undefined} onClick={onClick} className={cn("inline-flex items-center rounded-[2px] bg-light-card px-[7px] py-0.5 text-[11px] leading-[13px] text-ink-900 whitespace-nowrap", onClick && "hover:bg-line-200", className)}>
       {children}
     </Comp>
   );
