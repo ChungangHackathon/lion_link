@@ -10,6 +10,7 @@ public record ChatMessageResponse(
 		Long senderId,
 		String content,
 		boolean deleted,
+		String clientMsgId,
 		LocalDateTime createdAt,
 		LocalDateTime editedAt,
 		long unreadCount
@@ -22,6 +23,7 @@ public record ChatMessageResponse(
 				message.getSenderId(),
 				message.isDeleted() ? null : message.getContent(),
 				message.isDeleted(),
+				message.getClientMsgId(),
 				message.getCreatedAt(),
 				message.getEditedAt(),
 				unreadCount
