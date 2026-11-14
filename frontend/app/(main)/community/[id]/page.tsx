@@ -10,7 +10,7 @@ import { ME_ID } from "@/lib/mock/users";
 import { LION_PART_LABEL, POST_CATEGORY_LABEL, PROFILE_STATUS_LABEL } from "@/lib/types";
 import { daysLeft, formatDateTime, timeAgo } from "@/lib/format";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
-import type { PostDetail, PostMember } from "@/lib/api/posts";
+import type { Id, PostComment, PostDetail, PostMember } from "@/lib/api/posts";
 import { useApi } from "@/lib/api/useApi";
 import { usePostService } from "@/lib/api/usePostService";
 import { Avatar } from "@/components/ui/Avatar";
@@ -27,7 +27,7 @@ import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
 import { authorLabel, isImageUrl } from "@/components/domain/PostRow";
 
 /**
- * 댓글·번개 참여·커피챗 모집 참여·초대·메시지는 다음 작업(COMMENT·MEETUP·RECRUIT, 동문 찾기)에서 연결한다.
+ * 커피챗 모집 참여·번개 초대·메시지는 동문 찾기(RECRUIT·MEETUP-02·채팅)를 연결한 뒤 연다.
  * API 모드에서는 그 버튼들을 잠가 두고, 프로토타입 모드에서는 예전처럼 mock store로 동작한다.
  */
 const PENDING_TIP = "곧 연결될 기능이에요";
@@ -54,6 +54,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   const [invite, setInvite] = useState(false);
   const [liking, setLiking] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   if (error && !post) {
     if (isApiError(error) && error.status === 404) return <EmptyState title="404 · 삭제되었거나 없는 글이에요" action={{ label: "커뮤니티로", href: "/community" }} />;
@@ -87,6 +88,22 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
       toast(errorMessage(e), { kind: "error" });
     } finally {
       setLiking(false);
+    }
+  };
+
+  const setMeetupJoined = async (joined: boolean) => {
+    if (joining) return;
+    setJoining(true);
+    try {
+      const res = await service.setMeetupJoined(post.id, joined);
+      setData((p) => (p?.meetup ? { ...p, meetup: { ...p.meetup, joinedByMe: res.joined, participantCount: res.participantCount, capacity: res.capacity, status: res.status, members: res.members } } : p));
+      toast(joined ? "참여했어요. 단체 채팅방에 초대될 거예요." : "참여를 취소했어요");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      // 정원 마감·시작된 번개처럼 상태가 바뀌었으면 다시 불러온다
+      if (isApiError(e) && e.status === 409) reload();
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -204,7 +221,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           {/* Comments */}
           <section className="mt-8 flex flex-col gap-4">
             <h2 className="t-body-bold text-ink-900">댓글 {post.commentCount}</h2>
-            {mockPost ? <MockComments postId={mockPost.id} anonymousPost={!!mockPost.anonymous} mine={mine} /> : <p className="py-4 text-[14px] text-ink-500">댓글은 곧 연결될 기능이에요</p>}
+            <Comments postId={post.id} canModerate={isAdmin} onCountChange={(diff) => setData((p) => (p ? { ...p, commentCount: Math.max(0, p.commentCount + diff) } : p))} />
           </section>
         </Card>
       </div>
@@ -227,16 +244,11 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           <MeetupCard
             post={post}
             mine={mine}
-            ready={!API_ENABLED}
+            inviteReady={!API_ENABLED}
+            busy={joining}
             blocked={blockedRel}
-            onJoin={() => {
-              store.joinMeetup(id);
-              toast("참여했어요. 단체 채팅방에 초대될 거예요.");
-            }}
-            onLeave={() => {
-              store.leaveMeetup(id);
-              toast("참여를 취소했어요");
-            }}
+            onJoin={() => setMeetupJoined(true)}
+            onLeave={() => setMeetupJoined(false)}
             onInvite={() => setInvite(true)}
             onCancel={() => setDel(true)}
           />
@@ -332,56 +344,124 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-/** 프로토타입 모드 댓글 (COMMENT API 연결 전) */
-function MockComments({ postId, anonymousPost, mine }: { postId: string; anonymousPost: boolean; mine: boolean }) {
-  const { posts, alumni, addComment } = useStore();
-  const post = posts.find((p) => p.id === postId);
-  const [comment, setComment] = useState("");
-  const [anonComment, setAnonComment] = useState(false);
-  if (!post) return null;
+const COMMENT_PAGE = 20;
 
-  const submitComment = () => {
-    const t = comment.trim();
-    if (!t || t.length > 500) return;
-    addComment(post.id, t, anonComment || (anonymousPost && mine));
-    setComment("");
+/** 댓글 (COMMENT-01 ~ 03). 오래된 순이고 [댓글 더보기]로 다음 페이지를 붙인다 */
+function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModerate: boolean; onCountChange: (diff: number) => void }) {
+  const toast = useToast();
+  const service = usePostService();
+  const first = useApi(() => service.comments(postId, 0, COMMENT_PAGE), [service, postId]);
+  const [extra, setExtra] = useState<{ items: PostComment[]; page: number; hasNext: boolean } | null>(null);
+  const [added, setAdded] = useState<PostComment[]>([]);
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [text, setText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [target, setTarget] = useState<PostComment | null>(null);
+
+  // 프로토타입 모드에서는 store가 바뀌면 첫 페이지를 다시 불러오므로, 그때 붙여 둔 값은 비운다
+  const [seen, setSeen] = useState(first.data);
+  if (seen !== first.data) {
+    setSeen(first.data);
+    setExtra(null);
+    setAdded([]);
+    setRemoved(new Set());
+  }
+
+  const loaded = [...(first.data?.items ?? []), ...(extra?.items ?? [])];
+  const ids = new Set(loaded.map((c) => String(c.id)));
+  const comments = [...loaded, ...added.filter((c) => !ids.has(String(c.id)))].map((c) => (removed.has(String(c.id)) ? { ...c, deleted: true, author: null, content: "삭제된 댓글이에요." } : c));
+  const hasNext = extra ? extra.hasNext : !!first.data?.hasNext;
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const page = (extra?.page ?? 0) + 1;
+      const res = await service.comments(postId, page, COMMENT_PAGE);
+      setExtra((prev) => ({ items: [...(prev?.items ?? []), ...res.items], page, hasNext: res.hasNext }));
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setLoadingMore(false);
+    }
   };
+
+  const submit = async () => {
+    const content = text.trim();
+    if (!content || content.length > 500 || posting) return;
+    setPosting(true);
+    try {
+      const created = await service.addComment(postId, content);
+      setAdded((a) => [...a, created]);
+      setText("");
+      onCountChange(1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!target) return;
+    const c = target;
+    setTarget(null);
+    try {
+      await service.removeComment(postId, c.id);
+      setRemoved((r) => new Set(r).add(String(c.id)));
+      onCountChange(-1);
+      toast("댓글을 삭제했어요");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    }
+  };
+
+  if (first.error && !first.data) {
+    return <EmptyState compact title="댓글을 불러오지 못했어요" description={errorMessage(first.error)} action={{ label: "다시 시도", onClick: first.reload }} />;
+  }
 
   return (
     <>
-      {post.comments.length === 0 && <p className="py-4 text-[14px] text-ink-500">첫 댓글을 남겨보세요</p>}
-      <ul>
-        {post.comments.map((c) => {
-          const ca = alumni.find((a) => a.id === c.authorId);
-          const deleted = c.text === "삭제된 댓글이에요";
-          const anon = c.anonymous || (post.anonymous && c.authorId === post.authorId);
-          return (
+      {!first.data ? (
+        <Skeleton className="h-[80px] w-full" />
+      ) : comments.length === 0 ? (
+        <p className="py-4 text-[14px] text-ink-500">첫 댓글을 남겨보세요</p>
+      ) : (
+        <ul>
+          {comments.map((c) => (
             <li key={c.id} className="flex gap-3 border-b border-line-200 py-4 last:border-b-0">
-              <Avatar name={anon ? undefined : ca?.name} part={ca?.part} size={32} withdrawn={!ca} />
+              <Avatar name={c.author && !c.author.isDeleted ? c.author.name ?? undefined : undefined} part={firstPart(c.author)} size={32} withdrawn={!c.deleted && !c.isAnonymous && (!c.author || c.author.isDeleted)} />
               <div className="flex flex-col gap-1">
                 <p className="text-[13px]">
-                  <span className="font-bold text-ink-900">{anon ? "익명의 사자" : ca?.name ?? "탈퇴한 사자"}</span>
-                  <span className="ml-1.5 text-ink-500">
-                    {!anon && ca && `${ca.generation}기 · `}
-                    {timeAgo(c.at)}
+                  <span className="font-bold text-ink-900">{c.deleted ? "" : c.isAnonymous ? "익명의 사자" : c.author && !c.author.isDeleted ? c.author.name : "알 수 없음"}</span>
+                  <span className={cn("text-ink-500", !c.deleted && "ml-1.5")}>
+                    {!c.deleted && !c.isAnonymous && c.author && !c.author.isDeleted && `${c.author.generation}기 · `}
+                    {timeAgo(c.createdAt)}
                   </span>
-                  {c.authorId === ME_ID && !deleted && <button type="button" className="ml-2 text-ink-500 underline">삭제</button>}
+                  {!c.deleted && (c.isMine || canModerate) && (
+                    <button type="button" onClick={() => setTarget(c)} className="ml-2 text-ink-500 underline">
+                      삭제{!c.isMine && " (관리자)"}
+                    </button>
+                  )}
                 </p>
-                <p className={cn("text-[14px]", deleted ? "text-ink-400" : "text-ink-900")}>{c.text}</p>
+                <p className={cn("whitespace-pre-line text-[14px]", c.deleted ? "text-ink-400" : "text-ink-900")}>{c.content}</p>
               </div>
             </li>
-          );
-        })}
-      </ul>
-      <form onSubmit={(e) => { e.preventDefault(); submitComment(); }} className="flex items-center gap-2">
-        <input aria-label="댓글" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="댓글을 입력하세요 (1~500자)" maxLength={500} className="h-10 flex-1 rounded-[6px] border border-line-300 px-3 text-[14px] outline-none placeholder:text-ink-400 focus:border-ink-700" />
-        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 t-caption1 text-ink-700">
-          <input type="checkbox" checked={anonComment} onChange={(e) => setAnonComment(e.target.checked)} className="size-4 accent-[#004c97]" /> 익명
-        </label>
-        <Button type="submit" size="S" className="h-10" disabled={!comment.trim()}>
+          ))}
+        </ul>
+      )}
+      {hasNext && (
+        <Button variant="secondary" size="S" className="self-center" loading={loadingMore} onClick={loadMore}>
+          댓글 더보기
+        </Button>
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); void submit(); }} className="flex items-center gap-2">
+        <input aria-label="댓글" value={text} onChange={(e) => setText(e.target.value)} placeholder="댓글을 입력하세요 (1~500자)" maxLength={500} className="h-10 flex-1 rounded-[6px] border border-line-300 px-3 text-[14px] outline-none placeholder:text-ink-400 focus:border-ink-700" />
+        <Button type="submit" size="S" className="h-10" disabled={!text.trim()} loading={posting}>
           등록
         </Button>
       </form>
+      <ConfirmModal open={!!target} onClose={() => setTarget(null)} onConfirm={remove} title="댓글을 삭제할까요?" description="삭제한 댓글은 '삭제된 댓글이에요'로 남아요." confirmLabel="삭제" danger />
     </>
   );
 }
@@ -473,7 +553,7 @@ function RecruitCard({ post, mine, ready, onApply, onJoin, onCancel }: { post: P
 }
 
 /** L-06 번개 상세 카드 · K-03 번개 states */
-function MeetupCard({ post, mine, ready, blocked, onJoin, onLeave, onInvite, onCancel }: { post: PostDetail; mine: boolean; ready: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void }) {
+function MeetupCard({ post, mine, inviteReady, busy, blocked, onJoin, onLeave, onInvite, onCancel }: { post: PostDetail; mine: boolean; inviteReady: boolean; busy: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void }) {
   const m = post.meetup!;
   const past = m.status === "ENDED";
   const canceled = m.status === "CANCELED";
@@ -494,7 +574,7 @@ function MeetupCard({ post, mine, ready, blocked, onJoin, onLeave, onInvite, onC
       <MemberList members={m.members} />
       {mine ? (
         <>
-          {ready ? (
+          {inviteReady ? (
             <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
               초대 알림 보내기
             </Button>
@@ -513,14 +593,12 @@ function MeetupCard({ post, mine, ready, blocked, onJoin, onLeave, onInvite, onC
         <Tooltip text="참여할 수 없는 번개예요">
           <span className="flex h-12 w-full items-center justify-center rounded-[8px] bg-line-200 text-[15px] font-bold text-ink-400">참여하기</span>
         </Tooltip>
-      ) : !ready ? (
-        <Locked>{m.joinedByMe ? "참여 취소" : "참여하기"}</Locked>
       ) : m.joinedByMe ? (
-        <Button size="L" full variant="secondary" onClick={onLeave}>
+        <Button size="L" full variant="secondary" loading={busy} onClick={onLeave}>
           참여 취소
         </Button>
       ) : (
-        <Button size="L" full disabled={full} onClick={onJoin}>
+        <Button size="L" full disabled={full} loading={busy} onClick={onJoin}>
           {full ? "모집 마감" : "참여하기"}
         </Button>
       )}
