@@ -45,7 +45,7 @@ export default function NotificationSettingsPage() {
                 </p>
                 <p className="mt-1 text-[13px] text-ink-500">11/18까지 답하지 않으면 신청이 자동으로 만료돼요.</p>
                 <div className="mt-4">
-                  <Button href="/coffee/c-1">확인하러 가기</Button>
+                  <Button href="/coffee?id=c-1">확인하러 가기</Button>
                 </div>
                 <button type="button" onClick={() => { setUnsubscribed(true); setNotiSettings({ emailCoffee: false }); }} className="mt-6 text-[12px] text-ink-400 underline">
                   이 알림 그만 받기
