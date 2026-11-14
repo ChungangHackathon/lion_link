@@ -11,7 +11,9 @@ import { ME_ID } from "@/lib/mock/users";
 import { commonalities, timeLeft } from "@/lib/common";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
+import * as coffeeApi from "@/lib/api/coffee";
 import { personName, topicText, type CoffeeAction, type CoffeeChatDetail as CoffeeChatData } from "@/lib/api/coffee";
+import { addCoffeePeriod, getCoffeeDefaultMode, isHttpUrl } from "@/lib/api/profile";
 import { useCoffeeService } from "@/lib/api/useCoffeeService";
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -29,9 +31,9 @@ const STEPS: { key: CoffeeChatStatus | "REQUEST"; label: string }[] = [
   { key: "COMPLETED", label: "완료" },
 ];
 const STEP_INDEX: Record<CoffeeChatStatus, number> = { PENDING: 0, ACCEPTED: 1, SCHEDULED: 2, COMPLETED: 3, REJECTED: 0, CANCELED: 0, EXPIRED: 0 };
-const PENDING_TIP = "곧 연결될 기능이에요";
-/** 이번 작업(신청·목록·상세·신청 취소)에서 API로 연결한 동작. 나머지는 다음 이슈에서 연다 */
-const API_READY: CoffeeAction[] = ["WITHDRAW"];
+const PENDING_TIP = "프로토타입 모드에서는 쓸 수 없어요";
+const todayKst = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
+const addDaysKst = (days: number) => new Date(Date.now() + 9 * 3_600_000 + days * 86_400_000).toISOString().slice(0, 10);
 
 export const statusTone = (s: CoffeeChatStatus) => (s === "PENDING" ? "outline" : s === "SCHEDULED" || s === "COMPLETED" ? "filled" : "gray");
 
@@ -39,8 +41,10 @@ export const statusTone = (s: CoffeeChatStatus) => (s === "PENDING" ? "outline" 
  * 커피챗 상세 — 내 커피챗 오른쪽 영역 (M-01 · M-02 · M-04). 전체 화면 상세(D-01~07)는 디자인에서 빠졌어요.
  * 버튼은 서버가 준 actions(역할 × 상태표, D-08)대로 보여준다.
  * onChanged: 상태가 바뀌면 부른다 (바뀐 상세를 주면 그걸로, 아니면 다시 불러온다).
+ * onRemoved: 내가 더 볼 수 없게 됐을 때 (함께 신청자가 빠짐).
+ * API 모드는 COFFEE-04~10을 부르고, 프로토타입 모드는 예전처럼 mock store를 바꾼다.
  */
-export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: CoffeeChatData; compact?: boolean; initialAction?: "accept" | "reject" | null; onChanged?: (next?: CoffeeChatData) => void }) {
+export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: { chat: CoffeeChatData; compact?: boolean; initialAction?: "accept" | "reject" | null; onChanged?: (next?: CoffeeChatData) => void; onRemoved?: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const service = useCoffeeService();
@@ -50,8 +54,9 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: Cof
   const members = chat.members;
   const group = members.length > 0;
   const can = (a: CoffeeAction) => chat.actions.includes(a);
-  const ready = (a: CoffeeAction) => !API_ENABLED || API_READY.includes(a);
-  const [modal, setModal] = useState<"accept" | "reject" | "schedule" | "cancel" | "complete" | "cancelRequest" | null>(initialAction && ready(initialAction === "accept" ? "ACCEPT" : "REJECT") ? initialAction : null);
+  // 함께 신청자 빠지기는 mock store에 없어서 프로토타입 모드에서만 잠근다
+  const ready = (a: CoffeeAction) => API_ENABLED || a !== "LEAVE";
+  const [modal, setModal] = useState<"accept" | "reject" | "schedule" | "cancel" | "complete" | "cancelRequest" | "leave" | null>(initialAction && can(initialAction === "accept" ? "ACCEPT" : "REJECT") ? initialAction : null);
   const [pastMeeting, setPastMeeting] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -83,18 +88,50 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: Cof
   const room = chat.roomId ? `/chat/${chat.roomId}` : "/chat";
   const modeText = (m: string | null) => (m === "ONLINE" ? "온라인" : m === "OFFLINE" ? "오프라인" : "상관없음");
 
-  const withdraw = async () => {
+  /** API 동작 공통: 모달 닫기 → 호출 → 안내 → 상세 갱신. 상태가 바뀌어 있었으면(409) 다시 불러온다 */
+  const run = async (call: () => Promise<CoffeeChatData | void>, done: string) => {
     setModal(null);
     setBusy(true);
     try {
-      const next = await service.withdraw(chat.id);
-      toast("신청을 취소했어요");
-      onChanged?.(next);
+      const next = await call();
+      toast(done);
+      onChanged?.(next ?? undefined);
+      return true;
     } catch (e) {
       toast(errorMessage(e), { kind: "error" });
-      if (isApiError(e) && e.status === 409) onChanged?.();
+      if (isApiError(e) && (e.status === 409 || e.status === 404)) onChanged?.();
+      return false;
     } finally {
       setBusy(false);
+    }
+  };
+
+  const withdraw = () => run(() => service.withdraw(chat.id), "신청을 취소했어요");
+
+  const leave = async () => {
+    setModal(null);
+    setBusy(true);
+    try {
+      await coffeeApi.leaveCoffeeChat(chat.id);
+      toast("커피챗에서 빠졌어요");
+      onRemoved?.();
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 거절 창의 '당분간 커피챗 쉬기' (PROFILE-15). 기본이 '안 받기'면 이미 받지 않으니 건너뛴다 */
+  const rest = async (until: string) => {
+    try {
+      const { defaultMode } = await getCoffeeDefaultMode();
+      if (defaultMode !== "ON") return;
+      const p = await addCoffeePeriod({ startDate: todayKst(), endDate: until, mergeOverlap: true });
+      toast(`${p.endDate.slice(5).replace("-", "/")}까지 커피챗을 쉬어요`);
+    } catch (e) {
+      toast(`쉬는 기간을 저장하지 못했어요. ${errorMessage(e)}`, { kind: "error" });
     }
   };
 
@@ -114,7 +151,7 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: Cof
       ) : (
         can("SCHEDULE") && <ActionBtn ready={ready} busy={busy} action="SCHEDULE" label={chat.status === "ACCEPTED" ? "일정 확정하기" : "일정 변경"} variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} onClick={() => setModal("schedule")} />
       )}
-      {can("LEAVE") && <ActionBtn ready={ready} busy={busy} action="LEAVE" label="빠지기" onClick={() => undefined} />}
+      {can("LEAVE") && <ActionBtn ready={ready} busy={busy} action="LEAVE" label="빠지기" onClick={() => setModal("leave")} />}
     </div>
   );
 
@@ -305,44 +342,106 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: Cof
     </div>
   );
 
-  // 아래 모달들은 프로토타입 모드에서 mock store로 동작한다 (API 연결은 다음 이슈)
   const mockId = String(chat.id);
   return (
     <>
       {body}
 
-      {/* ★[O] D-10 수락 모달 / 일정 후보 */}
+      {/* ★[O] D-10 수락 모달 / 일정 후보 (COFFEE-04) */}
       <AcceptModal
         open={modal === "accept"}
         onClose={() => setModal(null)}
         group={group}
+        busy={busy}
         onConfirm={(cands, note) => {
-          const roomId = acceptCoffeeChat(mockId, cands);
-          setModal(null);
-          toast("수락했어요. 채팅방이 열렸어요.");
-          router.push(`/chat/${roomId}`);
-          void note;
+          if (!API_ENABLED) {
+            const roomId = acceptCoffeeChat(mockId, cands);
+            setModal(null);
+            toast("수락했어요. 채팅방이 열렸어요.");
+            router.push(`/chat/${roomId}`);
+            return;
+          }
+          void run(() => coffeeApi.acceptCoffeeChat(chat.id, { proposedSlots: cands, responseMessage: note.trim() || undefined }), "수락했어요. 채팅방이 열렸어요.");
         }}
       />
-      {/* ★[O] D-11 사유 선택 모달 / 커피챗 거절 */}
+      {/* ★[O] D-11 사유 선택 모달 / 커피챗 거절 (COFFEE-05 + PROFILE-15) */}
       <RejectModal
         open={modal === "reject"}
         onClose={() => setModal(null)}
-        onConfirm={(reason, note, rest) => {
-          rejectCoffeeChat(mockId, reason, note);
-          if (rest) setSettings({ mode: "RESTING", restUntil: rest });
-          setModal(null);
-          toast("거절했어요. 신청자에게 안내가 전달돼요.");
+        busy={busy}
+        onConfirm={async (reason, note, restUntil) => {
+          if (!API_ENABLED) {
+            rejectCoffeeChat(mockId, reason, note);
+            if (restUntil) setSettings({ mode: "RESTING", restUntil });
+            setModal(null);
+            toast("거절했어요. 신청자에게 안내가 전달돼요.");
+            return;
+          }
+          const ok = await run(() => coffeeApi.rejectCoffeeChat(chat.id, { rejectReason: reason, responseMessage: note.trim() || undefined }), "거절했어요. 신청자에게 안내가 전달돼요.");
+          if (ok && restUntil) await rest(restUntil);
         }}
       />
-      {/* ◇[O] D-15 일정 확정 · 변경 */}
-      <ScheduleModal open={modal === "schedule"} onClose={() => setModal(null)} candidates={chat.proposedSlots} initial={chat.scheduledAt ?? undefined} mode={chat.meetingMode ?? chat.preferredMode} onConfirm={(at) => { scheduleCoffeeChat(mockId, at); setModal(null); setPastMeeting(false); toast("일정을 확정했어요"); }} />
-      {/* ◇[O] D-16 커피챗 취소 */}
-      <CancelModal open={modal === "cancel"} onClose={() => setModal(null)} onConfirm={(note) => { cancelCoffeeChat(mockId, note); setModal(null); toast("커피챗을 취소했어요"); }} />
-      {/* ◇[O] D-17 만남 완료 · 감사 메시지 */}
-      <ThanksModal open={modal === "complete"} onClose={() => setModal(null)} name={personName(other)} onConfirm={(t) => { completeCoffeeChat(mockId, t); setModal(null); toast("커피챗을 완료했어요 ☕"); }} />
+      {/* ◇[O] D-15 일정 확정 · 변경 (COFFEE-07) */}
+      <ScheduleModal
+        key={`schedule-${chat.scheduledAt ?? ""}-${modal === "schedule"}`}
+        open={modal === "schedule"}
+        onClose={() => setModal(null)}
+        busy={busy}
+        candidates={chat.proposedSlots}
+        initial={chat.scheduledAt ?? undefined}
+        initialPlace={chat.meetingPlace ?? ""}
+        initialLink={chat.meetingLink ?? ""}
+        mode={chat.meetingMode ?? chat.preferredMode}
+        onConfirm={(at, meetingMode, place, link) => {
+          if (!API_ENABLED) {
+            scheduleCoffeeChat(mockId, at);
+            setModal(null);
+            setPastMeeting(false);
+            toast("일정을 확정했어요");
+            return;
+          }
+          void run(
+            () => coffeeApi.scheduleCoffeeChat(chat.id, { scheduledAt: at, meetingMode, meetingPlace: meetingMode === "OFFLINE" ? place : undefined, meetingLink: meetingMode === "ONLINE" && link ? link : undefined }),
+            chat.scheduledAt ? "일정을 바꿨어요" : "일정을 확정했어요",
+          );
+        }}
+      />
+      {/* ◇[O] D-16 커피챗 취소 (COFFEE-08) */}
+      <CancelModal
+        open={modal === "cancel"}
+        onClose={() => setModal(null)}
+        busy={busy}
+        onConfirm={(note) => {
+          if (!API_ENABLED) {
+            cancelCoffeeChat(mockId, note);
+            setModal(null);
+            toast("커피챗을 취소했어요");
+            return;
+          }
+          void run(() => coffeeApi.cancelCoffeeChat(chat.id, note), "커피챗을 취소했어요");
+        }}
+      />
+      {/* ◇[O] D-17 만남 완료 · 감사 메시지 (COFFEE-09). 감사 메시지는 채팅 연결 뒤 채팅방으로 보낸다 */}
+      <ThanksModal
+        open={modal === "complete"}
+        onClose={() => setModal(null)}
+        name={personName(other)}
+        allowMessage={!API_ENABLED}
+        busy={busy}
+        onConfirm={(t) => {
+          if (!API_ENABLED) {
+            completeCoffeeChat(mockId, t);
+            setModal(null);
+            toast("커피챗을 완료했어요 ☕");
+            return;
+          }
+          void run(() => coffeeApi.completeCoffeeChat(chat.id), "커피챗을 완료했어요 ☕");
+        }}
+      />
       {/* ◇[O] CF-7 신청 취소 확인 (COFFEE-06) */}
       <ConfirmModal open={modal === "cancelRequest"} onClose={() => setModal(null)} onConfirm={withdraw} title="신청을 취소할까요?" description="취소하면 사자에게 보낸 신청서가 사라져요. 같은 사자에게 다시 신청할 수 있어요." confirmLabel="신청 취소" />
+      {/* 함께 신청자 빠지기 (COFFEE-10) */}
+      <ConfirmModal open={modal === "leave"} onClose={() => setModal(null)} onConfirm={leave} title="이 커피챗에서 빠질까요?" description="빠지면 단체 채팅방에서도 나가요. 커피챗은 남은 사람끼리 그대로 진행돼요." confirmLabel="빠지기" danger />
     </>
   );
 }
@@ -351,7 +450,7 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: Cof
 function ActionBtn({ ready, busy, action, label, variant = "secondary", onClick }: { ready: (a: CoffeeAction) => boolean; busy: boolean; action: CoffeeAction; label: string; variant?: "primary" | "secondary"; onClick: () => void }) {
   if (ready(action)) {
     return (
-      <Button size="S" variant={variant} onClick={onClick} loading={busy && action === "WITHDRAW"}>
+      <Button size="S" variant={variant} onClick={onClick} disabled={busy}>
         {label}
       </Button>
     );
@@ -402,7 +501,7 @@ const combine = (date: string, time: string) => {
   return d.toISOString();
 };
 
-function AcceptModal({ open, onClose, onConfirm, group }: { open: boolean; onClose: () => void; onConfirm: (candidates: string[], note: string) => void; group: boolean }) {
+function AcceptModal({ open, onClose, onConfirm, group, busy }: { open: boolean; onClose: () => void; onConfirm: (candidates: string[], note: string) => void; group: boolean; busy?: boolean }) {
   const days = nextDays();
   const [rows, setRows] = useState([{ date: days[2].toISOString(), time: "19:00" }]);
   const [note, setNote] = useState("");
@@ -418,7 +517,7 @@ function AcceptModal({ open, onClose, onConfirm, group }: { open: boolean; onClo
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button disabled={rows.length === 0 || past || note.length > 200} onClick={() => onConfirm(rows.map((r) => combine(r.date, r.time)), note)}>
+          <Button disabled={rows.length === 0 || past || note.length > 200} loading={busy} onClick={() => onConfirm([...new Set(rows.map((r) => combine(r.date, r.time)))], note)}>
             수락 보내기
           </Button>
         </>
@@ -462,7 +561,7 @@ function AcceptModal({ open, onClose, onConfirm, group }: { open: boolean; onClo
   );
 }
 
-function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (reason: CoffeeChatRejectReason, note: string, restUntil?: string) => void }) {
+function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClose: () => void; onConfirm: (reason: CoffeeChatRejectReason, note: string, restUntil?: string) => void; busy?: boolean }) {
   const [reason, setReason] = useState<CoffeeChatRejectReason>("NO_TIME");
   const [note, setNote] = useState("");
   const [rest, setRest] = useState(true);
@@ -471,10 +570,9 @@ function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
   const until = () => {
     if (!rest) return undefined;
     if (period === "custom") return custom || undefined;
-    const d = new Date();
-    d.setDate(d.getDate() + (period === "1w" ? 7 : period === "2w" ? 14 : 30));
-    return d.toISOString().slice(0, 10);
+    return addDaysKst(period === "1w" ? 6 : period === "2w" ? 13 : 29);
   };
+  const customError = rest && period === "custom" && custom ? (custom < todayKst() ? "오늘 이후로 골라주세요" : custom > addDaysKst(179) ? "최대 180일까지 쉴 수 있어요" : undefined) : undefined;
   return (
     <Modal
       open={open}
@@ -486,7 +584,7 @@ function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button onClick={() => onConfirm(reason, note, until())} disabled={note.length > 200 || (rest && period === "custom" && !custom)}>
+          <Button onClick={() => onConfirm(reason, note, until())} loading={busy} disabled={note.length > 200 || (rest && period === "custom" && (!custom || !!customError))}>
             거절하기
           </Button>
         </>
@@ -516,9 +614,10 @@ function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
               <Chip selected={period === "custom"} onClick={() => setPeriod("custom")}>
                 직접 선택
               </Chip>
-              {period === "custom" && <input type="date" value={custom} onChange={(e) => setCustom(e.target.value)} className="h-8 rounded-[6px] border border-line-300 px-2 text-[13px]" />}
+              {period === "custom" && <input type="date" aria-label="쉬는 마지막 날" min={todayKst()} max={addDaysKst(179)} value={custom} onChange={(e) => setCustom(e.target.value)} className="h-8 rounded-[6px] border border-line-300 px-2 text-[13px]" />}
             </div>
           )}
+          {customError && <p className="t-caption2 text-orange">{customError}</p>}
           <p className="text-[12px] text-ink-500">쉬는 기간은 최대 5개까지 등록할 수 있어요.</p>
         </div>
       </div>
@@ -526,13 +625,16 @@ function RejectModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
   );
 }
 
-function ScheduleModal({ open, onClose, onConfirm, candidates, initial, mode }: { open: boolean; onClose: () => void; onConfirm: (at: string) => void; candidates: string[]; initial?: string; mode: string }) {
+function ScheduleModal({ open, onClose, onConfirm, candidates, initial, initialPlace = "", initialLink = "", mode, busy }: { open: boolean; onClose: () => void; onConfirm: (at: string, mode: "ONLINE" | "OFFLINE", place: string, link: string) => void; candidates: string[]; initial?: string; initialPlace?: string; initialLink?: string; mode: string; busy?: boolean }) {
   const days = nextDays(30);
   const [date, setDate] = useState(initial ? new Date(new Date(initial).setHours(0, 0, 0, 0)).toISOString() : candidates[0] ? new Date(new Date(candidates[0]).setHours(0, 0, 0, 0)).toISOString() : days[2].toISOString());
-  const [time, setTime] = useState(initial ? initial.slice(11, 16) : candidates[0] ? new Date(candidates[0]).toTimeString().slice(0, 5) : "19:00");
+  const [time, setTime] = useState(initial ? new Date(initial).toTimeString().slice(0, 5) : candidates[0] ? new Date(candidates[0]).toTimeString().slice(0, 5) : "19:00");
   const [m, setM] = useState<"ONLINE" | "OFFLINE">(mode === "ONLINE" ? "ONLINE" : "OFFLINE");
-  const [place, setPlace] = useState("강남역 ○○카페");
-  const valid = !!date && !!time && (m === "ONLINE" || place.trim().length > 0);
+  const [place, setPlace] = useState(initialPlace);
+  const [link, setLink] = useState(initialLink);
+  const past = !!date && !!time && new Date(combine(date, time)).getTime() <= Date.now();
+  const linkError = m === "ONLINE" && link.trim() && !isHttpUrl(link.trim()) ? "http:// 또는 https://로 시작하는 주소를 입력해주세요" : undefined;
+  const valid = !!date && !!time && !past && (m === "ONLINE" ? !linkError : place.trim().length > 0 && place.trim().length <= 50);
   return (
     <Modal
       open={open}
@@ -544,7 +646,7 @@ function ScheduleModal({ open, onClose, onConfirm, candidates, initial, mode }: 
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button disabled={!valid} onClick={() => onConfirm(combine(date, time))}>
+          <Button disabled={!valid} loading={busy} onClick={() => onConfirm(combine(date, time), m, place.trim(), link.trim())}>
             {initial ? "변경하기" : "일정 확정하기"}
           </Button>
         </>
@@ -588,13 +690,18 @@ function ScheduleModal({ open, onClose, onConfirm, candidates, initial, mode }: 
             </Chip>
           </div>
         </div>
-        {m === "OFFLINE" ? <Input label="장소" required placeholder="예) 강남역 ○○카페" value={place} onChange={(e) => setPlace(e.target.value)} /> : <Input label="링크 (선택)" placeholder="예) https://meet.google.com/…" help="온라인을 고르면 장소 대신 링크를 입력해요" />}
+        {m === "OFFLINE" ? (
+          <Input label="장소" required placeholder="예) 강남역 ○○카페" value={place} onChange={(e) => setPlace(e.target.value)} counter={{ value: place.length, max: 50 }} error={place.trim().length > 50 ? "50자 이내로 적어주세요" : undefined} />
+        ) : (
+          <Input label="링크 (선택)" placeholder="예) https://meet.google.com/…" help="온라인을 고르면 장소 대신 링크를 입력해요" value={link} onChange={(e) => setLink(e.target.value)} error={linkError} />
+        )}
+        {past && <p className="t-caption2 text-orange">지난 시간은 고를 수 없어요</p>}
       </div>
     </Modal>
   );
 }
 
-function CancelModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: (note: string) => void }) {
+function CancelModal({ open, onClose, onConfirm, busy }: { open: boolean; onClose: () => void; onConfirm: (note: string) => void; busy?: boolean }) {
   const [note, setNote] = useState("");
   return (
     <Modal
@@ -607,7 +714,7 @@ function CancelModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
           <Button variant="secondary" onClick={onClose}>
             닫기
           </Button>
-          <Button variant="danger" disabled={note.trim().length < 5} onClick={() => onConfirm(note.trim())}>
+          <Button variant="danger" disabled={note.trim().length < 5 || note.trim().length > 200} loading={busy} onClick={() => onConfirm(note.trim())}>
             커피챗 취소
           </Button>
         </>
@@ -621,8 +728,13 @@ function CancelModal({ open, onClose, onConfirm }: { open: boolean; onClose: () 
   );
 }
 
-function ThanksModal({ open, onClose, onConfirm, name }: { open: boolean; onClose: () => void; onConfirm: (text?: string) => void; name: string }) {
+function ThanksModal({ open, onClose, onConfirm, name, allowMessage = true, busy }: { open: boolean; onClose: () => void; onConfirm: (text?: string) => void; name: string; allowMessage?: boolean; busy?: boolean }) {
   const [text, setText] = useState("");
+  if (!allowMessage) {
+    return (
+      <ConfirmModal open={open} onClose={onClose} onConfirm={() => onConfirm()} title="만남을 완료 처리할까요?" description={`${name}님과의 커피챗을 완료로 바꿔요. 완료해도 채팅은 계속할 수 있어요.`} confirmLabel={busy ? "처리 중…" : "완료하기"} />
+    );
+  }
   return (
     <Modal
       open={open}

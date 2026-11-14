@@ -135,7 +135,16 @@ function CoffeeList() {
 
         <Card className="h-fit rounded-[10px] p-7">
           {detailId !== null && detailId !== undefined ? (
-            <DetailPane key={String(detailId)} id={detailId} initialAction={params.get("id") === String(detailId) ? (params.get("action") as "accept" | "reject" | null) : null} onChanged={first.reload} />
+            <DetailPane
+              key={String(detailId)}
+              id={detailId}
+              initialAction={params.get("id") === String(detailId) ? (params.get("action") as "accept" | "reject" | null) : null}
+              onChanged={first.reload}
+              onRemoved={() => {
+                setSelectedId(null);
+                first.reload();
+              }}
+            />
           ) : (
             <EmptyState title="신청을 선택해주세요" />
           )}
@@ -146,7 +155,7 @@ function CoffeeList() {
 }
 
 /** 오른쪽 상세 (COFFEE-03). 상태가 바뀌면 목록도 다시 불러온다 */
-function DetailPane({ id, initialAction, onChanged }: { id: Id; initialAction: "accept" | "reject" | null; onChanged: () => void }) {
+function DetailPane({ id, initialAction, onChanged, onRemoved }: { id: Id; initialAction: "accept" | "reject" | null; onChanged: () => void; onRemoved: () => void }) {
   const service = useCoffeeService();
   const { data, error, reload, setData } = useApi(() => service.get(id), [service, id]);
   if (error && !data) {
@@ -164,6 +173,7 @@ function DetailPane({ id, initialAction, onChanged }: { id: Id; initialAction: "
         else reload();
         onChanged();
       }}
+      onRemoved={onRemoved}
     />
   );
 }
