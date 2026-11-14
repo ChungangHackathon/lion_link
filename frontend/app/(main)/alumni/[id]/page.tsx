@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use, useState } from "react";
-import { cn } from "@/lib/cn";
 import { useStore } from "@/lib/store";
 import { profileDetail } from "@/lib/mock/profile";
 import { ME_ID } from "@/lib/mock/users";
@@ -12,36 +11,32 @@ import { Avatar } from "@/components/ui/Avatar";
 import { AvailabilityBadge, OutlineTag, PartTag, Tag } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Misc";
-import { Glyph, Icon } from "@/components/ui/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { Card, EmptyState, Tooltip } from "@/components/ui/Misc";
-import { ConfirmModal, Popover } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { AlumniRow } from "@/components/domain/AlumniCard";
 import { CoffeeRequestModal } from "@/components/domain/CoffeeRequestModal";
 import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
 import { ProfileSections } from "@/components/domain/ProfileSections";
 
-/** ★ P-01 동문 프로필 / 다른 동문 — 763 본문 + 312 ActionCard rail. ⊕R-01, →T-04, CF-10 차단 */
+/** ★ P-01 동문 프로필 / 다른 동문 — 763 본문 + 387 ActionCard rail. ⊕R-01, →T-04 */
 function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const preview = useSearchParams().get("preview") === "1";
   const toast = useToast();
-  const { alumni, bookmarks, toggleBookmark, block, blocked, coffeeChats } = useStore();
+  const { alumni, bookmarks, toggleBookmark, coffeeChats } = useStore();
   const person = alumni.find((a) => a.id === id);
   const me = alumni.find((a) => a.id === ME_ID)!;
   const [request, setRequest] = useState(false);
   const [message, setMessage] = useState(false);
-  const [more, setMore] = useState(false);
-  const [confirmBlock, setConfirmBlock] = useState(false);
 
   if (!person) return <EmptyState title="동문을 찾을 수 없어요" description="탈퇴했거나 주소가 잘못됐어요" action={{ label: "동문 찾기로", href: "/alumni" }} />;
-  if (id === ME_ID) {
+  if (id === ME_ID && !preview) {
     router.replace("/me");
     return null;
   }
   const detail = profileDetail(person.id);
   const saved = bookmarks.includes(person.id);
-  const isBlocked = blocked.includes(person.id);
   const connected = coffeeChats.some((c) => ["ACCEPTED", "SCHEDULED", "COMPLETED"].includes(c.status) && ((c.receiverId === person.id && c.requesterId === ME_ID) || (c.requesterId === person.id && c.receiverId === ME_ID)));
   const pending = coffeeChats.find((c) => c.status === "PENDING" && c.requesterId === ME_ID && c.receiverId === person.id);
 
@@ -56,10 +51,10 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
   const similar = alumni.filter((a) => a.id !== ME_ID && a.id !== person.id && (a.part === person.part || a.interests.some((i) => person.interests.includes(i)))).slice(0, 5);
 
   return (
-    <div className="grid grid-cols-[763px_312px] justify-between gap-6">
+    <div className="grid grid-cols-[minmax(0,763px)_387px] justify-between gap-6">
       <div className="flex flex-col gap-6">
         {/* Header card */}
-        <Card className="p-[30px]">
+        <Card className="rounded-[10px] p-[30px]">
           <div className="flex gap-[19px]">
             <div className="flex w-[150px] flex-col items-center gap-2">
               <Avatar name={person.name} part={person.part} size={96} className="!size-[150px] !text-[56px]" />
@@ -70,23 +65,12 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
                 <div className="flex items-center gap-2.5">
                   <h1 className="text-[28px] font-bold leading-[34px] text-ink-900">{person.name}</h1>
                   <PartTag part={person.part} generation={person.generation} />
-                  {person.isStaff && <OutlineTag>운영진</OutlineTag>}
+                  {person.isStaff && <span className="rounded-[5px] bg-orange-back px-2 py-[3px] text-[12px] font-semibold text-orange-badge">{person.generation + 1}기 {LION_PART_LABEL[person.part]} 운영진</span>}
                 </div>
                 <div className="relative flex items-center gap-2">
                   <button type="button" aria-label="관심 동문" aria-pressed={saved} onClick={() => { toggleBookmark(person.id); toast(saved ? "관심 동문에서 뺐어요" : "관심 동문에 저장했어요"); }} className="rounded p-1 hover:bg-bg-100">
-                    <Icon name={saved ? "star-filled" : "star"} />
+                    <Icon name={saved ? "star-filled" : "star"} size={24} className="text-navy" />
                   </button>
-                  <button type="button" aria-label="더보기" onClick={() => setMore((m) => !m)} className="rounded p-1 hover:bg-bg-100">
-                    <Glyph name="more" size={20} />
-                  </button>
-                  <Popover open={more} onClose={() => setMore(false)} className="w-[180px] p-2">
-                    <button type="button" onClick={() => { setMore(false); navigator.clipboard?.writeText(location.href); toast("프로필 주소를 복사했어요"); }} className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[14px] hover:bg-bg-100">
-                      <Glyph name="copy" /> 주소 복사
-                    </button>
-                    <button type="button" onClick={() => { setMore(false); setConfirmBlock(true); }} className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[14px] text-orange hover:bg-orange-back">
-                      <Glyph name="block" /> 차단하기
-                    </button>
-                  </Popover>
                 </div>
               </div>
               <p className="t-body2 text-ink-700">{person.intro}</p>
@@ -108,7 +92,7 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
               {detail.location && (
                 <p className="flex items-center gap-1 text-ink-700">
-                  <Glyph name="pin" size={14} /> {detail.location}
+                  <Icon name="pin" size={14} /> {detail.location}
                 </p>
               )}
             </div>
@@ -137,20 +121,18 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
 
       {/* Right rail: ActionCard (P-03 상태표) */}
       <aside className="flex flex-col gap-5">
-        <Card className="flex flex-col gap-2.5 p-5">
-          {isBlocked ? (
-            <p className="text-center text-[13px] text-ink-500">차단한 동문이에요</p>
-          ) : pending ? (
+        <Card className="flex flex-col gap-2.5 rounded-[10px] p-6">
+          {pending ? (
             <>
               <Button size="M" full disabled>
                 신청 대기 중
               </Button>
-              <Link href={`/coffee/${pending.id}`} className="text-center text-[12px] text-ink-500 underline">
+              <Link href={`/coffee?tab=sent&id=${pending.id}`} className="text-center text-[12px] text-ink-500 underline">
                 내 신청 보기
               </Link>
             </>
           ) : person.receive === "OPEN" ? (
-            <Button size="M" full onClick={() => setRequest(true)} leading={<Icon name="coffee" size={16} className="brightness-0 invert" />}>
+            <Button size="L" full onClick={() => setRequest(true)} leading={<Icon name="coffee" size={20} />}>
               커피챗 신청하기
             </Button>
           ) : (
@@ -158,11 +140,9 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
               <span className="flex h-10 w-full items-center justify-center rounded-[8px] bg-line-200 text-[13px] font-bold text-ink-400">커피챗 신청하기</span>
             </Tooltip>
           )}
-          {!isBlocked && (
-            <Button size="M" variant="secondary" full onClick={() => setMessage(true)} leading={<Icon name="chat" size={16} />}>
-              메시지 보내기
-            </Button>
-          )}
+          <Button size="M" variant="secondary" full onClick={() => setMessage(true)} leading={<Icon name="chat" size={18} />}>
+            메시지 보내기
+          </Button>
           <div className="mt-3 flex flex-col gap-2 text-[12px]">
             <p className="t-label2 text-ink-900">커피챗 설정</p>
             <div className="flex flex-wrap gap-1.5">
@@ -188,39 +168,50 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </Card>
 
-        <RailList title="지금 커피챗이 가능한 선배들" people={openList} href="/alumni?open=1" />
-        <RailList title="관심사가 비슷한 선배들" people={similar} href={`/alumni?part=${person.part}`} />
+        <RailList title="지금 커피챗이 가능한 사자들" people={openList} href="/alumni?open=1" />
+        <RailList title="관심사가 비슷한 사자들" people={similar} href={`/alumni?part=${person.part}`} />
       </aside>
 
       {request && <CoffeeRequestModal open onClose={() => setRequest(false)} target={person} />}
       {message && <MessageRequestModal open onClose={() => setMessage(false)} target={person} />}
-      {/* ◇[O] CF-10 차단 확인 */}
-      <ConfirmModal open={confirmBlock} onClose={() => setConfirmBlock(false)} onConfirm={() => { setConfirmBlock(false); block(person.id); toast(`${person.name}님을 차단했어요`, { action: { label: "차단 목록", onClick: () => router.push("/me/blocked") } }); }} title={`${person.name}님을 차단할까요?`} description="차단하면 서로의 프로필·게시글이 보이지 않고, 커피챗·메시지를 주고받을 수 없어요. 진행 중인 커피챗은 취소돼요." confirmLabel="차단하기" danger />
     </div>
   );
 }
 
 function RailList({ title, people, href }: { title: string; people: { id: string }[]; href: string }) {
-  const { alumni } = useStore();
+  const { alumni, bookmarks, toggleBookmark } = useStore();
   return (
-    <div className="flex flex-col gap-2.5">
-      <h2 className="t-label1 text-ink-900">{title}</h2>
-      <Card className="overflow-hidden">
+    <div className="flex flex-col gap-3">
+      <h2 className="t-body-bold text-ink-900">{title}</h2>
+      <div className="flex flex-col gap-0.5">
         {people.map((p) => {
           const a = alumni.find((x) => x.id === p.id)!;
+          const saved = bookmarks.includes(a.id);
           return (
-            <div key={a.id} className={cn("px-2")}>
-              <AlumniRow person={a} />
-              <div className="px-3 pb-3 -mt-1">
-                <AvailabilityBadge mode={a.receive} note={a.receiveNote} small />
+            <div key={a.id} className="flex items-start gap-4 rounded-[10px] border border-line-200 bg-white px-5 py-3">
+              <Link href={`/alumni/${a.id}`} className="flex shrink-0 flex-col items-center">
+                <Avatar name={a.name} part={a.part} size={96} />
+                <AvailabilityBadge mode={a.receive} note={a.receiveNote} small className="-mt-3 bg-white" />
+              </Link>
+              <div className="flex min-w-0 flex-1 flex-col gap-2.5 pt-5">
+                <div className="flex items-center gap-2">
+                  <Link href={`/alumni/${a.id}`} className="t-title3 text-ink-900 hover:underline">
+                    {a.name}
+                  </Link>
+                  <PartTag part={a.part} generation={a.generation} />
+                </div>
+                <p className="truncate text-[13px] text-ink-900">{a.headline}</p>
               </div>
+              <button type="button" aria-label="관심 동문" aria-pressed={saved} onClick={() => toggleBookmark(a.id)} className="mt-4 rounded p-0.5 text-navy hover:bg-bg-100">
+                <Icon name={saved ? "star-filled" : "star"} size={22} />
+              </button>
             </div>
           );
         })}
-        <Link href={href} className="flex items-center justify-center gap-1 border-t border-line-200 py-3 text-[13px] text-ink-700 hover:bg-bg-50">
-          전체 보기 <Glyph name="chevron-down" size={14} />
+        <Link href={href} className="flex flex-col items-center rounded-[10px] border border-line-200 bg-white py-3 text-[13px] font-medium text-ink-900 hover:bg-bg-50">
+          전체 보기 <Icon name="chevron-down" size={16} />
         </Link>
-      </Card>
+      </div>
     </div>
   );
 }

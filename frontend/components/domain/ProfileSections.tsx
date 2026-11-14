@@ -10,14 +10,13 @@ import { Card } from "@/components/ui/Misc";
 
 /**
  * Profile body blocks shared by P-01 (다른 동문) and P-02 (내 프로필).
- * Section order is unified (v2.5 §4-1): 소개 → 외부 링크·연락처 → 경력 → 멋사 활동 → 프로젝트 → 기술·키워드 → 자격증·수상·대외활동·언어.
+ * Section order is unified (v2.5 §4-1): 소개 → 경력 → 멋사 활동 → 프로젝트 → 자격증·수상·대외활동·언어 → 외부 링크·연락처 (대표 기술은 상단 카드).
  * `onEdit(section)` turns on the 바로 고치기 pencil (P-02).
  */
 export function ProfileSections({ detail, connected, onEdit }: { detail: ProfileDetail; person?: Alumni; connected?: boolean; onEdit?: (section: string) => void }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [careersOpen, setCareersOpen] = useState(false);
   const [lionOpen, setLionOpen] = useState(false);
-  const [skillsOpen, setSkillsOpen] = useState(false);
   const mine = !!onEdit;
   const canSee = (v: "ALL" | "CONNECTED" | "ME") => mine || v === "ALL" || (v === "CONNECTED" && connected);
 
@@ -34,39 +33,8 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
             )}
           </>
         ) : (
-          <Empty text={mine ? "나를 소개하는 글을 써보세요. 후배들이 신청할 때 가장 먼저 읽어요." : "아직 소개가 없어요"} />
+          <Empty text={mine ? "나를 소개하는 글을 써보세요. 사자들이 신청할 때 가장 먼저 읽어요." : "아직 소개가 없어요"} />
         )}
-      </Section>
-
-      <Section title="외부 링크·연락처" onEdit={onEdit && (() => onEdit("contact"))}>
-        <ul className="flex flex-col gap-3 text-[13px]">
-          {detail.links.map((l) => (
-            <li key={l.label} className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-ink-700">
-                <Glyph name="link" size={14} /> {l.label}
-              </span>
-              {canSee(l.visibility) ? (
-                <a href={`https://${l.url}`} target="_blank" rel="noreferrer" className="text-ink-900 hover:underline">
-                  {l.url}
-                </a>
-              ) : (
-                <Locked />
-              )}
-            </li>
-          ))}
-          <li className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-ink-700">
-              <Glyph name="mail" size={14} /> 이메일
-            </span>
-            {detail.email && canSee(detail.email.visibility) ? <span className="text-ink-900">{detail.email.value}</span> : <Locked />}
-          </li>
-          <li className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-ink-700">
-              <Glyph name="comment" size={14} /> 전화번호
-            </span>
-            {detail.phone && canSee(detail.phone.visibility) ? <span className="text-ink-900">{detail.phone.value}</span> : <Locked />}
-          </li>
-        </ul>
       </Section>
 
       <Section title="경력" onEdit={onEdit && (() => onEdit("career"))}>
@@ -160,26 +128,6 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
         )}
       </Section>
 
-      <Section title="기술 · 키워드" onEdit={onEdit && (() => onEdit("skills"))}>
-        <div className="flex flex-wrap gap-2">
-          {detail.repSkills.map((s) => (
-            <Tag key={s} className="font-semibold">
-              <Icon name="star-filled" size={11} className="mr-1" /> {s}
-            </Tag>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(skillsOpen ? detail.skills : detail.skills.slice(0, 6)).map((s) => (
-            <Tag key={s}>{s}</Tag>
-          ))}
-          {detail.skills.length > 6 && (
-            <button type="button" onClick={() => setSkillsOpen((o) => !o)} className="text-[12px] text-ink-500 underline underline-offset-2">
-              {skillsOpen ? "접기" : `+${detail.skills.length - 6}개 더 보기`}
-            </button>
-          )}
-        </div>
-      </Section>
-
       <Section title="자격증·수상·대외활동·언어" onEdit={onEdit && (() => onEdit("certs"))}>
         {detail.certs.length === 0 ? (
           <Empty text={mine ? "자격증·수상 이력을 추가해보세요" : "등록된 항목이 없어요"} />
@@ -194,15 +142,45 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
           </dl>
         )}
       </Section>
+      <Section title="외부 링크·연락처" onEdit={onEdit && (() => onEdit("contact"))}>
+        <ul className="flex flex-col gap-3 text-[13px]">
+          {detail.links.map((l) => (
+            <li key={l.label} className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-ink-700">
+                <Glyph name="link" size={14} /> {l.label}
+              </span>
+              {canSee(l.visibility) ? (
+                <a href={`https://${l.url}`} target="_blank" rel="noreferrer" className="text-ink-900 hover:underline">
+                  {l.url}
+                </a>
+              ) : (
+                <Locked />
+              )}
+            </li>
+          ))}
+          <li className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-ink-700">
+              <Glyph name="mail" size={14} /> 이메일
+            </span>
+            {detail.email && canSee(detail.email.visibility) ? <span className="text-ink-900">{detail.email.value}</span> : <Locked />}
+          </li>
+          <li className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-ink-700">
+              <Glyph name="comment" size={14} /> 전화번호
+            </span>
+            {detail.phone && canSee(detail.phone.visibility) ? <span className="text-ink-900">{detail.phone.value}</span> : <Locked />}
+          </li>
+        </ul>
+      </Section>
     </>
   );
 }
 
 function Section({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit?: () => void }) {
   return (
-    <Card as="section" className="flex flex-col gap-4 p-6">
+    <Card as="section" className="flex flex-col gap-4 rounded-[10px] p-[30px]">
       <div className="flex items-center justify-between">
-        <h2 className="text-[18px] font-bold text-ink-900">{title}</h2>
+        <h2 className="t-title3 text-ink-900">{title}</h2>
         {onEdit && (
           <button type="button" aria-label={`${title} 편집`} onClick={onEdit} className="rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
             <Glyph name="edit" size={18} />
