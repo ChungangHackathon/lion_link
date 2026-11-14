@@ -19,6 +19,7 @@ import { ConfirmModal } from "@/components/ui/Modal";
 import { Card, EmptyState, ProtoButton, Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 import { AlumniPicker } from "@/components/domain/AlumniPicker";
+import { usePostAttachments } from "@/components/domain/PostAttachments";
 
 export default function NewPostPage() {
   return (
@@ -91,6 +92,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
   const [notify, setNotify] = useState<Id | null>(null); // CF-14 → post id
   const [invite, setInvite] = useState<Id | null>(null); // L-11 → post id
   const [saving, setSaving] = useState(false);
+  const attachments = usePostAttachments(editing?.files);
 
   const target = picked
     ? { name: picked.name, generation: picked.generation, part: picked.lionParts[0] ?? ("ETC" as const), acceptGroup: picked.coffeeChat.acceptGroup }
@@ -101,8 +103,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
   const locked = !!editing && (!!editing.meetup || !!editing.recruit) && members > 1;
   const lockedAll = !!editing?.recruit && editing.recruit.status !== "OPEN";
   const minCap = Math.max(2, editing?.meetup?.participantCount ?? editing?.recruit?.memberCount ?? 2);
-  const canInvite = !API_ENABLED; // 번개 초대(MEETUP-02) 연결 전
-  const dirty = title.length > 0 || body.length > 0;
+  const dirty = title.length > 0 || body.length > 0 || attachments.count > 0;
 
   const normalizedLinks = links.map(normalizeLink).filter((l): l is string => !!l);
   const badLink = normalizedLinks.some((l) => !isHttpUrl(l));
@@ -114,12 +115,12 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
       : cat === "RECRUIT"
         ? !!targetId && !!deadline && deadline >= todayKst() && cap >= minCap && cap <= 5
         : true;
-  const valid = validBase && validExtra;
+  const valid = validBase && validExtra && !attachments.uploading;
 
   const submit = async () => {
     if (!valid || saving) return;
     setSaving(true);
-    const base = { category: cat, title: title.trim(), content: body.trim(), links: normalizedLinks };
+    const base = { category: cat, title: title.trim(), content: body.trim(), links: normalizedLinks, files: attachments.files };
     const meetup = cat === "MEETUP" ? { meetAt: toKstDateTime(meetDate, meetTime), place: place.trim(), capacity: cap } : undefined;
     try {
       if (editing) {
@@ -139,7 +140,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
       if (meetup) req.meetup = { ...meetup, companionIds: companions.length ? companions.map((a) => a.id) : undefined };
       if (cat === "RECRUIT") req.recruit = { seniorId: targetId!, capacity: cap, deadline };
       const res = await service.create(req);
-      if (cat === "MEETUP" && canInvite) {
+      if (cat === "MEETUP") {
         setNotify(res.id);
         return;
       }
@@ -203,8 +204,8 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
 
         <div className="flex items-center justify-between border-y border-line-200 py-3">
           <div className="flex gap-4">
-            <ToolButton icon="image" label="사진" onClick={() => toast("사진 올리기는 백엔드 연결 후 동작해요")} />
-            <ToolButton icon="clip" label="파일" onClick={() => toast("파일 첨부는 백엔드 연결 후 동작해요")} />
+            <ToolButton icon="image" label="사진" onClick={attachments.pickImage} />
+            <ToolButton icon="clip" label="파일" onClick={attachments.pickFile} />
             <ToolButton icon="link" label="링크" onClick={() => links.length < 3 && setLinks((x) => (x[x.length - 1] === "" ? x : [...x, ""]))} />
           </div>
           {cat === "FREE" && !editing && (
@@ -289,12 +290,10 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         </div>
       )}
 
-      {/* 이미지·첨부 미리보기 */}
-      <div className="flex gap-3">
-        <button type="button" onClick={() => toast("사진 올리기는 백엔드 연결 후 동작해요")} aria-label="사진 추가" className="grid size-[64px] place-items-center rounded-[8px] border border-line-200 bg-white text-ink-500 hover:bg-bg-50">
-          <Icon name="plus" size={22} />
-        </button>
-      </div>
+      {/* 이미지·첨부 미리보기 (FILE-01) */}
+      {attachments.inputs}
+      {attachments.view}
+      {attachments.uploading && <p className="-mt-3 t-caption2 text-ink-500">파일을 올리는 중이에요. 다 올라가면 등록할 수 있어요.</p>}
       {links.map((l, i) => (
         <div key={i} className={cn("flex items-center gap-3 rounded-[8px] border px-4 py-3", l.trim() && !isHttpUrl(normalizeLink(l) ?? "") ? "border-orange" : "border-line-200")}>
           <Icon name="link" size={18} className="text-ink-700" />
@@ -332,7 +331,26 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         cancelLabel="나중에"
       />
       {/* ◇[O] L-11 번개 초대 알림 보내기 */}
-      <AlumniPicker open={!!invite} onClose={() => { const id = invite; setInvite(null); router.push(`/community/${id}`); }} onConfirm={(ids) => { toast(`${ids.length}명에게 초대 알림을 보냈어요`); }} max={20} title="번개 초대 알림 보내기" description="최대 20명까지 보낼 수 있어요" confirmLabel="알림 보내기" />
+      <AlumniPicker
+        open={!!invite}
+        onClose={() => {
+          const id = invite;
+          setInvite(null);
+          router.push(`/community/${id}`);
+        }}
+        onConfirm={(ids) => {
+          if (!invite) return;
+          service.inviteToMeetup(invite, ids).then(
+            (res) => toast(res.sentCount > 0 ? `${res.sentCount}명에게 초대 알림을 보냈어요` : "이미 참여했거나 초대한 동문이에요"),
+            (e) => toast(errorMessage(e), { kind: "error" }),
+          );
+        }}
+        max={20}
+        title="번개 초대 알림 보내기"
+        description="최대 20명까지 보낼 수 있어요. 자동으로 참여되지는 않아요."
+        confirmLabel="알림 보내기"
+        exclude={companions.map((a) => a.id)}
+      />
     </div>
   );
 }

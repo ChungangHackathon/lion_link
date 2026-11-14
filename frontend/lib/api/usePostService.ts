@@ -5,7 +5,7 @@ import { useStore } from "@/lib/store";
 import { POPULAR_KEYWORDS } from "@/lib/mock/posts";
 import { API_ENABLED, type Page, type Slice } from "./client";
 import * as posts from "./posts";
-import type { CategoryCounts, Id, LikeResult, MeetupParticipation, PopularKeyword, PostComment, PostDetail, PostListQuery, PostSummary, PostUpdateRequest, PostWriteRequest } from "./posts";
+import type { CategoryCounts, Id, LikeResult, MeetupParticipation, PopularKeyword, PostComment, PostDetail, PostFileInput, PostListQuery, PostSummary, PostUpdateRequest, PostWriteRequest, RecruitParticipation, UploadType } from "./posts";
 import * as mock from "./mock/posts";
 
 /**
@@ -25,6 +25,9 @@ export interface PostService {
   addComment: (postId: Id, content: string) => Promise<PostComment>;
   removeComment: (postId: Id, commentId: Id) => Promise<void>;
   setMeetupJoined: (postId: Id, joined: boolean) => Promise<MeetupParticipation>;
+  inviteToMeetup: (postId: Id, userIds: Id[]) => Promise<{ sentCount: number; skippedUserIds: Id[] }>;
+  joinRecruit: (postId: Id) => Promise<RecruitParticipation>;
+  uploadFile: (type: UploadType, file: File) => Promise<PostFileInput>;
 }
 
 const apiService: PostService = {
@@ -40,6 +43,9 @@ const apiService: PostService = {
   addComment: posts.createComment,
   removeComment: posts.deleteComment,
   setMeetupJoined: posts.setMeetupJoined,
+  inviteToMeetup: posts.inviteToMeetup,
+  joinRecruit: posts.joinRecruit,
+  uploadFile: posts.uploadFile,
 };
 
 export function usePostService(): PostService {
@@ -60,6 +66,9 @@ export function usePostService(): PostService {
       addComment: (postId, content) => mock.mockAddComment(state, store, postId, content),
       removeComment: (postId, commentId) => mock.mockRemoveComment(state, store, postId, commentId),
       setMeetupJoined: (postId, joined) => mock.mockSetMeetupJoined(state, store, postId, joined),
+      inviteToMeetup: (postId, userIds) => mock.mockInviteToMeetup(state, postId, userIds),
+      joinRecruit: (postId) => mock.mockJoinRecruit(state, store, postId),
+      uploadFile: (type, file) => mock.mockUploadFile(type, file),
     };
   }, [store]);
 }

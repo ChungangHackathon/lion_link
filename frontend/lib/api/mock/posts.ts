@@ -9,7 +9,7 @@ import { ME_ID } from "@/lib/mock/users";
 import type { Page, Slice } from "../client";
 import { ApiError } from "../client";
 import type { ApiLionPart } from "../profile";
-import type { CategoryCounts, Id, LikeResult, MeetupParticipation, MeetupStatus, PostAuthor, PostComment, PostDetail, PostFile, PostListQuery, PostMember, PostSummary, PostUpdateRequest, PostWriteRequest } from "../posts";
+import type { CategoryCounts, Id, LikeResult, MeetupParticipation, MeetupStatus, PostAuthor, PostComment, PostDetail, PostFile, PostFileInput, PostListQuery, PostMember, PostSummary, PostUpdateRequest, PostWriteRequest, RecruitParticipation, UploadType } from "../posts";
 
 export interface MockPostState {
   posts: Post[];
@@ -49,6 +49,8 @@ function meetupStatus(m: NonNullable<Post["meetup"]>): MeetupStatus {
   if (new Date(m.at).getTime() < Date.now()) return "ENDED";
   return m.memberIds.length >= m.max ? "FULL" : "OPEN";
 }
+
+const formatSize = (n: number) => (n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
 
 /** "2.1MB" → bytes */
 function parseSize(size: string): number {
@@ -186,8 +188,8 @@ function toMockInput(body: PostWriteRequest, prev?: Post): Omit<Post, "id" | "vi
     keywords: body.title.split(/\s+/).filter((w) => w.length > 1).slice(0, 3),
     links: body.links ?? [],
     deadline: body.deadline ?? undefined,
-    images: prev?.images,
-    files: prev?.files,
+    images: body.files ? body.files.filter((f) => f.type === "IMAGE").map((f) => f.url) : prev?.images,
+    files: body.files ? body.files.filter((f) => f.type === "ATTACHMENT").map((f) => ({ name: f.name, size: formatSize(f.size) })) : prev?.files,
     meetup: body.meetup
       ? { at: new Date(body.meetup.meetAt).toISOString(), place: body.meetup.place, max: body.meetup.capacity, memberIds: prev?.meetup?.memberIds ?? [ME_ID, ...(body.meetup.companionIds ?? []).map(String)] }
       : undefined,
@@ -220,6 +222,7 @@ export function mockUpdatePost(state: MockPostState, actions: MockPostActions, i
       category === "RECRUIT"
         ? { seniorId: patch.recruit?.seniorId ?? prev.recruit?.targetId ?? "", capacity: patch.recruit?.capacity ?? prev.recruit?.max ?? 2, deadline: patch.recruit?.deadline ?? prev.recruit?.deadline.slice(0, 10) ?? "" }
         : undefined,
+    files: patch.files,
   };
   actions.updatePost(prev.id, { ...toMockInput(body, prev), edited: true });
   return delay({ id, title: body.title, updatedAt: new Date().toISOString() });
@@ -315,4 +318,34 @@ export function mockSetMeetupJoined(state: MockPostState, actions: MockPostActio
     status: meetupStatus(next),
     members: memberIds.map((id) => member(state, id, post.authorId)),
   });
+}
+
+// ---------------------------------------------------------------------------
+// 번개 초대 · 커피챗 모집 참여 · 파일 업로드
+// ---------------------------------------------------------------------------
+
+export function mockInviteToMeetup(state: MockPostState, postId: Id, userIds: Id[]) {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post?.meetup) return Promise.reject(notFound());
+  const members = post.meetup.memberIds;
+  const skipped = userIds.filter((id) => members.includes(String(id)) || String(id) === ME_ID);
+  return delay({ sentCount: userIds.length - skipped.length, skippedUserIds: skipped });
+}
+
+export function mockJoinRecruit(state: MockPostState, actions: MockPostActions, postId: Id): Promise<RecruitParticipation> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post) return Promise.reject(notFound());
+  if (!post.recruit) return Promise.reject(new ApiError(404, "RECRUIT_NOT_FOUND", "커피챗 모집 글이 아니에요."));
+  const r = post.recruit;
+  if (r.targetId === ME_ID) return Promise.reject(new ApiError(403, "SENIOR_CANNOT_JOIN", "신청받을 사자는 참여할 수 없어요."));
+  if (r.status !== "OPEN") return Promise.reject(new ApiError(409, "RECRUIT_CLOSED", "마감된 모집이에요."));
+  if (!r.memberIds.includes(ME_ID) && r.memberIds.length >= r.max) return Promise.reject(new ApiError(409, "RECRUIT_FULL", "정원이 다 찼어요."));
+  const memberIds = r.memberIds.includes(ME_ID) ? r.memberIds : [...r.memberIds, ME_ID];
+  actions.updatePost(post.id, { recruit: { ...r, memberIds } });
+  return delay({ postId, joined: true, memberCount: memberIds.length, capacity: r.max, status: r.status, members: memberIds.map((id) => member(state, id, post.authorId)) });
+}
+
+/** 프로토타입: 서버 없이 브라우저 안에서만 보이는 주소를 만든다 */
+export function mockUploadFile(type: UploadType, file: File): Promise<PostFileInput> {
+  return delay({ type, url: URL.createObjectURL(file), name: file.name, size: file.size });
 }
