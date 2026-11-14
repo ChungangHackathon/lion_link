@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { API_ENABLED } from "@/lib/api/client";
+import { useApi } from "@/lib/api/useApi";
+import { useNotificationService } from "@/lib/api/useNotificationService";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/lib/session";
 import { useStore } from "@/lib/store";
@@ -24,13 +27,25 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, user } = useSession();
-  const { coffeeChats, rooms, notifications } = useStore();
+  const { coffeeChats, rooms } = useStore();
   const [open, setOpen] = useState<"bell" | "me" | null>(null);
 
   const mode = variant ?? (session.status === "PENDING" ? "pending" : "default");
   const pendingCoffee = coffeeChats.filter((c) => c.receiverId === ME_ID && c.status === "PENDING").length;
   const unreadChat = rooms.reduce((n, r) => n + r.unread, 0);
-  const unreadNoti = notifications.filter((n) => !n.read).length;
+
+  // 종 배지: 안 읽은 알림 수 (NOTI-01 unreadCounts.all). 승인 회원만 부를 수 있다
+  const notiService = useNotificationService();
+  const badgeEnabled = mode === "default" && session.loggedIn && session.status === "APPROVED";
+  const badge = useApi((signal) => notiService.list("ALL", signal), [notiService], badgeEnabled);
+  const unreadNoti = badgeEnabled ? badge.data?.unreadCounts.all ?? 0 : 0;
+  const reloadBadge = badge.reload;
+  useEffect(() => {
+    // 실시간 알림 연결 전까지는 1분마다 새로 확인한다
+    if (!API_ENABLED || !badgeEnabled) return;
+    const timer = setInterval(reloadBadge, 60_000);
+    return () => clearInterval(timer);
+  }, [badgeEnabled, reloadBadge]);
 
   const NAV = [
     { href: "/alumni", label: "동문 찾기", count: 0 },
@@ -74,6 +89,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
                 </button>
                 <Popover open={open === "bell"} onClose={() => setOpen(null)} className="w-[380px]">
                   <NotificationDropdown
+                    onChanged={reloadBadge}
                     onNavigate={(href) => {
                       setOpen(null);
                       router.push(href);
