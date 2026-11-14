@@ -1,25 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/layout/AuthShell";
 import { Button, Chip } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type LionPart, type ProfileStatus } from "@/lib/types";
+import { INTEREST_CODE, INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type InterestLabel, type ProfileStatus } from "@/lib/types";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/Toast";
+import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
+import { landingPath } from "@/lib/api/auth";
+import { isHttpUrl, normalizeLink, submitOnboarding, type ApiLionPart, type OnboardingRequest } from "@/lib/api/profile";
 
-const PARTS = Object.keys(LION_PART_LABEL) as LionPart[];
+/** 멋사 파트는 기타 없이 4개 (docs/api.md 2. 프로필 열거값) */
+const PARTS = (Object.keys(LION_PART_LABEL) as (keyof typeof LION_PART_LABEL)[]).filter((p): p is ApiLionPart => p !== "ETC");
 const STATUSES = Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[];
 
 /** ★ O-01 기본 정보 입력 / 빈 상태 → ◇ O-02 재직 선택 + 입력 완료 → A-13 */
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user } = useSession();
+  const { user, me, ready, session, setMe, refreshMe } = useSession();
   const toast = useToast();
-  const [parts, setParts] = useState<LionPart[]>([]);
+  const [parts, setParts] = useState<ApiLionPart[]>([]);
   const [status, setStatus] = useState<ProfileStatus | null>(null);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<InterestLabel[]>([]);
   const [link, setLink] = useState("");
   const [intro, setIntro] = useState("");
   const [company, setCompany] = useState("");
@@ -27,19 +31,60 @@ export default function OnboardingPage() {
   const [staff, setStaff] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const togglePart = (p: LionPart) => {
+  // 로그인 전이거나 이미 입력했으면 맞는 화면으로 (API 모드)
+  useEffect(() => {
+    if (!API_ENABLED || !ready) return;
+    if (!session.loggedIn) router.replace("/login");
+    else if (me && (me.profileCompleted || me.status === "REJECTED")) router.replace(landingPath(me));
+  }, [ready, session.loggedIn, me, router]);
+
+  const togglePart = (p: ApiLionPart) => {
     setParts((s) => (s.includes(p) ? s.filter((x) => x !== p) : s.length >= 2 ? (toast("멋사 파트는 최대 2개까지 선택할 수 있어요", { kind: "error" }), s) : [...s, p]));
   };
-  const toggleInterest = (v: string) => {
+  const toggleInterest = (v: InterestLabel) => {
     setInterests((s) => (s.includes(v) ? s.filter((x) => x !== v) : s.length >= 3 ? (toast("관심 분야는 최대 3개까지 선택할 수 있어요", { kind: "error" }), s) : [...s, v]));
   };
 
   const needsCompany = status === "EMPLOYED" || status === "FOUNDER";
-  const valid = parts.length > 0 && !!status && interests.length > 0 && (!needsCompany || (company.trim() && role.trim())) && intro.length <= 100;
+  const companyOk = company.trim().length <= 30 && role.trim().length <= 30;
+  const linkValue = normalizeLink(link);
+  const linkOk = !linkValue || isHttpUrl(linkValue);
+  const valid = parts.length > 0 && !!status && interests.length > 0 && (!needsCompany || (company.trim() && role.trim())) && companyOk && linkOk && intro.length <= 100;
 
-  const submit = () => {
+  const submit = async () => {
+    if (!valid || !status) return;
     setLoading(true);
-    setTimeout(() => router.push("/pending"), 500);
+
+    if (!API_ENABLED) {
+      setTimeout(() => router.push("/pending"), 500);
+      return;
+    }
+
+    const generation = me?.generation ?? user?.generation;
+    const body: OnboardingRequest = {
+      lionParts: parts,
+      status,
+      interests: interests.map((v) => INTEREST_CODE[v]),
+      company: needsCompany && company.trim() ? company.trim() : undefined,
+      jobTitle: needsCompany && role.trim() ? role.trim() : undefined,
+      link: linkValue,
+      headline: intro.trim() || undefined,
+      // "운영진으로 활동했어요" → 가입 기수에 운영진 활동 1줄 (다른 기수는 프로필 편집에서 추가)
+      staffActivities: staff && generation ? [{ generation, parts }] : undefined,
+    };
+
+    try {
+      const next = await submitOnboarding(body);
+      setMe(next);
+      router.push(landingPath(next));
+    } catch (error) {
+      toast(errorMessage(error), { kind: "error" });
+      if (isApiError(error, "ALREADY_COMPLETED")) {
+        const latest = await refreshMe();
+        if (latest) router.replace(landingPath(latest));
+      }
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,8 +116,8 @@ export default function OnboardingPage() {
       {needsCompany && (
         <div className="flex flex-col gap-3 rounded-[8px] border border-line-200 bg-bg-50 p-4">
           <div className="flex gap-3">
-            <Input label={status === "FOUNDER" ? "회사·팀 이름" : "회사명"} placeholder="예) 핀테크 스타트업" value={company} onChange={(e) => setCompany(e.target.value)} required />
-            <Input label="직무" placeholder="예) 백엔드 개발자" value={role} onChange={(e) => setRole(e.target.value)} required />
+            <Input label={status === "FOUNDER" ? "회사·팀 이름" : "회사명"} placeholder="예) 핀테크 스타트업" value={company} onChange={(e) => setCompany(e.target.value)} required error={company.trim().length > 30 ? "30자 이내로 적어주세요" : undefined} />
+            <Input label="직무" placeholder="예) 백엔드 개발자" value={role} onChange={(e) => setRole(e.target.value)} required error={role.trim().length > 30 ? "30자 이내로 적어주세요" : undefined} />
           </div>
           <p className="t-caption1 text-ink-500">회사명 공개 범위는 나중에 프로필 편집에서 바꿀 수 있어요.</p>
         </div>
@@ -86,7 +131,7 @@ export default function OnboardingPage() {
         ))}
       </Field>
 
-      <Input label="외부 링크 (선택)" placeholder="링크드인 · 깃허브 · 포트폴리오 등" value={link} onChange={(e) => setLink(e.target.value)} />
+      <Input label="외부 링크 (선택)" placeholder="링크드인 · 깃허브 · 포트폴리오 등" value={link} onChange={(e) => setLink(e.target.value)} error={!linkOk ? "올바른 주소를 입력해주세요 (예: github.com/아이디)" : undefined} />
       <Input label="한 줄 소개 (선택)" placeholder="예) 핀테크 스타트업 3년 차 백엔드 개발자, 사이드 프로젝트 같이 할 사람 찾아요" value={intro} onChange={(e) => setIntro(e.target.value)} counter={{ value: intro.length, max: 100 }} error={intro.length > 100 ? "100자 이내로 적어주세요" : undefined} />
 
       {/* 운영진 활동 (v2.9 §3) */}

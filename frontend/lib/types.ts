@@ -42,6 +42,22 @@ export const INTEREST_OPTIONS = [
   "창업",
   "기타",
 ] as const;
+export type InterestLabel = (typeof INTEREST_OPTIONS)[number];
+
+/** 관심 분야 API 코드 (backend domain/profile/Interest) */
+export type InterestCode = "PLANNING_PM" | "DESIGN" | "FRONTEND" | "BACKEND" | "APP" | "DATA_AI" | "INFRA_DEVOPS" | "MARKETING" | "STARTUP" | "ETC";
+export const INTEREST_CODE: Record<InterestLabel, InterestCode> = {
+  "기획·PM": "PLANNING_PM",
+  디자인: "DESIGN",
+  프론트엔드: "FRONTEND",
+  백엔드: "BACKEND",
+  앱: "APP",
+  "데이터·AI": "DATA_AI",
+  "인프라·DevOps": "INFRA_DEVOPS",
+  마케팅: "MARKETING",
+  창업: "STARTUP",
+  기타: "ETC",
+};
 
 /** 커피챗 받기 상태 (CS-01 · Badge/Availability) */
 export type ReceiveMode = "OPEN" | "CLOSED" | "RESTING" | "SCHEDULED";
