@@ -71,7 +71,7 @@ function duration(start: string | null, end: string | null, current?: boolean): 
   return [y && `${y}년`, m && `${m}개월`].filter(Boolean).join(" ");
 }
 
-function slotsText(slots: { day: Weekday; times: TimeSlot[] }[]): string {
+export function slotsText(slots: { day: Weekday; times: TimeSlot[] }[]): string {
   if (!slots.length) return "-";
   return slots.map((s) => `${DAY_LABEL[s.day]} ${s.times.map((t) => TIME_LABEL[t]).join("·")}`).join(", ");
 }

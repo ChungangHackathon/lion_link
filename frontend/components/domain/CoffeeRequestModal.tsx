@@ -3,38 +3,50 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import type { Alumni, MeetingMode } from "@/lib/types";
-import { useStore } from "@/lib/store";
-import { profileDetail } from "@/lib/mock/profile";
+import type { MeetingMode } from "@/lib/types";
+import { LION_PART_LABEL } from "@/lib/types";
+import { useSession } from "@/lib/session";
 import { ME_ID } from "@/lib/mock/users";
+import { errorMessage } from "@/lib/api/client";
+import type { AlumniSummary, CoffeeTopic } from "@/lib/api/alumni";
+import { COFFEE_TOPIC_LABEL } from "@/lib/api/coffee";
+import type { Id } from "@/lib/api/posts";
+import { useApi } from "@/lib/api/useApi";
+import { useCoffeeService } from "@/lib/api/useCoffeeService";
 import { Avatar } from "@/components/ui/Avatar";
 import { OutlineTag } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
 import { Glyph } from "@/components/ui/Icon";
 import { Input, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
+import { EmptyState, Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 import { AlumniPicker } from "./AlumniPicker";
-import { summaryFromMock } from "@/lib/api/mock/alumni";
 
-const TOPICS = ["커리어·이직", "취업 준비", "프로젝트·개발", "기타(직접 입력)"];
 const REASON_PRESETS = ["취업 준비 중인데 …", "프로젝트를 하다가 막힌 부분이 있는데 …", "이직을 고민하고 있는데 …"];
+const ETC = "ETC" as const;
+
+/** 함께 신청할 동문 표시용 */
+export type RequestMember = Pick<AlumniSummary, "id" | "name" | "generation" | "lionParts">;
 
 /**
- * ★[O] R-01 커피챗 신청 모달 / 1:1 · ◇ R-01b 여러 명 · R-02 동문 추가 · R-05 미리보기.
+ * ★[O] R-01 커피챗 신청 모달 / 1:1 · ◇ R-01b 여러 명 · R-02 동문 추가 · R-05 미리보기. (COFFEE-01)
  * 취소(변경 있음) → C-08 이탈 확인. 신청 보내기 → M-02.
- * `fromRecruitId` + `preMembers`: 모집글(K-01)에서 온 신청 — 멤버 자동 채움·수정 불가(R-04).
+ * 받는 사자의 커피챗 설정(주제·시간대·여러 명 신청)은 열 때 불러온다.
+ * `fromRecruitId` + `preMembers`: 모집글(K-01)에서 온 신청 — 멤버 자동 채움·수정 불가(R-04). 서버가 모집 참여자로 정한다.
  */
-export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecruitId }: { open: boolean; onClose: () => void; target: Alumni; preMembers?: string[]; fromRecruitId?: string }) {
+export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecruitId, onSent }: { open: boolean; onClose: () => void; target: { id: Id; name: string }; preMembers?: RequestMember[]; fromRecruitId?: Id; onSent?: (coffeeChatId: Id) => void }) {
   const router = useRouter();
   const toast = useToast();
-  const { alumni, createCoffeeChat } = useStore();
-  const detail = profileDetail(target.id);
+  const service = useCoffeeService();
+  const { user } = useSession();
+  const info = useApi(() => service.target(target.id), [service, target.id], open);
+  const detail = info.data;
 
   const [guide, setGuide] = useState(false);
-  const [members, setMembers] = useState<string[]>(preMembers ?? []);
+  const [members, setMembers] = useState<RequestMember[]>(preMembers ?? []);
   const [picker, setPicker] = useState(false);
-  const [topic, setTopic] = useState<string | null>(null);
+  const [topic, setTopic] = useState<CoffeeTopic | null>(null);
   const [topicEtc, setTopicEtc] = useState("");
   const [reason, setReason] = useState("");
   const [mode, setMode] = useState<MeetingMode | null>(null);
@@ -45,31 +57,36 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
   const [sending, setSending] = useState(false);
 
   const dirty = !!topic || reason.length > 0 || !!mode || memo.length > 0 || questions.some((q) => q.length > 0) || (members.length > 0 && !preMembers);
-  const topicValue = topic === "기타(직접 입력)" ? topicEtc.trim() : topic;
-  const qErrors = questions.map((q) => (q.length > 0 && (q.length < 5 || q.length > 200) ? "5~200자로 입력해주세요" : undefined));
-  const valid = !!topicValue && reason.trim().length >= 10 && reason.length <= 500 && !!mode && memo.length <= 100 && qErrors.every((e) => !e);
+  const topicOk = !!topic && (topic !== ETC || (topicEtc.trim().length >= 1 && topicEtc.trim().length <= 30));
+  const topicLabel = topic === ETC ? topicEtc.trim() : topic ? COFFEE_TOPIC_LABEL[topic] : "";
+  const qErrors = questions.map((q) => (q.trim().length > 0 && (q.trim().length < 5 || q.trim().length > 200) ? "5~200자로 입력해주세요" : undefined));
+  const valid = topicOk && reason.trim().length >= 10 && reason.trim().length <= 500 && !!mode && memo.length <= 100 && qErrors.every((e) => !e);
 
   const requestClose = () => (dirty ? setLeave(true) : onClose());
 
-  const submit = () => {
-    if (!valid) return;
+  const submit = async () => {
+    if (!valid || sending) return;
     setSending(true);
-    setTimeout(() => {
-      createCoffeeChat({
-        receiverId: target.id,
-        memberIds: members,
-        topic: topicValue!,
-        message: reason.trim(),
-        questions: questions.filter((q) => q.trim()),
-        mode: mode!,
-        candidates: [],
+    try {
+      const res = await service.request({
+        receiverId: fromRecruitId ? undefined : target.id,
+        topic: topic!,
+        topicCustom: topic === ETC ? topicEtc.trim() : undefined,
+        reason: reason.trim(),
+        questions: questions.map((q) => q.trim()).filter(Boolean),
+        preferredMode: mode!,
+        scheduleNote: memo.trim() || undefined,
+        memberIds: fromRecruitId || members.length === 0 ? undefined : members.map((m) => m.id),
         fromRecruitId,
       });
-      setSending(false);
+      onSent?.(res.id);
       onClose();
-      toast("신청을 보냈어요. 사자가 7일 안에 답해요.");
-      router.push("/coffee?tab=sent");
-    }, 500);
+      toast("신청을 보냈어요. 사자가 14일 안에 답해요.");
+      router.push(`/coffee?tab=sent&id=${res.id}`);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      setSending(false);
+    }
   };
 
   const group = members.length > 0;
@@ -91,29 +108,33 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
                 <li>사자가 도와줄 수 있는 주제 안에서 질문을 구체적으로 적어주세요.</li>
                 <li>내 상황(기수·현재 상태·준비 중인 것)을 한두 줄로 먼저 소개하면 좋아요.</li>
                 <li>가능한 시간대를 참고해 희망 일정을 남기면 수락이 빨라요.</li>
-                <li>7일 안에 답이 없으면 자동 만료돼요.</li>
+                <li>14일 안에 답이 없으면 자동 만료돼요.</li>
               </ul>
             )}
           </div>
 
           {/* 사자 정보 */}
-          <div className="flex flex-col gap-5 rounded-[8px] border border-line-200 bg-bg-50 px-2.5 py-4">
-            <div className="flex flex-col gap-2.5">
-              <p className="t-label1 text-ink-700">사자가 도와줄 수 있는 주제</p>
-              <div className="flex flex-wrap gap-1.5">
-                {detail.coffeeTopics.map((t) => (
-                  <OutlineTag key={t}>{t}</OutlineTag>
-                ))}
+          {info.error && !detail ? (
+            <EmptyState compact title="사자 정보를 불러오지 못했어요" description={errorMessage(info.error)} action={{ label: "다시 시도", onClick: info.reload }} />
+          ) : !detail ? (
+            <Skeleton className="h-[120px] w-full" />
+          ) : (
+            <div className="flex flex-col gap-5 rounded-[8px] border border-line-200 bg-bg-50 px-2.5 py-4">
+              <div className="flex flex-col gap-2.5">
+                <p className="t-label1 text-ink-700">사자가 도와줄 수 있는 주제</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {detail.topics.length ? detail.topics.map((t) => <OutlineTag key={t}>{COFFEE_TOPIC_LABEL[t]}</OutlineTag>) : <span className="text-[13px] text-ink-500">정해 둔 주제가 없어요. 기타로 적어주세요.</span>}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <p className="t-label1 text-ink-700">가능한 시간대</p>
+                <p className="text-[13px] font-medium text-ink-600">{detail.times}</p>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <p className="t-label1 text-ink-700">가능한 시간대</p>
-              <p className="text-[13px] font-medium text-ink-600">{detail.coffeeTimes}</p>
-            </div>
-          </div>
+          )}
 
           {/* 함께 신청할 동문 (R-01b / R-02 / R-04) */}
-          {target.allowGroup && (
+          {(detail?.acceptGroup || !!fromRecruitId) && (
             <div className="flex flex-col gap-3 rounded-[8px] border border-line-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
@@ -128,21 +149,17 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
               </div>
               {group && (
                 <div className="flex flex-wrap gap-2">
-                  {members.map((id) => {
-                    const a = alumni.find((x) => x.id === id);
-                    if (!a) return null;
-                    return (
-                      <span key={id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold text-ink-900">
-                        <Avatar name={a.name} part={a.part} size={32} className="!size-6 !text-[11px]" />
-                        {a.name} · {a.generation}기
-                        {!fromRecruitId && (
-                          <button type="button" aria-label="제외" onClick={() => setMembers((m) => m.filter((x) => x !== id))} className="text-ink-400 hover:text-ink-900">
-                            ✕
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
+                  {members.map((a) => (
+                    <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold text-ink-900">
+                      <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" />
+                      {a.name} · {a.generation}기
+                      {!fromRecruitId && (
+                        <button type="button" aria-label={`${a.name} 제외`} onClick={() => setMembers((m) => m.filter((x) => x.id !== a.id))} className="text-ink-400 hover:text-ink-900">
+                          ✕
+                        </button>
+                      )}
+                    </span>
+                  ))}
                 </div>
               )}
               {group && <p className="t-caption1 text-ink-500">수락되면 함께 신청한 동문 모두가 단체 채팅방에 초대돼요. 대표 신청자는 나예요.</p>}
@@ -152,13 +169,13 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
           {/* 상담 주제 */}
           <Section label="상담 주제 *">
             <div className="flex flex-wrap gap-2">
-              {TOPICS.map((t) => (
+              {[...(detail?.topics ?? []), ETC].map((t) => (
                 <Chip key={t} selected={topic === t} onClick={() => setTopic(t)}>
-                  {t}
+                  {t === ETC ? "기타(직접 입력)" : COFFEE_TOPIC_LABEL[t]}
                 </Chip>
               ))}
             </div>
-            {topic === "기타(직접 입력)" && <Input placeholder="주제를 직접 입력해주세요" value={topicEtc} onChange={(e) => setTopicEtc(e.target.value)} counter={{ value: topicEtc.length, max: 30 }} />}
+            {topic === ETC && <Input placeholder="주제를 직접 입력해주세요" value={topicEtc} onChange={(e) => setTopicEtc(e.target.value)} counter={{ value: topicEtc.length, max: 30 }} error={topicEtc.trim().length > 30 ? "30자 이내로 적어주세요" : undefined} />}
           </Section>
 
           {/* 신청 이유 */}
@@ -170,7 +187,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
                 </Chip>
               ))}
             </div>
-            <Textarea placeholder="사자님의 ○○ 경험이 궁금해서 신청했어요. 저는 지금 ..." rows={4} value={reason} onChange={(e) => setReason(e.target.value)} counter={{ value: reason.length, max: 500 }} error={reason.length > 500 ? "500자 이내로 적어주세요" : reason.length > 0 && reason.trim().length < 10 ? "10자 이상 적어주세요" : undefined} />
+            <Textarea placeholder="사자님의 ○○ 경험이 궁금해서 신청했어요. 저는 지금 ..." rows={4} value={reason} onChange={(e) => setReason(e.target.value)} counter={{ value: reason.length, max: 500 }} error={reason.trim().length > 500 ? "500자 이내로 적어주세요" : reason.length > 0 && reason.trim().length < 10 ? "10자 이상 적어주세요" : undefined} />
           </Section>
 
           <div className="grid grid-cols-[266px_1fr] gap-4">
@@ -222,12 +239,14 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
             <div className="flex flex-col gap-3 rounded-[8px] border border-primary/30 bg-part-be-bg/40 p-4 text-[14px] leading-6 text-ink-900">
               <p className="t-label2 text-primary">사자에게 이렇게 보여요</p>
               <div className="flex items-center gap-2">
-                <Avatar name="박중앙" part="FRONTEND" size={32} />
-                <span className="font-semibold">박중앙 · 13기 · 프론트엔드</span>
+                <Avatar name={user?.name} part={user?.part} size={32} />
+                <span className="font-semibold">
+                  {user?.name} · {user?.generation}기{user?.part && user.part !== "ETC" ? ` · ${LION_PART_LABEL[user.part]}` : ""}
+                </span>
                 {group && <span className="text-[12px] text-ink-500">외 {members.length}명</span>}
               </div>
               <p>
-                <b>주제</b> {topicValue || "—"} · <b>방식</b> {mode === "ONLINE" ? "온라인" : mode === "OFFLINE" ? "오프라인" : mode === "ANY" ? "상관없음" : "—"}
+                <b>주제</b> {topicLabel || "—"} · <b>방식</b> {mode === "ONLINE" ? "온라인" : mode === "OFFLINE" ? "오프라인" : mode === "ANY" ? "상관없음" : "—"}
               </p>
               <p className="whitespace-pre-line">{reason || "(신청 이유)"}</p>
               {memo && <p className="text-ink-500">희망 일정: {memo}</p>}
@@ -249,7 +268,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
               <Button variant="secondary" onClick={requestClose}>
                 취소
               </Button>
-              <Button disabled={!valid} loading={sending} onClick={submit} className="text-[16px]">
+              <Button disabled={!valid || !detail} loading={sending} onClick={submit} className="text-[16px]">
                 신청 보내기
               </Button>
             </div>
@@ -260,8 +279,8 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
       <AlumniPicker
         open={picker}
         onClose={() => setPicker(false)}
-        onConfirm={(ids) => setMembers(ids.map(String))}
-        initial={members.map((id) => alumni.find((a) => a.id === id)).filter((a) => !!a).map((a) => summaryFromMock(a!, []))}
+        onConfirm={(_, people) => setMembers(people)}
+        initial={members as AlumniSummary[]}
         max={4}
         title="함께 신청할 동문 추가"
         description="최대 4명 · 나 포함 5명까지"

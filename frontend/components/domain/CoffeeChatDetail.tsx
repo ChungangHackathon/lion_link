@@ -2,21 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
-import type { CoffeeChat, CoffeeChatRejectReason, CoffeeChatStatus } from "@/lib/types";
+import type { CoffeeChatRejectReason, CoffeeChatStatus } from "@/lib/types";
 import { COFFEE_REJECT_LABEL, COFFEE_STATUS_LABEL, LION_PART_LABEL, PROFILE_STATUS_LABEL } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { ME_ID } from "@/lib/mock/users";
 import { commonalities, timeLeft } from "@/lib/common";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
+import { personName, topicText, type CoffeeAction, type CoffeeChatDetail as CoffeeChatData } from "@/lib/api/coffee";
+import { useCoffeeService } from "@/lib/api/useCoffeeService";
 import { Avatar } from "@/components/ui/Avatar";
-import { StatusBadge, Tag } from "@/components/ui/Badge";
+import { StatusBadge } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Checkbox, Input, Radio, Select, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
-import { ProtoButton } from "@/components/ui/Misc";
+import { ProtoButton, Tooltip } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 
 const STEPS: { key: CoffeeChatStatus | "REQUEST"; label: string }[] = [
@@ -26,81 +29,92 @@ const STEPS: { key: CoffeeChatStatus | "REQUEST"; label: string }[] = [
   { key: "COMPLETED", label: "완료" },
 ];
 const STEP_INDEX: Record<CoffeeChatStatus, number> = { PENDING: 0, ACCEPTED: 1, SCHEDULED: 2, COMPLETED: 3, REJECTED: 0, CANCELED: 0, EXPIRED: 0 };
+const PENDING_TIP = "곧 연결될 기능이에요";
+/** 이번 작업(신청·목록·상세·신청 취소)에서 API로 연결한 동작. 나머지는 다음 이슈에서 연다 */
+const API_READY: CoffeeAction[] = ["WITHDRAW"];
 
 export const statusTone = (s: CoffeeChatStatus) => (s === "PENDING" ? "outline" : s === "SCHEDULED" || s === "COMPLETED" ? "filled" : "gray");
 
 /**
  * 커피챗 상세 — 내 커피챗 오른쪽 영역 (M-01 · M-02 · M-04). 전체 화면 상세(D-01~07)는 디자인에서 빠졌어요.
- * Buttons follow the ActionCard 역할 × 상태표 (D-08).
+ * 버튼은 서버가 준 actions(역할 × 상태표, D-08)대로 보여준다.
+ * onChanged: 상태가 바뀌면 부른다 (바뀐 상세를 주면 그걸로, 아니면 다시 불러온다).
  */
-export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; compact?: boolean; initialAction?: "accept" | "reject" | null }) {
+export function CoffeeChatDetail({ chat, initialAction, onChanged }: { chat: CoffeeChatData; compact?: boolean; initialAction?: "accept" | "reject" | null; onChanged?: (next?: CoffeeChatData) => void }) {
   const router = useRouter();
   const toast = useToast();
+  const service = useCoffeeService();
   const { alumni, acceptCoffeeChat, rejectCoffeeChat, cancelCoffeeChat, scheduleCoffeeChat, completeCoffeeChat, setSettings } = useStore();
-  const me = alumni.find((a) => a.id === ME_ID)!;
-  const isReceiver = chat.receiverId === ME_ID;
-  const other = alumni.find((a) => a.id === (isReceiver ? chat.requesterId : chat.receiverId));
-  const members = chat.memberIds.map((id) => alumni.find((a) => a.id === id)).filter(Boolean);
+  const isReceiver = chat.myRole === "RECEIVER";
+  const other = isReceiver ? chat.requester : chat.receiver;
+  const members = chat.members;
   const group = members.length > 0;
-  const [modal, setModal] = useState<"accept" | "reject" | "schedule" | "cancel" | "complete" | "cancelRequest" | null>(initialAction ?? null);
+  const can = (a: CoffeeAction) => chat.actions.includes(a);
+  const ready = (a: CoffeeAction) => !API_ENABLED || API_READY.includes(a);
+  const [modal, setModal] = useState<"accept" | "reject" | "schedule" | "cancel" | "complete" | "cancelRequest" | null>(initialAction && ready(initialAction === "accept" ? "ACCEPT" : "REJECT") ? initialAction : null);
   const [pastMeeting, setPastMeeting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (initialAction) setModal(initialAction);
-  }, [initialAction, chat.id]);
+  // 프로토타입 모드 전용: mock 동문으로 '현재 상태·나와의 공통점'을 보여준다 (API 상세에는 없는 값)
+  const me = API_ENABLED ? undefined : alumni.find((a) => a.id === ME_ID);
+  const mockOther = API_ENABLED || other.id === null ? undefined : alumni.find((a) => a.id === String(other.id));
+  const common = me && mockOther ? commonalities(me, mockOther) : null;
 
-  if (!other) return null;
-  const left = timeLeft(chat.expiresAt);
+  const part = other.lionParts?.[0] ?? "ETC";
+  const left = timeLeft(chat.expiresAt ?? undefined);
   const step = STEP_INDEX[chat.status];
   const ended = ["REJECTED", "CANCELED", "EXPIRED"].includes(chat.status);
-  const meetingPassed = chat.status === "SCHEDULED" && (pastMeeting || (chat.scheduledAt && new Date(chat.scheduledAt).getTime() < Date.now()));
+  const meetingPassed = chat.status === "SCHEDULED" && (pastMeeting || can("COMPLETE") || (!!chat.scheduledAt && new Date(chat.scheduledAt).getTime() < Date.now()));
   const daysToMeeting = chat.scheduledAt ? Math.ceil((new Date(chat.scheduledAt).getTime() - Date.now()) / 86_400_000) : 0;
 
   const subline =
-    chat.status === "PENDING" ? `${left.text} · ${chat.expiresAt ? formatDate(chat.expiresAt) : ""} 만료` : chat.status === "ACCEPTED" ? `${formatDate(chat.createdAt)} 수락` : chat.status === "SCHEDULED" ? (meetingPassed ? "만남 시각이 지났어요" : `만남까지 ${daysToMeeting}일`) : chat.status === "COMPLETED" ? `${chat.scheduledAt ? formatDate(chat.scheduledAt) : formatDate(chat.createdAt)} 완료` : formatDate(chat.createdAt);
+    chat.status === "PENDING"
+      ? `${left.text} · ${chat.expiresAt ? formatDate(chat.expiresAt) : ""} 만료`
+      : chat.status === "ACCEPTED"
+        ? `${formatDate(chat.acceptedAt ?? chat.createdAt)} 수락`
+        : chat.status === "SCHEDULED"
+          ? meetingPassed
+            ? "만남 시각이 지났어요"
+            : `만남까지 ${daysToMeeting}일`
+          : chat.status === "COMPLETED"
+            ? `${formatDate(chat.completedAt ?? chat.scheduledAt ?? chat.createdAt)} 완료`
+            : formatDate(chat.canceledAt ?? chat.rejectedAt ?? chat.createdAt);
 
   const room = chat.roomId ? `/chat/${chat.roomId}` : "/chat";
-  const common = commonalities(me, other);
+  const modeText = (m: string | null) => (m === "ONLINE" ? "온라인" : m === "OFFLINE" ? "오프라인" : "상관없음");
+
+  const withdraw = async () => {
+    setModal(null);
+    setBusy(true);
+    try {
+      const next = await service.withdraw(chat.id);
+      toast("신청을 취소했어요");
+      onChanged?.(next);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      if (isApiError(e) && e.status === 409) onChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   /** D-08 ActionCard 역할 × 상태표 — 상태 줄 오른쪽의 작은 버튼 */
   const actions = (
     <div className="flex shrink-0 items-center gap-2">
-      {chat.status === "PENDING" && isReceiver && (
-        <>
-          <Button size="S" variant="secondary" onClick={() => setModal("reject")}>
-            거절하기
-          </Button>
-          <Button size="S" onClick={() => setModal("accept")}>
-            수락하기
-          </Button>
-        </>
-      )}
-      {chat.status === "PENDING" && !isReceiver && (
-        <Button size="S" variant="secondary" onClick={() => setModal("cancelRequest")}>
-          신청 취소
-        </Button>
-      )}
-      {(chat.status === "ACCEPTED" || chat.status === "SCHEDULED") && (
-        <>
-          <Button size="S" variant="secondary" href={room}>
-            채팅으로 이동
-          </Button>
-          {meetingPassed ? (
-            <Button size="S" onClick={() => setModal("complete")}>
-              만남 완료
-            </Button>
-          ) : (
-            <Button size="S" variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} onClick={() => setModal("schedule")}>
-              {chat.status === "ACCEPTED" ? "일정 확정하기" : "일정 변경"}
-            </Button>
-          )}
-        </>
-      )}
-      {chat.status === "COMPLETED" && (
+      {can("REJECT") && <ActionBtn ready={ready} busy={busy} action="REJECT" label="거절하기" onClick={() => setModal("reject")} />}
+      {can("ACCEPT") && <ActionBtn ready={ready} busy={busy} action="ACCEPT" label="수락하기" variant="primary" onClick={() => setModal("accept")} />}
+      {can("WITHDRAW") && <ActionBtn ready={ready} busy={busy} action="WITHDRAW" label="신청 취소" onClick={() => setModal("cancelRequest")} />}
+      {(chat.status === "ACCEPTED" || chat.status === "SCHEDULED" || chat.status === "COMPLETED") && chat.roomId !== null && (
         <Button size="S" variant="secondary" href={room}>
           채팅으로 이동
         </Button>
       )}
+      {meetingPassed && can("COMPLETE") ? (
+        <ActionBtn ready={ready} busy={busy} action="COMPLETE" label="만남 완료" variant="primary" onClick={() => setModal("complete")} />
+      ) : (
+        can("SCHEDULE") && <ActionBtn ready={ready} busy={busy} action="SCHEDULE" label={chat.status === "ACCEPTED" ? "일정 확정하기" : "일정 변경"} variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} onClick={() => setModal("schedule")} />
+      )}
+      {can("LEAVE") && <ActionBtn ready={ready} busy={busy} action="LEAVE" label="빠지기" onClick={() => undefined} />}
     </div>
   );
 
@@ -108,35 +122,49 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
     <div className="flex flex-col gap-6">
       {/* 상대 */}
       <div className="flex items-center gap-2.5">
-        <Link href={`/alumni/${other.id}`} className="shrink-0">
-          <Avatar name={other.name} part={other.part} size={48} />
-        </Link>
+        {other.isDeleted || other.id === null ? (
+          <Avatar size={48} withdrawn />
+        ) : (
+          <Link href={`/alumni/${other.id}`} className="shrink-0">
+            <Avatar name={other.name ?? undefined} part={part} size={48} />
+          </Link>
+        )}
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className="flex items-baseline gap-2">
-            <Link href={`/alumni/${other.id}`} className="t-title3 text-ink-900 hover:underline">
-              {other.name}
-              {group && isReceiver ? ` 외 ${members.length}명` : ""}
-            </Link>
-            <span className="t-caption1 text-ink-500">
-              {other.generation}기 · {LION_PART_LABEL[other.part]}
-            </span>
-          </p>
-          <p className="t-caption1 text-ink-700">
-            {PROFILE_STATUS_LABEL[other.status]}
-            {other.status === "EMPLOYED" || other.status === "FOUNDER" ? ` · ${other.headline}` : other.interests[0] ? ` · 관심 분야 ${other.interests[0]}` : ""}
-          </p>
-          <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-500">
-            나와의 공통점
-            {common.length ? (
-              common.map((c) => (
-                <span key={c} className="rounded-[4px] bg-bg-100 px-2 py-0.5 text-[12px] font-semibold text-ink-900">
-                  {c}
-                </span>
-              ))
+            {other.isDeleted || other.id === null ? (
+              <span className="t-title3 text-ink-900">{personName(other)}</span>
             ) : (
-              <span className="text-ink-400">아직 없어요</span>
+              <Link href={`/alumni/${other.id}`} className="t-title3 text-ink-900 hover:underline">
+                {other.name}
+                {group && isReceiver ? ` 외 ${members.length}명` : ""}
+              </Link>
+            )}
+            {!other.isDeleted && (
+              <span className="t-caption1 text-ink-500">
+                {other.generation}기{part !== "ETC" ? ` · ${LION_PART_LABEL[part]}` : ""}
+              </span>
             )}
           </p>
+          {mockOther && (
+            <p className="t-caption1 text-ink-700">
+              {PROFILE_STATUS_LABEL[mockOther.status]}
+              {mockOther.status === "EMPLOYED" || mockOther.status === "FOUNDER" ? ` · ${mockOther.headline}` : mockOther.interests[0] ? ` · 관심 분야 ${mockOther.interests[0]}` : ""}
+            </p>
+          )}
+          {common && (
+            <p className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-500">
+              나와의 공통점
+              {common.length ? (
+                common.map((c) => (
+                  <span key={c} className="rounded-[4px] bg-bg-100 px-2 py-0.5 text-[12px] font-semibold text-ink-900">
+                    {c}
+                  </span>
+                ))
+              ) : (
+                <span className="text-ink-400">아직 없어요</span>
+              )}
+            </p>
+          )}
         </div>
       </div>
 
@@ -171,7 +199,8 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
         {chat.status === "ACCEPTED" && (
           <div className="flex flex-col gap-1 rounded-[8px] border border-line-200 p-4 text-[13px]">
             <p className="text-ink-500">수락하며 보낸 일정 후보</p>
-            <p className="t-body-bold text-ink-900">{chat.candidates.length ? chat.candidates.map(formatDateTime).join(" · ") : "후보 없음"}</p>
+            <p className="t-body-bold text-ink-900">{chat.proposedSlots.length ? chat.proposedSlots.map(formatDateTime).join(" · ") : "후보 없음"}</p>
+            {chat.responseMessage && <p className="mt-1 text-ink-700">“{chat.responseMessage}”</p>}
             <p className="mt-1 text-[12px] text-ink-400">수락 후 30일 동안 일정 확정이 없으면 자동 완료돼요.</p>
           </div>
         )}
@@ -182,11 +211,16 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
             </p>
             <p className="t-body-bold text-ink-900">
               📅 {formatDateTime(chat.scheduledAt)}
-              {chat.mode !== "ONLINE" && " · 강남역 ○○카페"}
+              {chat.meetingMode === "OFFLINE" && chat.meetingPlace && ` · ${chat.meetingPlace}`}
             </p>
             <p className="t-caption1 text-ink-700">
-              {chat.mode === "ONLINE" ? "온라인" : "오프라인"} · {meetingPassed ? "만남 시각이 지났어요" : `만남까지 ${daysToMeeting}일`}
+              {modeText(chat.meetingMode)} · {meetingPassed ? "만남 시각이 지났어요" : `만남까지 ${daysToMeeting}일`}
             </p>
+            {chat.meetingMode === "ONLINE" && chat.meetingLink && (
+              <a href={chat.meetingLink} target="_blank" rel="noreferrer" className="w-fit text-[13px] text-primary underline">
+                {chat.meetingLink}
+              </a>
+            )}
           </div>
         )}
         {chat.status === "COMPLETED" && !chat.scheduledAt && (
@@ -195,28 +229,30 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
             <p className="text-ink-500">수락 후 30일 동안 일정 확정이 없어 자동 완료됐어요.</p>
           </div>
         )}
-        {chat.status === "SCHEDULED" && !meetingPassed && <ProtoButton onClick={() => setPastMeeting(true)}>만남 시각이 지난 상태로</ProtoButton>}
+        {!API_ENABLED && chat.status === "SCHEDULED" && !meetingPassed && <ProtoButton onClick={() => setPastMeeting(true)}>만남 시각이 지난 상태로</ProtoButton>}
       </div>
 
       <hr className="border-line-200" />
 
-      {/* 감사 메시지 · 거절 메시지 */}
-      {chat.status === "COMPLETED" && chat.rejectNote && (
-        <div className="rounded-[8px] bg-blue-50 p-4 text-[14px]">
-          <p className="t-label2 text-primary">{other.name}님이 남긴 감사 메시지</p>
-          <p className="mt-1 text-ink-900">{chat.rejectNote}</p>
-        </div>
-      )}
+      {/* 거절·취소 안내 */}
       {chat.status === "REJECTED" && !isReceiver && (
         <div className="rounded-[8px] bg-bg-50 p-4 text-[14px]">
           <p className="font-semibold text-ink-900">
-            {other.name} 사자가 이번에는 어렵다고 했어요. 사유: {chat.rejectReason ? COFFEE_REJECT_LABEL[chat.rejectReason] : "—"}
+            {personName(other)} 사자가 이번에는 어렵다고 했어요. 사유: {chat.rejectReason ? COFFEE_REJECT_LABEL[chat.rejectReason] : "—"}
           </p>
-          {chat.rejectNote && (
+          {chat.responseMessage && (
             <p className="mt-2 text-ink-700">
-              <span className="text-ink-500">사자의 메시지</span> · {chat.rejectNote}
+              <span className="text-ink-500">사자의 메시지</span> · {chat.responseMessage}
             </p>
           )}
+        </div>
+      )}
+      {chat.status === "CANCELED" && chat.cancelReason && (
+        <div className="rounded-[8px] bg-bg-50 p-4 text-[14px]">
+          <p className="font-semibold text-ink-900">커피챗이 취소됐어요</p>
+          <p className="mt-1 text-ink-700">
+            <span className="text-ink-500">취소 사유</span> · {chat.cancelReason}
+          </p>
         </div>
       )}
 
@@ -224,21 +260,22 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
         <Field label={`신청자 ${members.length + 1}명`}>
           <ul className="flex flex-col gap-1 text-[15px] text-ink-900">
             <li>
-              {isReceiver ? other.name : me.name} · {isReceiver ? other.generation : me.generation}기 (대표{!isReceiver && ", 나"})
+              {personName(chat.requester)} · {chat.requester.generation}기 (대표{chat.myRole === "REQUESTER" && ", 나"})
             </li>
-            {members.map((m) => (
-              <li key={m!.id}>
-                {m!.name} · {m!.generation}기
+            {members.map((m, i) => (
+              <li key={m.id ?? `deleted-${i}`}>
+                {personName(m)}
+                {!m.isDeleted && ` · ${m.generation}기`}
               </li>
             ))}
           </ul>
         </Field>
       )}
       <Field label="상담 주제">
-        <p className="text-[15px] leading-6 text-ink-900">{chat.topic}</p>
+        <p className="text-[15px] leading-6 text-ink-900">{topicText(chat)}</p>
       </Field>
       <Field label="신청 이유">
-        <p className="whitespace-pre-line text-[15px] leading-[18px] text-ink-900">{chat.message}</p>
+        <p className="whitespace-pre-line text-[15px] leading-[18px] text-ink-900">{chat.reason}</p>
       </Field>
       {chat.questions.length > 0 && (
         <Field label="미리 드리는 질문">
@@ -252,17 +289,24 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
         </Field>
       )}
       <div className="grid grid-cols-2 gap-6">
-        <KV k="희망 방식" v={chat.mode === "ONLINE" ? "온라인" : chat.mode === "OFFLINE" ? "오프라인" : "상관없음"} boxed />
-        <KV k="희망 일정 메모" v="평일 저녁 좋아요" boxed />
+        <KV k="희망 방식" v={modeText(chat.preferredMode)} boxed />
+        <KV k="희망 일정 메모" v={chat.scheduleNote || "—"} boxed />
       </div>
-      {(chat.status === "ACCEPTED" || chat.status === "SCHEDULED") && (
-        <button type="button" onClick={() => setModal("cancel")} className="mx-auto py-2 t-label1 font-medium text-ink-500 hover:text-orange">
-          커피챗 취소
-        </button>
-      )}
+      {can("CANCEL") &&
+        (ready("CANCEL") ? (
+          <button type="button" onClick={() => setModal("cancel")} className="mx-auto py-2 t-label1 font-medium text-ink-500 hover:text-orange">
+            커피챗 취소
+          </button>
+        ) : (
+          <Tooltip text={PENDING_TIP} className="mx-auto">
+            <span className="py-2 t-label1 font-medium text-ink-400">커피챗 취소</span>
+          </Tooltip>
+        ))}
     </div>
   );
 
+  // 아래 모달들은 프로토타입 모드에서 mock store로 동작한다 (API 연결은 다음 이슈)
+  const mockId = String(chat.id);
   return (
     <>
       {body}
@@ -273,7 +317,7 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
         onClose={() => setModal(null)}
         group={group}
         onConfirm={(cands, note) => {
-          const roomId = acceptCoffeeChat(chat.id, cands);
+          const roomId = acceptCoffeeChat(mockId, cands);
           setModal(null);
           toast("수락했어요. 채팅방이 열렸어요.");
           router.push(`/chat/${roomId}`);
@@ -285,21 +329,39 @@ export function CoffeeChatDetail({ chat, initialAction }: { chat: CoffeeChat; co
         open={modal === "reject"}
         onClose={() => setModal(null)}
         onConfirm={(reason, note, rest) => {
-          rejectCoffeeChat(chat.id, reason, note);
+          rejectCoffeeChat(mockId, reason, note);
           if (rest) setSettings({ mode: "RESTING", restUntil: rest });
           setModal(null);
           toast("거절했어요. 신청자에게 안내가 전달돼요.");
         }}
       />
       {/* ◇[O] D-15 일정 확정 · 변경 */}
-      <ScheduleModal open={modal === "schedule"} onClose={() => setModal(null)} candidates={chat.candidates} initial={chat.scheduledAt} mode={chat.mode} onConfirm={(at) => { scheduleCoffeeChat(chat.id, at); setModal(null); setPastMeeting(false); toast("일정을 확정했어요"); }} />
+      <ScheduleModal open={modal === "schedule"} onClose={() => setModal(null)} candidates={chat.proposedSlots} initial={chat.scheduledAt ?? undefined} mode={chat.meetingMode ?? chat.preferredMode} onConfirm={(at) => { scheduleCoffeeChat(mockId, at); setModal(null); setPastMeeting(false); toast("일정을 확정했어요"); }} />
       {/* ◇[O] D-16 커피챗 취소 */}
-      <CancelModal open={modal === "cancel"} onClose={() => setModal(null)} onConfirm={(note) => { cancelCoffeeChat(chat.id, note); setModal(null); toast("커피챗을 취소했어요"); }} />
+      <CancelModal open={modal === "cancel"} onClose={() => setModal(null)} onConfirm={(note) => { cancelCoffeeChat(mockId, note); setModal(null); toast("커피챗을 취소했어요"); }} />
       {/* ◇[O] D-17 만남 완료 · 감사 메시지 */}
-      <ThanksModal open={modal === "complete"} onClose={() => setModal(null)} name={other.name} onConfirm={(t) => { completeCoffeeChat(chat.id, t); setModal(null); toast("커피챗을 완료했어요 ☕"); }} />
-      {/* ◇[O] CF-7 신청 취소 확인 */}
-      <ConfirmModal open={modal === "cancelRequest"} onClose={() => setModal(null)} onConfirm={() => { cancelCoffeeChat(chat.id); setModal(null); toast("신청을 취소했어요"); }} title="신청을 취소할까요?" description="취소하면 사자에게 보낸 신청서가 사라져요. 같은 사자에게 다시 신청할 수 있어요." confirmLabel="신청 취소" />
+      <ThanksModal open={modal === "complete"} onClose={() => setModal(null)} name={personName(other)} onConfirm={(t) => { completeCoffeeChat(mockId, t); setModal(null); toast("커피챗을 완료했어요 ☕"); }} />
+      {/* ◇[O] CF-7 신청 취소 확인 (COFFEE-06) */}
+      <ConfirmModal open={modal === "cancelRequest"} onClose={() => setModal(null)} onConfirm={withdraw} title="신청을 취소할까요?" description="취소하면 사자에게 보낸 신청서가 사라져요. 같은 사자에게 다시 신청할 수 있어요." confirmLabel="신청 취소" />
     </>
+  );
+}
+
+/** 아직 API를 연결하지 않은 동작은 잠근 버튼으로 보여준다 */
+function ActionBtn({ ready, busy, action, label, variant = "secondary", onClick }: { ready: (a: CoffeeAction) => boolean; busy: boolean; action: CoffeeAction; label: string; variant?: "primary" | "secondary"; onClick: () => void }) {
+  if (ready(action)) {
+    return (
+      <Button size="S" variant={variant} onClick={onClick} loading={busy && action === "WITHDRAW"}>
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <Tooltip text={PENDING_TIP}>
+      <Button size="S" variant={variant} disabled>
+        {label}
+      </Button>
+    </Tooltip>
   );
 }
 

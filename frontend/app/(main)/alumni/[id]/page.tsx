@@ -151,12 +151,12 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
                 내 신청 보기
               </Link>
             </>
-          ) : person.canRequest && mockPerson ? (
+          ) : person.canRequest ? (
             <Button size="L" full onClick={() => setRequest(true)} leading={<Icon name="coffee" size={20} />}>
               커피챗 신청하기
             </Button>
           ) : (
-            <Tooltip text={person.canRequest ? PENDING_TIP : person.requestBlockedReason}>
+            <Tooltip text={person.requestBlockedReason}>
               <span className="flex h-10 w-full items-center justify-center rounded-[8px] bg-line-200 text-[13px] font-bold text-ink-400">커피챗 신청하기</span>
             </Tooltip>
           )}
@@ -200,7 +200,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
         <RailList title="관심사가 비슷한 사자들" people={similar} href={similarParts ? `/alumni?part=${person.part}` : "/alumni"} />
       </aside>
 
-      {request && mockPerson && <CoffeeRequestModal open onClose={() => setRequest(false)} target={mockPerson} />}
+      {request && <CoffeeRequestModal open onClose={() => setRequest(false)} target={{ id: person.id, name: person.name }} />}
       {message && mockPerson && <MessageRequestModal open onClose={() => setMessage(false)} target={mockPerson} />}
     </div>
   );

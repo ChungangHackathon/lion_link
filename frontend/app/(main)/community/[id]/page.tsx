@@ -6,7 +6,6 @@ import { Suspense, use, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/lib/session";
 import { useStore } from "@/lib/store";
-import { ME_ID } from "@/lib/mock/users";
 import { LION_PART_LABEL, POST_CATEGORY_LABEL, PROFILE_STATUS_LABEL } from "@/lib/types";
 import { daysLeft, formatDateTime, timeAgo } from "@/lib/format";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
@@ -73,7 +72,6 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   // 프로토타입 모드 전용: mock 동문·커피챗 데이터가 필요한 기능
   const mockPost = API_ENABLED ? undefined : store.posts.find((p) => p.id === id);
   const mockAuthor = mockPost && !mockPost.anonymous ? store.alumni.find((a) => a.id === mockPost.authorId) : undefined;
-  const mockTarget = mockPost?.recruit ? store.alumni.find((a) => a.id === mockPost.recruit!.targetId) : undefined;
   const blockedRel = !!mockPost?.meetup && (store.blocked.includes(mockPost.authorId) || mockPost.meetup.memberIds.some((m) => store.blocked.includes(m)));
 
   const toggleLike = async () => {
@@ -262,7 +260,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           <RecruitCard
             post={post}
             mine={mine}
-            applyReady={!!mockTarget}
+            applyReady
             busy={joining}
             onApply={() => setRequest(true)}
             onJoin={joinRecruit}
@@ -353,16 +351,15 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           </div>
         )}
       </Modal>
-      {request && mockPost?.recruit && mockTarget && (
+      {request && post.recruit && post.recruit.senior.id !== null && (
         <CoffeeRequestModal
           open
-          onClose={() => {
-            setRequest(false);
-            store.setRecruitStatus(id, "APPLIED");
-          }}
-          target={mockTarget}
-          preMembers={mockPost.recruit.memberIds.filter((m) => m !== ME_ID)}
-          fromRecruitId={id}
+          onClose={() => setRequest(false)}
+          onSent={() => reload()}
+          target={{ id: post.recruit.senior.id, name: post.recruit.senior.name ?? "사자" }}
+          // 모집 참여자(작성자 제외)가 함께 신청자가 된다. 서버도 같은 기준으로 정한다 (COFFEE-01 fromRecruitId)
+          preMembers={post.recruit.members.filter((m) => !m.isHost && !m.isDeleted && m.id !== null).map((m) => ({ id: m.id!, name: m.name ?? "", generation: m.generation ?? 0, lionParts: m.lionParts ?? [] }))}
+          fromRecruitId={post.id}
         />
       )}
       {message && mockAuthor && <MessageRequestModal open onClose={() => setMessage(false)} target={mockAuthor} />}
