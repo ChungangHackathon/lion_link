@@ -15,6 +15,7 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { AlumniPicker } from "./AlumniPicker";
+import { summaryFromMock } from "@/lib/api/mock/alumni";
 
 const TOPICS = ["커리어·이직", "취업 준비", "프로젝트·개발", "기타(직접 입력)"];
 const REASON_PRESETS = ["취업 준비 중인데 …", "프로젝트를 하다가 막힌 부분이 있는데 …", "이직을 고민하고 있는데 …"];
@@ -256,7 +257,16 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
         </div>
       </Modal>
 
-      <AlumniPicker open={picker} onClose={() => setPicker(false)} onConfirm={setMembers} initial={members} max={4} title="함께 신청할 동문 추가" description="최대 4명 · 나 포함 5명까지" exclude={[target.id, ME_ID]} />
+      <AlumniPicker
+        open={picker}
+        onClose={() => setPicker(false)}
+        onConfirm={(ids) => setMembers(ids.map(String))}
+        initial={members.map((id) => alumni.find((a) => a.id === id)).filter((a) => !!a).map((a) => summaryFromMock(a!, []))}
+        max={4}
+        title="함께 신청할 동문 추가"
+        description="최대 4명 · 나 포함 5명까지"
+        exclude={[target.id, ME_ID]}
+      />
 
       {/* ◇[O] C-08 이탈 확인창 / CF-1 */}
       <ConfirmModal open={leave} onClose={() => setLeave(false)} onConfirm={() => { setLeave(false); onClose(); }} title="작성 중인 내용이 사라져요" description="지금 나가면 적은 내용은 저장되지 않아요." confirmLabel="나가기" cancelLabel="계속 작성" danger />

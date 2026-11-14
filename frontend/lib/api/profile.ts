@@ -32,6 +32,11 @@ export function submitOnboarding(body: OnboardingRequest) {
   return api<Me>("/me/profile/onboarding", { method: "POST", body });
 }
 
+/** PROFILE-02 내 프로필 조회 (지금은 동문 찾기의 '나와 같은 파트'에 필요한 값만 쓴다) */
+export function getMyProfileParts() {
+  return api<{ lionParts: ApiLionPart[] }>("/me/profile");
+}
+
 /** 입력한 링크에 http(s)://가 없으면 https://를 붙인다. 비어 있으면 undefined */
 export function normalizeLink(value: string): string | undefined {
   const v = value.trim();

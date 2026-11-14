@@ -1,24 +1,31 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useStore } from "@/lib/store";
 import { ME_ID } from "@/lib/mock/users";
-import { INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type LionPart, type ProfileStatus } from "@/lib/types";
+import { INTEREST_CODE, INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type InterestLabel, type ProfileStatus } from "@/lib/types";
+import { API_ENABLED, errorMessage } from "@/lib/api/client";
+import type { AlumniSort, AlumniSummary } from "@/lib/api/alumni";
+import { getMyProfileParts, type ApiLionPart } from "@/lib/api/profile";
+import { useApi } from "@/lib/api/useApi";
+import { useAlumniService } from "@/lib/api/useAlumniService";
 import { Button, Chip } from "@/components/ui/Button";
 import { Checkbox, Switch } from "@/components/ui/Input";
 import { Icon } from "@/components/ui/Icon";
 import { Popover } from "@/components/ui/Modal";
 import { EmptyState, Skeleton } from "@/components/ui/Misc";
+import { useToast } from "@/components/ui/Toast";
 import { AlumniCard } from "@/components/domain/AlumniCard";
 import { useAlumniActions } from "@/components/domain/useAlumniActions";
 
 const GENS = Array.from({ length: 14 }, (_, i) => i + 1);
-const PARTS: LionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
+const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
 const STATUSES = Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[];
-type Sort = "recommend" | "generation" | "generation-desc" | "newest";
-const SORT_LABEL: Record<Sort, string> = { recommend: "추천순", generation: "앞 기수부터", "generation-desc": "최근 기수부터", newest: "최근 가입순" };
+/** ALUMNI-01 정렬은 세 가지 (기수 내림차순은 API에 없어서 뺐다) */
+const SORT_LABEL: Record<AlumniSort, string> = { RECOMMEND: "추천순", GENERATION: "앞 기수부터", LATEST: "최근 가입순" };
+const SIZE = 20;
 
 export default function AlumniPage() {
   return (
@@ -28,23 +35,43 @@ export default function AlumniPage() {
   );
 }
 
+function useDebounced<T>(value: T, ms = 300): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
+
+/** 내 멋사 파트 ('나와 같은 파트' 빠른 필터). API 모드는 PROFILE-02, 프로토타입은 mock */
+function useMyPart(): ApiLionPart | null {
+  const { alumni } = useStore();
+  const mine = useApi(() => getMyProfileParts(), [], API_ENABLED).data;
+  if (API_ENABLED) return mine?.lionParts[0] ?? null;
+  const part = alumni.find((a) => a.id === ME_ID)?.part;
+  return part && part !== "ETC" ? part : null;
+}
+
 /** ★ S-01 동문 목록 / 기본 · ◇ S-03 검색·필터 적용됨 · [S] S-04 상태 모음 (왼쪽 필터 패널 + 4열 카드 그리드) */
 function AlumniList() {
-  const { alumni, blocked } = useStore();
+  const service = useAlumniService();
+  const toast = useToast();
   const { onRequest, onMessage, modals } = useAlumniActions();
   const params = useSearchParams();
   const router = useRouter();
-  const me = alumni.find((a) => a.id === ME_ID)!;
+  const myPart = useMyPart();
 
   const [q, setQ] = useState(params.get("q") ?? "");
   const [onlyOpen, setOnlyOpen] = useState(params.get("open") === "1");
   const [gens, setGens] = useState<number[]>(params.get("gen") ? params.get("gen")!.split(",").map(Number) : []);
-  const [parts, setParts] = useState<LionPart[]>(params.get("part") ? (params.get("part")!.split(",") as LionPart[]) : []);
+  const [parts, setParts] = useState<ApiLionPart[]>(params.get("part") ? (params.get("part")!.split(",").filter((p) => PARTS.includes(p as ApiLionPart)) as ApiLionPart[]) : []);
   const [statuses, setStatuses] = useState<ProfileStatus[]>([]);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<InterestLabel[]>([]);
   const [moreInterests, setMoreInterests] = useState(false);
-  const [sort, setSort] = useState<Sort>("recommend");
+  const [sort, setSort] = useState<AlumniSort>("RECOMMEND");
   const [sortOpen, setSortOpen] = useState(false);
+  const query = useDebounced(q.trim());
 
   const toggle = <T,>(set: React.Dispatch<React.SetStateAction<T[]>>, v: T) => set((s) => (s.includes(v) ? s.filter((x) => x !== v) : [...s, v]));
   const reset = () => {
@@ -62,29 +89,36 @@ function AlumniList() {
   const contiguous = sortedGens.length > 1 && sortedGens[sortedGens.length - 1] - sortedGens[0] === sortedGens.length - 1;
   const genLabel = contiguous ? `${sortedGens[0]}~${sortedGens[sortedGens.length - 1]}기` : sortedGens.map((g) => `${g}기`).join(", ");
 
-  const list = useMemo(() => {
-    const kw = q.trim().toLowerCase();
-    const r = alumni.filter(
-      (a) =>
-        a.id !== ME_ID &&
-        !blocked.includes(a.id) &&
-        (!onlyOpen || a.receive === "OPEN") &&
-        (gens.length === 0 || gens.includes(a.generation)) &&
-        (parts.length === 0 || parts.includes(a.part)) &&
-        (statuses.length === 0 || statuses.includes(a.status)) &&
-        (interests.length === 0 || a.interests.some((i) => interests.includes(i))) &&
-        (!kw || `${a.name} ${a.company ?? ""} ${a.role ?? ""} ${a.headline} ${a.skills.join(" ")}`.toLowerCase().includes(kw)),
-    );
-    if (sort === "generation") r.sort((a, b) => a.generation - b.generation);
-    else if (sort === "generation-desc") r.sort((a, b) => b.generation - a.generation);
-    else if (sort === "newest") r.reverse();
-    else r.sort((a, b) => Number(b.receive === "OPEN") - Number(a.receive === "OPEN") || Number(b.part === me.part) - Number(a.part === me.part));
-    return r;
-  }, [alumni, blocked, q, onlyOpen, gens, parts, statuses, interests, sort, me.part]);
+  const filters = { q: query || undefined, generations: gens, parts, statuses, interests: interests.map((i) => INTEREST_CODE[i]), available: onlyOpen, sort };
+  const filterKey = JSON.stringify(filters);
+  const first = useApi((signal) => service.list({ ...filters, page: 0, size: SIZE }, signal), [service, filterKey]);
+  const [more, setMore] = useState<{ items: AlumniSummary[]; page: number; hasNext: boolean } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [seen, setSeen] = useState(first.data);
+  if (seen !== first.data) {
+    setSeen(first.data);
+    setMore(null);
+  }
+  const list = [...(first.data?.items ?? []), ...(more?.items ?? [])];
+  const total = first.data?.totalElements ?? 0;
+  const hasNext = more ? more.hasNext : !!first.data?.hasNext;
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const page = (more?.page ?? 0) + 1;
+      const res = await service.list({ ...filters, page, size: SIZE });
+      setMore((m) => ({ items: [...(m?.items ?? []), ...res.items], page, hasNext: res.hasNext }));
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // 빠른 필터 (S-01·S-03)
   const quick = {
-    samePart: parts.length === 1 && parts[0] === me.part,
+    samePart: !!myPart && parts.length === 1 && parts[0] === myPart,
     open: onlyOpen,
     employed: statuses.length === 1 && statuses[0] === "EMPLOYED",
   };
@@ -131,7 +165,7 @@ function AlumniList() {
         <hr className="border-line-200" />
         <FilterGroup title="관심 분야">
           {(moreInterests ? INTEREST_OPTIONS : INTEREST_OPTIONS.slice(0, 5)).map((i) => (
-            <Checkbox key={i} label={i} checked={interests.includes(i)} onChange={() => toggle(setInterests, i as string)} />
+            <Checkbox key={i} label={i} checked={interests.includes(i)} onChange={() => toggle(setInterests, i)} />
           ))}
           <button type="button" onClick={() => setMoreInterests((m) => !m)} className="w-fit t-caption1 text-ink-500 underline underline-offset-2">
             {moreInterests ? "접기" : `+ ${INTEREST_OPTIONS.length - 5}개 더보기`}
@@ -142,7 +176,7 @@ function AlumniList() {
       <section className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h1 className="t-title text-ink-900">동문 찾기</h1>
-          <p className="t-body-bold font-medium text-ink-500">{applied ? `검색 결과 ${list.length}명` : `총 ${alumni.length - 1}명의 동문`}</p>
+          <p className="min-h-6 t-body-bold font-medium text-ink-500">{first.data ? (applied ? `검색 결과 ${total}명` : `총 ${total}명의 동문`) : ""}</p>
         </div>
 
         <label className="flex h-10 items-center gap-2 rounded-[8px] border border-line-300 bg-white px-[14px] focus-within:border-ink-700">
@@ -158,9 +192,11 @@ function AlumniList() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-0.5 t-caption1 text-ink-500">빠른 필터</span>
-            <QuickChip icon="users" selected={quick.samePart} onClick={() => setParts(quick.samePart ? [] : [me.part])}>
-              나와 같은 파트
-            </QuickChip>
+            {myPart && (
+              <QuickChip icon="users" selected={quick.samePart} onClick={() => setParts(quick.samePart ? [] : [myPart])}>
+                나와 같은 파트
+              </QuickChip>
+            )}
             <QuickChip icon="coffee" selected={quick.open} onClick={() => setOnlyOpen((o) => !o)}>
               지금 커피챗 가능
             </QuickChip>
@@ -176,7 +212,7 @@ function AlumniList() {
             </button>
             <Popover open={sortOpen} onClose={() => setSortOpen(false)} className="w-[220px] p-2">
               <ul role="listbox" aria-label="정렬">
-                {(Object.keys(SORT_LABEL) as Sort[]).map((k) => (
+                {(Object.keys(SORT_LABEL) as AlumniSort[]).map((k) => (
                   <li key={k}>
                     <button
                       type="button"
@@ -238,18 +274,28 @@ function AlumniList() {
           </div>
         )}
 
-        {list.length === 0 ? (
-          <EmptyState icon="image" title={q.trim() ? `“${q.trim()}”에 맞는 동문이 없어요. 다른 키워드로 찾아보세요.` : "조건에 맞는 동문이 없어요"} description={q.trim() ? undefined : "필터를 줄이거나 다른 검색어로 찾아보세요"} action={{ label: "필터 초기화", onClick: reset }} />
+        {first.error && !first.data ? (
+          <EmptyState title="동문을 불러오지 못했어요" description={errorMessage(first.error)} action={{ label: "다시 시도", onClick: first.reload }} />
+        ) : !first.data ? (
+          <div className="grid grid-cols-4 gap-x-[17px] gap-y-[40px] pt-5" aria-busy="true">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-[300px] w-full" />
+            ))}
+          </div>
+        ) : list.length === 0 ? (
+          <EmptyState icon="image" title={query ? `“${query}”에 맞는 동문이 없어요. 다른 키워드로 찾아보세요.` : "조건에 맞는 동문이 없어요"} description={query ? undefined : "필터를 줄이거나 다른 검색어로 찾아보세요"} action={{ label: "필터 초기화", onClick: reset }} />
         ) : (
-          <div className="grid grid-cols-4 gap-x-[17px] gap-y-[40px] pt-5">
+          <div className={cn("grid grid-cols-4 gap-x-[17px] gap-y-[40px] pt-5", first.loading && "opacity-60")}>
             {list.map((a) => (
               <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} className="w-full" />
             ))}
           </div>
         )}
-        {list.length > 12 && (
+        {hasNext && (
           <div className="flex justify-center pt-2">
-            <Button variant="secondary">더 보기</Button>
+            <Button variant="secondary" loading={loadingMore} onClick={loadMore}>
+              더 보기
+            </Button>
           </div>
         )}
       </section>

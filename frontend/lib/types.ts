@@ -58,6 +58,7 @@ export const INTEREST_CODE: Record<InterestLabel, InterestCode> = {
   창업: "STARTUP",
   기타: "ETC",
 };
+export const INTEREST_LABEL = Object.fromEntries(Object.entries(INTEREST_CODE).map(([label, code]) => [code, label])) as Record<InterestCode, InterestLabel>;
 
 /** 커피챗 받기 상태 (CS-01 · Badge/Availability) */
 export type ReceiveMode = "OPEN" | "CLOSED" | "RESTING" | "SCHEDULED";
