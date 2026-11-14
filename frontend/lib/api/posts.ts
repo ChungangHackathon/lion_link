@@ -1,0 +1,224 @@
+/** 6. 커뮤니티 게시글 API (docs/api.md POST-01 ~ POST-08) */
+
+import type { PostCategory, ProfileStatus } from "@/lib/types";
+import type { ApiLionPart } from "./profile";
+import { api, type Page } from "./client";
+
+/** 서버 ID는 숫자, 프로토타입(mock) 데이터는 문자열이라 둘 다 받는다 */
+export type Id = number | string;
+
+export type MeetupStatus = "OPEN" | "FULL" | "ENDED" | "CANCELED";
+export type RecruitStatus = "OPEN" | "APPLIED" | "ENDED";
+export type PostSort = "LATEST" | "VIEWS";
+
+/** 익명 글이면 null. 탈퇴한 작성자는 isDeleted=true이고 나머지는 null */
+export interface PostAuthor {
+  id: Id | null;
+  name: string | null;
+  generation: number | null;
+  lionParts: ApiLionPart[] | null;
+  photoUrl: string | null;
+  headline: string | null;
+  isDeleted: boolean;
+}
+
+export interface PostDetailAuthor extends PostAuthor {
+  bio: string | null;
+  status: ProfileStatus | null;
+}
+
+export interface PostMember {
+  id: Id | null;
+  name: string | null;
+  generation: number | null;
+  lionParts: ApiLionPart[] | null;
+  photoUrl: string | null;
+  isHost: boolean;
+  isDeleted: boolean;
+}
+
+export interface PostSummary {
+  id: Id;
+  category: PostCategory;
+  title: string;
+  isAnonymous: boolean;
+  author: PostAuthor | null;
+  viewCount: number;
+  commentCount: number;
+  hasFile: boolean;
+  thumbnailUrl: string | null;
+  /** 공모전·채용 마감일 (YYYY-MM-DD) */
+  deadline: string | null;
+  meetup: { meetAt: string; place: string; capacity: number; participantCount: number; status: MeetupStatus } | null;
+  recruit: {
+    senior: { id: Id | null; name: string | null; generation: number | null; isDeleted: boolean };
+    capacity: number;
+    memberCount: number;
+    deadline: string;
+    status: RecruitStatus;
+  } | null;
+  createdAt: string;
+}
+
+export interface PostFile {
+  id: Id;
+  type: "IMAGE" | "ATTACHMENT";
+  url: string;
+  name: string;
+  size: number;
+}
+
+export interface PostDetail {
+  id: Id;
+  category: PostCategory;
+  title: string;
+  content: string;
+  isAnonymous: boolean;
+  /** 익명 글이어도 내 글이면 true */
+  isMine: boolean;
+  author: PostDetailAuthor | null;
+  links: string[];
+  files: PostFile[];
+  deadline: string | null;
+  viewCount: number;
+  commentCount: number;
+  likeCount: number;
+  likedByMe: boolean;
+  meetup: {
+    meetAt: string;
+    place: string;
+    capacity: number;
+    participantCount: number;
+    status: MeetupStatus;
+    joinedByMe: boolean;
+    members: PostMember[];
+  } | null;
+  recruit: {
+    senior: { id: Id | null; name: string | null; generation: number | null; lionParts: ApiLionPart[] | null; photoUrl: string | null; acceptGroup: boolean; isDeleted: boolean };
+    capacity: number;
+    memberCount: number;
+    deadline: string;
+    status: RecruitStatus;
+    joinedByMe: boolean;
+    isSenior: boolean;
+    hasOpenCoffeeChatWithSenior: boolean;
+    members: PostMember[];
+  } | null;
+  createdAt: string;
+  /** 수정한 적이 있을 때만 값이 있다 ('수정됨') */
+  updatedAt: string | null;
+}
+
+export interface PostListQuery {
+  category?: PostCategory[];
+  q?: string;
+  sort?: PostSort;
+  recruiting?: boolean;
+  period?: "WEEK";
+  page?: number;
+  size?: number;
+}
+
+export interface CategoryCounts {
+  total: number;
+  counts: Record<PostCategory, number>;
+}
+
+export interface PopularKeyword {
+  keyword: string;
+  count: number;
+}
+
+export interface PostWriteRequest {
+  category: PostCategory;
+  title: string;
+  content: string;
+  links?: string[];
+  /** FREE에서만 true 가능 (작성 때만) */
+  isAnonymous?: boolean;
+  /** CONTEST·JOB만 (YYYY-MM-DD) */
+  deadline?: string | null;
+  /** MEETUP이면 필수. meetAt은 KST ISO-8601 */
+  meetup?: { meetAt: string; place: string; capacity: number; companionIds?: Id[] };
+  /** RECRUIT이면 필수 */
+  recruit?: { seniorId: Id; capacity: number; deadline: string };
+}
+
+/** POST-05 수정: 보낸 필드만 바뀐다. 익명 여부·함께하는 동문은 바꿀 수 없다 */
+export interface PostUpdateRequest {
+  category?: PostCategory;
+  title?: string;
+  content?: string;
+  links?: string[];
+  deadline?: string | null;
+  meetup?: { meetAt?: string; place?: string; capacity?: number };
+  recruit?: { seniorId?: Id; capacity?: number; deadline?: string };
+}
+
+export interface LikeResult {
+  postId: Id;
+  liked: boolean;
+  likeCount: number;
+}
+
+/** POST-01 게시글 목록·검색 */
+export function listPosts(query: PostListQuery = {}, signal?: AbortSignal) {
+  return api<Page<PostSummary>>("/posts", {
+    query: {
+      category: query.category?.length ? query.category.join(",") : undefined,
+      q: query.q?.trim(),
+      sort: query.sort,
+      recruiting: query.recruiting || undefined,
+      period: query.period,
+      page: query.page,
+      size: query.size,
+    },
+    signal,
+  });
+}
+
+/** POST-02 카테고리별 게시글 수 */
+export function getCategoryCounts() {
+  return api<CategoryCounts>("/posts/category-counts");
+}
+
+/** POST-08 인기 키워드 */
+export function getPopularKeywords(size = 10) {
+  return api<{ items: PopularKeyword[] }>("/posts/popular-keywords", { query: { size } });
+}
+
+/** POST-04 게시글 상세 */
+export function getPost(id: Id) {
+  return api<PostDetail>(`/posts/${id}`);
+}
+
+/** POST-03 게시글 작성 */
+export function createPost(body: PostWriteRequest) {
+  return api<{ id: Id; category: PostCategory; createdAt: string }>("/posts", { method: "POST", body });
+}
+
+/** POST-05 게시글 수정 (보낸 필드만 바뀐다) */
+export function updatePost(id: Id, body: PostUpdateRequest) {
+  return api<{ id: Id; title: string; updatedAt: string }>(`/posts/${id}`, { method: "PATCH", body });
+}
+
+/** POST-06 게시글 삭제 (번개 취소·모집 취소도 이것) */
+export function deletePost(id: Id) {
+  return api(`/posts/${id}`, { method: "DELETE" });
+}
+
+/** POST-07 좋아요 · 좋아요 취소 */
+export function setPostLike(id: Id, liked: boolean) {
+  return api<LikeResult>(`/posts/${id}/like`, { method: liked ? "PUT" : "DELETE" });
+}
+
+/** "2026-11-20", "19:00" → "2026-11-20T19:00:00+09:00" (서버는 KST 기준) */
+export function toKstDateTime(date: string, time: string): string {
+  return `${date}T${time.length === 5 ? `${time}:00` : time}+09:00`;
+}
+
+/** KST ISO 시각 → 입력칸용 날짜·시각 ("2026-11-20", "19:00") */
+export function fromKstDateTime(iso: string): { date: string; time: string } {
+  const kst = new Date(new Date(iso).getTime() + 9 * 3_600_000).toISOString();
+  return { date: kst.slice(0, 10), time: kst.slice(11, 16) };
+}
