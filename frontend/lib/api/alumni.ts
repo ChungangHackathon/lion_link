@@ -83,7 +83,8 @@ export interface AlumniDetail {
   contact: { email?: string | null; phone?: string | null };
   careers: (Period & { id: Id; company?: string; companyHidden?: boolean; jobTitle: string; employmentType: string | null; description: string | null })[];
   educations: (Period & { id: Id; school: string; major: string | null; degree: string | null; description?: string | null })[];
-  lionActivities: { id: Id; generation: number; role: "LION" | "STAFF" | "PRESIDENT" | "PART_LEAD" | "ETC"; parts: ApiLionPart[] }[];
+  /** isDefault: 가입 기수 항목. 역할·파트만 바꿀 수 있고 지울 수 없다 (내 프로필에서만 온다) */
+  lionActivities: { id: Id; generation: number; role: "LION" | "STAFF" | "PRESIDENT" | "PART_LEAD" | "ETC"; parts: ApiLionPart[]; isDefault?: boolean }[];
   lionProjects: { id: Id; name: string; eventType: "REGULAR" | "JUNGKATHON" | "UNION_HACKATHON" | "ETC"; generation: number; myRole: string | null; description: string | null; link: string | null }[];
   projects: (Period & { id: Id; name: string; role: string | null; description: string | null; link: string | null; tags?: string[] })[];
   certifications: { id: Id; name: string; issuer: string | null; acquiredYm: string | null }[];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { Button } from "./Button";
@@ -29,6 +29,7 @@ export function Modal({
   width?: number;
   className?: string;
 }) {
+  const titleId = useId();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -45,11 +46,11 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()} role="presentation">
-      <div role="dialog" aria-modal="true" className={cn("flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-[12px] bg-white p-7 shadow-[0_12px_40px_rgba(17,24,39,0.18)]", className)} style={{ maxWidth: width }}>
+      <div role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} className={cn("flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-[12px] bg-white p-7 shadow-[0_12px_40px_rgba(17,24,39,0.18)]", className)} style={{ maxWidth: width }}>
         {(title || description) && (
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1.5">
-              {title && <h2 className={cn("text-ink-900", children ? "t-title3" : "t-body-bold")}>{title}</h2>}
+              {title && <h2 id={titleId} className={cn("text-ink-900", children ? "t-title3" : "t-body-bold")}>{title}</h2>}
               {description && <p className="t-body2 text-ink-500">{description}</p>}
             </div>
             <button type="button" onClick={onClose} aria-label="닫기" className="-m-1 shrink-0 rounded p-1 hover:bg-bg-100">
