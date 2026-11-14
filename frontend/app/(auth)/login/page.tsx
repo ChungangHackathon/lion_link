@@ -27,13 +27,13 @@ export default function LoginPage() {
     <AuthShell>
       <div className="flex flex-col items-center gap-2 pb-4 pt-2 text-center">
         <h1 className="t-title text-ink-900">LION:LINK</h1>
-        <p className="t-body-bold text-ink-500">1기부터 지금까지, 멋사 중앙대 선배와 후배를 잇는 동문 네트워크</p>
+        <p className="t-body-bold text-ink-500">1기부터 지금까지, 멋사 중앙대 사자와 사자를 잇는 동문 네트워크</p>
       </div>
       <Button size="L" variant="secondary" full loading={loading} onClick={google} className="border-ink-500" leading={<GoogleMark />}>
-        구글로 로그인
+        구글로 계속하기
       </Button>
       <hr className="border-line-200" />
-      <p className="t-label2 text-center text-ink-500">초대 링크로만 가입할 수 있어요. 링크가 없다면 운영진에게 문의해주세요.</p>
+      <p className="t-label2 text-center text-ink-500">멋사 중앙대 동문 네트워크예요. 처음이면 구글 계정으로 가입 신청하고, 운영진 승인 후 이용할 수 있어요.</p>
       <div className="flex justify-center">
         <button type="button" onClick={() => setHelp(true)} className="t-label2 text-ink-700 underline underline-offset-2">
           계정에 문제가 있나요?
@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="mt-2 flex flex-wrap justify-center gap-2 border-t border-dashed border-line-300 pt-4">
         <DemoLogin label="승인 대기 회원으로" onClick={() => { login({ status: "PENDING" }); router.push("/pending"); }} />
         <DemoLogin label="관리자(정운영)로" onClick={() => { login({ role: "ADMIN" }); router.push("/admin"); }} />
-        <DemoLogin label="초대 링크 가입 보기" onClick={() => router.push("/invite/abc123")} />
+        <DemoLogin label="가입 신청 화면 보기" onClick={() => router.push("/signup")} />
       </div>
 
       <ConfirmModal

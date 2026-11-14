@@ -3,17 +3,17 @@ import { cn } from "@/lib/cn";
 
 /**
  * A-01 hero: gradient sky, white wordmark with roof, and the 1기~14기 village
- * strip along the bottom. The invitee's 기수 house is "lit" with a tag.
+ * strip along the bottom. The applicant's 기수 house is "lit" with a tag.
  * Assets exported from Figma (public/brand).
  */
-export function VillageHero({ children, generation }: { children: React.ReactNode; generation: number }) {
+export function VillageHero({ children, generation, tag }: { children: React.ReactNode; generation: number; tag?: string }) {
   return (
     <div className="relative flex min-h-full flex-1 flex-col overflow-hidden" style={{ backgroundImage: "linear-gradient(90deg, #2155a4 0%, #9293ab 53%, #ffcfb2 100%)" }}>
       <main className="relative z-10 mx-auto flex w-full max-w-[560px] flex-col items-center gap-[30px] px-4 pb-[360px] pt-20">
         <Wordmark />
         {children}
       </main>
-      <Village generation={generation} />
+      <Village generation={generation} tag={tag} />
     </div>
   );
 }
@@ -52,7 +52,7 @@ const HOUSES = [
   { l: 90.28, t: 61.39, w: 4.8 },
 ];
 
-function Village({ generation }: { generation: number }) {
+function Village({ generation, tag = "냐냐냥의 집" }: { generation: number; tag?: string }) {
   const lit = Math.min(14, Math.max(1, generation));
   const litHouse = HOUSES[lit - 1];
   return (
@@ -74,7 +74,7 @@ function Village({ generation }: { generation: number }) {
       <div className="absolute flex flex-col items-center" style={{ left: `${litHouse.l + litHouse.w / 2 - 5.3}%`, top: "29.6%", width: "10.6%" }}>
         <div className="relative w-full">
           <img src="/brand/village/tag.svg" alt="" className="w-full" />
-          <span className="absolute inset-0 grid place-items-center text-[18px] font-bold text-[#1a0a00]">냐냐냥의 집</span>
+          <span className="absolute inset-0 grid place-items-center truncate px-3 text-[18px] font-bold text-[#1a0a00]">{tag}</span>
         </div>
         <img src="/brand/village/tag-tail.svg" alt="" className="-mt-px w-[12%]" />
       </div>
