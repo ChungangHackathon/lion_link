@@ -9,12 +9,11 @@ import { INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type LionPart,
 import { Avatar } from "@/components/ui/Avatar";
 import { AvailabilityBadge, PartTag, Tag } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
-import { Glyph, Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { Checkbox, Input, Select, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { Card, ProgressBar } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
-import { ProfileSections } from "@/components/domain/ProfileSections";
 
 type Section = "basic" | "about" | "contact" | "career" | "education" | "lion" | "project" | "skills" | "links" | "certs";
 const ADDABLE: { key: Section; label: string; desc: string }[] = [
@@ -23,7 +22,7 @@ const ADDABLE: { key: Section; label: string; desc: string }[] = [
   { key: "education", label: "학력", desc: "학교 · 전공 · 학위" },
   { key: "lion", label: "멋사 활동", desc: "기수 · 역할 · 프로젝트" },
   { key: "project", label: "프로젝트", desc: "사이드 프로젝트 · 대외 활동" },
-  { key: "skills", label: "기술·키워드", desc: "대표 기술 최대 5개" },
+  { key: "skills", label: "대표 기술", desc: "대표 기술 최대 5개" },
   { key: "links", label: "외부 링크", desc: "깃허브 · 링크드인 · 포트폴리오" },
   { key: "certs", label: "자격증·수상·언어", desc: "자격증 · 수상 · 대외활동 · 언어" },
 ];
@@ -63,69 +62,185 @@ export default function MyProfilePage() {
     setTimeout(() => setSaved(null), 2000);
   };
 
+  const filled = Math.round((completion / 100) * 9);
+  type Quick = { icon: IconName; label: string; section: Section };
+  const quick = ([
+    { icon: "image", label: "프로필 사진 올리기", section: "basic" },
+    ...(detail.careers.length ? [] : [{ icon: "edit", label: "경력 추가", section: "career" }]),
+    ...(detail.about ? [] : [{ icon: "edit", label: "소개 쓰기", section: "about" }]),
+    ...(detail.projects.length ? [] : [{ icon: "plus", label: "프로젝트 추가", section: "project" }]),
+  ] as Quick[]).slice(0, 3);
+
   return (
     <div className="flex flex-col gap-6">
-      {/* 완성도 (2.6) */}
+      {/* 완성도 카드 (본인에게만) — 항목 9개 = 9칸 */}
       {completion < 100 && (
-        <div className="flex items-center justify-between gap-4 rounded-[10px] border border-[#cce4ff] bg-[#f1f5fc] px-6 py-4">
-          <ProgressBar value={completion} className="max-w-[360px]" />
-          {nextStep && (
-            <div className="flex items-center gap-3 rounded-[8px] bg-white px-3.5 py-2.5">
-              <span className="text-[13px] font-medium text-ink-900">{nextStep.text}</span>
-              <Button size="S" variant="secondary" onClick={() => setEdit(nextStep.section)}>
-                쓰러 가기
-              </Button>
-            </div>
-          )}
+        <div className="flex flex-col gap-3 rounded-[10px] bg-[#edf2fb] px-6 py-5 shadow-[0_3px_6px_rgba(0,0,0,0.1)]">
+          <p className="flex items-center gap-2.5 t-title3">
+            <span className="text-ink-900">프로필 완성도</span>
+            <span className="text-primary-strong">{completion}%</span>
+          </p>
+          <div className="flex gap-1" role="progressbar" aria-valuenow={completion} aria-valuemin={0} aria-valuemax={100} aria-label="프로필 완성도">
+            {Array.from({ length: 9 }, (_, i) => (
+              <span key={i} className={cn("h-2 flex-1 rounded-[4px]", i < filled ? "bg-primary-strong" : "bg-line-200")} />
+            ))}
+          </div>
+          <p className="t-caption1 text-ink-500">{nextStep ? nextStep.text : `아래 ${quick.length}가지만 채우면 완성돼요`}</p>
+          <div className="flex flex-wrap gap-2">
+            {quick.map((q) => (
+              <button key={q.label} type="button" onClick={() => (q.section === "career" ? setCareerForm({ index: null }) : setEdit(q.section))} className="flex h-[34px] items-center gap-2 rounded-full border border-line-200 bg-white px-3 t-label2 font-medium text-ink-900 hover:bg-bg-50">
+                <Icon name={q.icon} size={16} className="text-ink-700" />
+                {q.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {/* 상단 소개 카드 (E-12) */}
-      <Card className="relative p-[30px]">
-        <button type="button" aria-label="기본 정보 편집" onClick={() => setEdit("basic")} className="absolute right-5 top-5 rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
-          <Glyph name="edit" size={18} />
-        </button>
-        <div className="flex gap-6">
-          <div className="flex flex-col items-center gap-2">
-            <Avatar name={me.name} part={me.part} size={96} className="!size-[120px] !text-[44px]" />
-            <AvailabilityBadge mode={settings.mode} note={settings.restUntil ? `쉬는 중 · ${settings.restUntil}까지` : undefined} className="-mt-4 bg-white" />
+      <Card className="flex gap-8 rounded-[10px] p-8">
+        <div className="relative h-[140px] w-[140px] shrink-0">
+          <Avatar name={me.name} part={me.part} size={96} className="!size-[140px] !text-[52px]" />
+          <button type="button" aria-label="프로필 사진 바꾸기" onClick={() => setEdit("basic")} className="absolute bottom-0 right-0 grid size-9 place-items-center rounded-full border border-line-200 bg-white text-ink-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:bg-bg-50">
+            <Icon name="edit" size={18} />
+          </button>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3 pt-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <h1 className="t-title text-ink-900">{me.name}</h1>
+              <span className="rounded-[5px] bg-part-be-bg px-2.5 py-1 t-label2 text-ink-500">
+                {me.generation}기 · {LION_PART_LABEL[me.part]}
+              </span>
+              <AvailabilityBadge mode={settings.mode} note={settings.restUntil ? `쉬는 중 · ${settings.restUntil}까지` : undefined} small />
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button size="S" variant="secondary" href={`/alumni/${ME_ID}?preview=1`} className="h-[34px]" leading={<Icon name="monitor" size={16} />}>
+                다른 동문에게 보이는 모습
+              </Button>
+              <button type="button" onClick={() => setEdit("basic")} className="flex h-[34px] items-center gap-1.5 rounded-[6px] bg-part-be-bg px-3 t-label2 text-primary-strong hover:bg-part-be-line">
+                <Icon name="edit" size={16} /> 프로필 편집
+              </button>
+            </div>
           </div>
-          <div className="flex flex-1 flex-col gap-3 pt-3">
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-[28px] font-bold text-ink-900">{me.name}</h1>
-              <PartTag part={me.part} generation={me.generation} />
-              <span className="text-[13px] text-ink-500">{PROFILE_STATUS_LABEL[me.status]}</span>
-            </div>
-            <p className="t-body2 text-ink-700">{me.intro || <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
-            <div className="flex flex-col gap-2 text-[13px]">
-              <p className="t-label1 text-ink-900">{me.headline}</p>
-              <p className="flex items-center gap-2">
-                <span className="text-ink-500">대표 기술</span>
-                {detail.repSkills.length ? detail.repSkills.map((s) => <Tag key={s}>{s}</Tag>) : <span className="text-ink-400">아직 없어요</span>}
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="text-ink-500">관심 분야</span>
-                {me.interests.map((s) => (
-                  <Tag key={s}>{s}</Tag>
-                ))}
-              </p>
-              {detail.location && (
-                <p className="flex items-center gap-1 text-ink-700">
-                  <Glyph name="pin" size={14} /> {detail.location}
-                </p>
-              )}
-            </div>
+          <p className="text-[18px] leading-7 text-ink-700">{me.intro || <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
+          <div className="flex items-center gap-2 t-caption1">
+            <span className="text-ink-500">대표 기술</span>
+            {detail.repSkills.length ? (
+              detail.repSkills.map((s) => (
+                <span key={s} className="rounded-[4px] bg-bg-100 px-2 py-1 text-[12px] text-ink-700">
+                  {s}
+                </span>
+              ))
+            ) : (
+              <span className="text-ink-400">아직 없어요</span>
+            )}
+            <button type="button" aria-label="대표 기술 편집" onClick={() => setEdit("skills")} className="rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
+              <Icon name="edit" size={14} />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[14px] text-ink-500">
+            <span className="flex items-center gap-1.5">
+              <Icon name="user" size={16} className="text-ink-900" /> {me.headline}
+            </span>
+            {detail.location && (
+              <span className="flex items-center gap-1.5">
+                <Icon name="place" size={16} className="text-ink-900" /> {detail.location}
+              </span>
+            )}
+            {detail.links[0] && (
+              <span className="flex items-center gap-1.5">
+                <Icon name="link" size={16} className="text-ink-900" /> {detail.links[0].url}
+              </span>
+            )}
           </div>
         </div>
       </Card>
 
-      <Button variant="secondary" size="L" full onClick={() => setAddOpen(true)} leading={<Glyph name="plus" size={16} />}>
-        프로필 항목 추가
-      </Button>
+      {saved && <p className="rounded-[8px] bg-part-be-bg px-4 py-2 text-[13px] text-primary-strong">{saved} 저장 완료 · 프로필에 바로 반영됐어요</p>}
 
-      {saved && <p className="rounded-[8px] bg-part-be-bg px-4 py-2 text-[13px] text-primary">{saved} 저장 완료 · 프로필에 바로 반영됐어요</p>}
-
-      <ProfileSections detail={detail} person={me} onEdit={(s) => setEdit(s === "career" ? "career" : (s as Section))} />
+      {/* 본문 — 추가한 항목만 한 카드 안에 */}
+      <Card className="flex flex-col gap-9 rounded-[10px] p-7">
+        {detail.about && (
+          <MySection title="소개" onEdit={() => setEdit("about")}>
+            <p className="whitespace-pre-line text-[14px] leading-6 text-ink-700">{detail.about}</p>
+          </MySection>
+        )}
+        {detail.careers.length > 0 && (
+          <MySection title="경력" onEdit={() => setEdit("career")}>
+            <ul className="flex flex-col gap-4">
+              {detail.careers.map((c, i) => (
+                <ItemRow key={i} title={c.company} sub={`${c.role}${c.type ? ` · ${c.type}` : ""}`} meta={c.from ? `${c.from} ~ ${c.to} · ${c.duration}` : "시작 시점을 입력해주세요"} />
+              ))}
+            </ul>
+          </MySection>
+        )}
+        {detail.educations.length > 0 && (
+          <MySection title="학력" onEdit={() => setEdit("education")}>
+            <ul className="flex flex-col gap-4">
+              {detail.educations.map((e, i) => (
+                <ItemRow key={i} title={e.school} sub={`${e.major} · ${e.degree}`} meta={`${e.from} ~ ${e.to}`} />
+              ))}
+            </ul>
+          </MySection>
+        )}
+        {detail.lion.length > 0 && (
+          <MySection title="멋사 활동" onEdit={() => setEdit("lion")}>
+            <ul className="flex flex-col gap-2">
+              {detail.lion.map((l, i) => (
+                <li key={i} className="rounded-[8px] border border-line-200 bg-bg-50 px-[15px] py-3 t-body-bold font-medium text-ink-900">
+                  {l.generation}기 {l.role}
+                </li>
+              ))}
+            </ul>
+          </MySection>
+        )}
+        {detail.projects.length > 0 && (
+          <MySection title="프로젝트" onEdit={() => setEdit("project")}>
+            <ul className="flex flex-col gap-4">
+              {detail.projects.map((pj, i) => (
+                <ItemRow key={i} title={pj.name} sub={pj.type} meta={`${pj.from} ~ ${pj.to}`} />
+              ))}
+            </ul>
+          </MySection>
+        )}
+        {detail.certs.length > 0 && (
+          <MySection title="자격증·수상·대외활동·언어" onEdit={() => setEdit("certs")}>
+            <dl className="flex flex-col gap-2 text-[14px]">
+              {detail.certs.map((c, i) => (
+                <div key={i} className="flex gap-4">
+                  <dt className="w-16 text-ink-500">{c.kind}</dt>
+                  <dd className="text-ink-900">{c.text}</dd>
+                </div>
+              ))}
+            </dl>
+          </MySection>
+        )}
+        {detail.links.length > 0 && (
+          <MySection title="외부 링크" onEdit={() => setEdit("links")}>
+            <ul className="flex flex-col gap-2">
+              {detail.links.map((l) => (
+                <li key={l.label} className="flex items-center gap-2 text-[14px] text-ink-700">
+                  <Icon name="link" size={18} className="text-ink-700" /> {l.label} · <span className="font-medium text-ink-900">{l.url}</span>
+                </li>
+              ))}
+            </ul>
+          </MySection>
+        )}
+        <MySection title="연락처" onEdit={() => setEdit("contact")}>
+          <p className="flex items-center gap-2 text-[14px] font-medium text-ink-900">
+            <Icon name="mail" size={18} className="text-ink-700" /> {detail.email?.value ?? "아직 연락처가 없어요"}
+            {detail.email && (
+              <span className="ml-1 flex items-center gap-1 text-[12px] font-normal text-ink-500">
+                <Icon name="lock" size={12} /> {detail.email.visibility === "ALL" ? "모든 동문" : detail.email.visibility === "CONNECTED" ? "연결된 동문만" : "나만"}
+              </span>
+            )}
+          </p>
+        </MySection>
+        <button type="button" onClick={() => setAddOpen(true)} className="flex h-[46px] items-center justify-center gap-2 rounded-[8px] border border-dashed border-line-300 text-[14px] font-medium text-ink-500 hover:bg-bg-50">
+          <Icon name="plus" size={16} /> 프로필 항목 추가
+        </button>
+      </Card>
 
       {/* ★[O] E-07 프로필 항목 추가 */}
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="프로필 항목 추가" description="추가한 항목만 프로필에 보여요" width={560}>
@@ -152,7 +267,7 @@ export default function MyProfilePage() {
       <BasicEditModal open={edit === "basic"} onClose={() => setEdit(null)} me={me} detail={detail} onSave={(patch, loc) => { updateMe(patch); setDetail((d) => ({ ...d, location: loc })); done("기본 정보"); }} />
 
       {/* E-10 소개 편집 (한 칸짜리) */}
-      <TextModal open={edit === "about"} onClose={() => setEdit(null)} title="소개 편집" label="자기소개" value={detail.about} max={1000} rows={8} placeholder="어떤 일을 하고 있는지, 후배들에게 어떤 이야기를 해줄 수 있는지 적어주세요." onSave={(v) => { setDetail((d) => ({ ...d, about: v })); done("소개"); }} />
+      <TextModal open={edit === "about"} onClose={() => setEdit(null)} title="소개 편집" label="자기소개" value={detail.about} max={1000} rows={8} placeholder="어떤 일을 하고 있는지, 사자들에게 어떤 이야기를 해줄 수 있는지 적어주세요." onSave={(v) => { setDetail((d) => ({ ...d, about: v })); done("소개"); }} />
 
       {/* E-09 경력 편집 (목록형) + E-04 경력 추가 */}
       <ListEditModal
@@ -189,8 +304,8 @@ export default function MyProfilePage() {
       {/* E-13 연락처 */}
       <ContactModal open={edit === "contact"} onClose={() => setEdit(null)} detail={detail} onSave={(email, phone) => { setDetail((d) => ({ ...d, email, phone })); done("연락처"); }} />
 
-      {/* E-14 기술·키워드 */}
-      <SkillsModal open={edit === "skills"} onClose={() => setEdit(null)} rep={detail.repSkills} skills={detail.skills} onSave={(rep, skills) => { setDetail((d) => ({ ...d, repSkills: rep, skills })); updateMe({ skills: [...rep, ...skills] }); done("기술·키워드"); }} />
+      {/* E-14 대표 기술 */}
+      <SkillsModal open={edit === "skills"} onClose={() => setEdit(null)} rep={detail.repSkills} skills={detail.skills} onSave={(rep, skills) => { setDetail((d) => ({ ...d, repSkills: rep, skills })); updateMe({ skills: [...rep, ...skills] }); done("대표 기술"); }} />
 
       {/* E-15 외부 링크 */}
       <LinksModal open={edit === "links"} onClose={() => setEdit(null)} links={detail.links} onSave={(links) => { setDetail((d) => ({ ...d, links })); done("외부 링크"); }} />
@@ -499,7 +614,7 @@ function ContactModal({ open, onClose, detail, onSave }: { open: boolean; onClos
   );
 }
 
-/** ◇[O] E-14 기술·키워드 편집 — ★로 대표 기술 최대 5개 */
+/** ◇[O] E-14 대표 기술 편집 — ★로 대표 기술 최대 5개 */
 function SkillsModal({ open, onClose, rep, skills, onSave }: { open: boolean; onClose: () => void; rep: string[]; skills: string[]; onSave: (rep: string[], skills: string[]) => void }) {
   const [all, setAll] = useState<string[]>([...rep, ...skills]);
   const [stars, setStars] = useState<string[]>(rep);
@@ -514,7 +629,7 @@ function SkillsModal({ open, onClose, rep, skills, onSave }: { open: boolean; on
     <Modal
       open={open}
       onClose={onClose}
-      title="기술·키워드 편집"
+      title="대표 기술 편집"
       width={560}
       footer={
         <>
@@ -595,5 +710,34 @@ function LinksModal({ open, onClose, links, onSave }: { open: boolean; onClose: 
         <p className="text-[12px] text-ink-500">최대 5개까지 추가할 수 있어요</p>
       </div>
     </Modal>
+  );
+}
+
+function MySection({ title, onEdit, children }: { title: string; onEdit: () => void; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3.5">
+      <div className="flex items-center justify-between">
+        <h2 className="t-body-bold text-ink-900">{title}</h2>
+        <button type="button" onClick={onEdit} aria-label={`${title} 편집`} className="flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-ink-700 hover:bg-bg-100">
+          <Icon name="edit" size={14} /> 편집
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ItemRow({ title, sub, meta }: { title: string; sub?: string; meta?: string }) {
+  return (
+    <li className="flex items-start gap-3.5">
+      <span className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-bg-100 text-ink-400">
+        <Icon name="image" size={18} />
+      </span>
+      <div className="flex flex-col gap-0.5">
+        <span className="t-label1 text-ink-900">{title}</span>
+        {sub && <span className="t-caption1 text-ink-700">{sub}</span>}
+        {meta && <span className="text-[12px] text-ink-400">{meta}</span>}
+      </div>
+    </li>
   );
 }
