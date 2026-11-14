@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Gnb } from "@/components/layout/Gnb";
 import { useSession } from "@/lib/session";
+import { ChatRealtimeProvider } from "@/lib/api/chatRealtime";
 
 /**
  * Member area: GNB + page. 로그인 전 → /login, 승인 대기 → /pending, 반려 → /rejected,
@@ -30,9 +31,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   if (!allowed) return <div className="flex flex-1 bg-bg-50" aria-busy="true" />;
 
   return (
-    <div className={`flex flex-1 flex-col ${white ? "bg-white" : "bg-bg-50"}`}>
-      <Gnb />
-      <main className="container-page flex flex-1 flex-col py-8">{children}</main>
-    </div>
+    <ChatRealtimeProvider enabled={allowed}>
+      <div className={`flex flex-1 flex-col ${white ? "bg-white" : "bg-bg-50"}`}>
+        <Gnb />
+        <main className="container-page flex flex-1 flex-col py-8">{children}</main>
+      </div>
+    </ChatRealtimeProvider>
   );
 }

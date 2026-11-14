@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/api/client";
 import { DECLINE_REASONS, userName, type DeclineReason, type RequestItem } from "@/lib/api/chat";
 import { partOf } from "@/lib/api/chatView";
 import { useApi } from "@/lib/api/useApi";
+import { usePersonalEvents } from "@/lib/api/chatRealtime";
 import { useAlumniService } from "@/lib/api/useAlumniService";
 import { useChatRefresh, useChatService } from "@/lib/api/useChatService";
 import { Avatar } from "@/components/ui/Avatar";
@@ -37,6 +38,8 @@ function Requests() {
   const service = useChatService();
   const refreshList = useChatRefresh();
   const { data, error, reload, setData } = useApi((signal) => service.listRequests(0, signal), [service]);
+  // 새 요청이 오거나(REQUEST_RECEIVED) 보낸 사람이 요청을 취소하면(ROOM_UPDATED) 요청함을 다시 불러온다
+  usePersonalEvents(() => reload());
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
   const [decline, setDecline] = useState(false);
   const [busy, setBusy] = useState<"accept" | "decline" | "more" | null>(null);
