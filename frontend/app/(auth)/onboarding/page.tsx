@@ -86,7 +86,7 @@ export default function OnboardingPage() {
         ))}
       </Field>
 
-      <Input label="프로필 링크 (선택)" placeholder="링크드인 · 깃허브 · 포트폴리오 등" value={link} onChange={(e) => setLink(e.target.value)} />
+      <Input label="외부 링크 (선택)" placeholder="링크드인 · 깃허브 · 포트폴리오 등" value={link} onChange={(e) => setLink(e.target.value)} />
       <Input label="한 줄 소개 (선택)" placeholder="예) 핀테크 스타트업 3년 차 백엔드 개발자, 사이드 프로젝트 같이 할 사람 찾아요" value={intro} onChange={(e) => setIntro(e.target.value)} counter={{ value: intro.length, max: 100 }} error={intro.length > 100 ? "100자 이내로 적어주세요" : undefined} />
 
       {/* 운영진 활동 (v2.9 §3) */}

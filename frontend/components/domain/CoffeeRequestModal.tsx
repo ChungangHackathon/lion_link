@@ -66,7 +66,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
       });
       setSending(false);
       onClose();
-      toast("신청을 보냈어요. 선배가 7일 안에 답해요.");
+      toast("신청을 보냈어요. 사자가 7일 안에 답해요.");
       router.push("/coffee?tab=sent");
     }, 500);
   };
@@ -75,7 +75,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
 
   return (
     <>
-      <Modal open={open} onClose={requestClose} title={`${target.name} 선배에게 커피챗 신청`} width={640}>
+      <Modal open={open} onClose={requestClose} title={`${target.name} 사자에게 커피챗 신청`} width={640}>
         <div className="flex flex-col gap-[22px]">
           {/* 작성 가이드 */}
           <div className="rounded-[8px] border border-light-layout bg-[#cce4ff]">
@@ -87,7 +87,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
             </button>
             {guide && (
               <ul className="list-disc space-y-1 px-9 pb-3 text-[13px] leading-5 text-ink-700">
-                <li>선배가 도와줄 수 있는 주제 안에서 질문을 구체적으로 적어주세요.</li>
+                <li>사자가 도와줄 수 있는 주제 안에서 질문을 구체적으로 적어주세요.</li>
                 <li>내 상황(기수·현재 상태·준비 중인 것)을 한두 줄로 먼저 소개하면 좋아요.</li>
                 <li>가능한 시간대를 참고해 희망 일정을 남기면 수락이 빨라요.</li>
                 <li>7일 안에 답이 없으면 자동 만료돼요.</li>
@@ -95,10 +95,10 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
             )}
           </div>
 
-          {/* 선배 정보 */}
+          {/* 사자 정보 */}
           <div className="flex flex-col gap-5 rounded-[8px] border border-line-200 bg-bg-50 px-2.5 py-4">
             <div className="flex flex-col gap-2.5">
-              <p className="t-label1 text-ink-700">선배가 도와줄 수 있는 주제</p>
+              <p className="t-label1 text-ink-700">사자가 도와줄 수 있는 주제</p>
               <div className="flex flex-wrap gap-1.5">
                 {detail.coffeeTopics.map((t) => (
                   <OutlineTag key={t}>{t}</OutlineTag>
@@ -161,7 +161,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
           </Section>
 
           {/* 신청 이유 */}
-          <Section label="이 선배에게 신청하는 이유 *">
+          <Section label="이 사자에게 신청하는 이유 *">
             <div className="flex flex-wrap gap-2">
               {REASON_PRESETS.map((p) => (
                 <Chip key={p} onClick={() => setReason((r) => (r ? r : p.replace(" …", " ")))}>
@@ -169,7 +169,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
                 </Chip>
               ))}
             </div>
-            <Textarea placeholder="선배님의 ○○ 경험이 궁금해서 신청했어요. 저는 지금 ..." rows={4} value={reason} onChange={(e) => setReason(e.target.value)} counter={{ value: reason.length, max: 500 }} error={reason.length > 500 ? "500자 이내로 적어주세요" : reason.length > 0 && reason.trim().length < 10 ? "10자 이상 적어주세요" : undefined} />
+            <Textarea placeholder="사자님의 ○○ 경험이 궁금해서 신청했어요. 저는 지금 ..." rows={4} value={reason} onChange={(e) => setReason(e.target.value)} counter={{ value: reason.length, max: 500 }} error={reason.length > 500 ? "500자 이내로 적어주세요" : reason.length > 0 && reason.trim().length < 10 ? "10자 이상 적어주세요" : undefined} />
           </Section>
 
           <div className="grid grid-cols-[266px_1fr] gap-4">
@@ -219,7 +219,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
           {/* 미리보기 (R-05) */}
           {preview && (
             <div className="flex flex-col gap-3 rounded-[8px] border border-primary/30 bg-part-be-bg/40 p-4 text-[14px] leading-6 text-ink-900">
-              <p className="t-label2 text-primary">선배에게 이렇게 보여요</p>
+              <p className="t-label2 text-primary">사자에게 이렇게 보여요</p>
               <div className="flex items-center gap-2">
                 <Avatar name="박중앙" part="FRONTEND" size={32} />
                 <span className="font-semibold">박중앙 · 13기 · 프론트엔드</span>
