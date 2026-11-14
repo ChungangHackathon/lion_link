@@ -45,15 +45,15 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()} role="presentation">
-      <div role="dialog" aria-modal="true" className={cn("flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-[12px] bg-white p-7", className)} style={{ maxWidth: width }}>
+      <div role="dialog" aria-modal="true" className={cn("flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-[12px] bg-white p-7 shadow-[0_12px_40px_rgba(17,24,39,0.18)]", className)} style={{ maxWidth: width }}>
         {(title || description) && (
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1.5">
-              {title && <h2 className="text-[18px] font-bold leading-[1.4] text-ink-900">{title}</h2>}
+              {title && <h2 className={cn("text-ink-900", children ? "t-title3" : "t-body-bold")}>{title}</h2>}
               {description && <p className="t-body2 text-ink-500">{description}</p>}
             </div>
             <button type="button" onClick={onClose} aria-label="닫기" className="-m-1 shrink-0 rounded p-1 hover:bg-bg-100">
-              <Icon name="close" />
+              <Icon name="close" size={22} className="text-ink-900" />
             </button>
           </div>
         )}
@@ -95,10 +95,10 @@ export function ConfirmModal({
       description={description}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" size="S" onClick={onClose}>
             {cancelLabel}
           </Button>
-          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={loading}>
+          <Button variant={danger ? "danger" : "primary"} size="S" onClick={onConfirm} loading={loading}>
             {confirmLabel}
           </Button>
         </>

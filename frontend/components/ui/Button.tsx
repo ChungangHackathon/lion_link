@@ -55,7 +55,7 @@ export function Button(props: ButtonProps | LinkProps) {
   );
   const content = (
     <>
-      {loading ? <Icon name="spinner" className="animate-spin" /> : leading}
+      {loading ? <Icon name="spinner" size={16} /> : leading}
       {children}
     </>
   );

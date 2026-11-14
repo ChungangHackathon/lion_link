@@ -54,7 +54,7 @@ export function Input({
         )}
       >
         <input id={id} readOnly={readOnly} aria-invalid={!!error} className="min-w-0 flex-1 bg-transparent outline-none" {...rest} />
-        {readOnly && <Icon name="lock" />}
+        {readOnly && <Icon name="lock" size={16} className="text-ink-400" />}
         {counter && (
           <span className={cn("text-[12px] shrink-0", counter.value > counter.max ? "text-orange" : "text-ink-400")}>
             {counter.value}/{counter.max}
@@ -115,7 +115,7 @@ export function Select({
         <select id={id} className="min-w-0 flex-1 appearance-none bg-transparent outline-none" {...rest}>
           {children}
         </select>
-        <Icon name="chevron-down" className="pointer-events-none absolute right-3" />
+        <Icon name="chevron-down" size={16} className="pointer-events-none absolute right-3 text-ink-500" />
       </div>
       {error && <p className="t-caption2 text-orange">{error}</p>}
     </div>
@@ -130,7 +130,7 @@ export function Checkbox({
   return (
     <label className={cn("inline-flex items-center gap-2 cursor-pointer select-none", className)}>
       <input type="checkbox" className="peer sr-only" {...rest} />
-      <span className="grid size-[18px] place-items-center rounded-[4px] border border-ink-400 bg-white peer-checked:border-primary peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100">
+      <span className="grid size-[18px] place-items-center rounded-[4px] border border-ink-400 bg-white peer-checked:border-cau peer-checked:bg-cau peer-disabled:border-line-200 peer-disabled:bg-bg-100 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40 [&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <path d="m5 12 5 5L20 7" />
         </svg>
@@ -170,9 +170,9 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50", checked ? "bg-green" : "bg-line-300")}
+      className={cn("relative h-[18px] w-[33px] shrink-0 rounded-full transition-colors disabled:opacity-50", checked ? "bg-green" : "bg-line-300")}
     >
-      <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow transition-all", checked ? "left-[22px]" : "left-0.5")} />
+      <span className={cn("absolute top-0.5 size-[14px] rounded-full bg-white shadow-sm transition-all", checked ? "left-[17px]" : "left-0.5")} />
     </button>
   );
 }
