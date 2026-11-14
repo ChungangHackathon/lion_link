@@ -12,7 +12,7 @@ export function PageHeader({ title, back, action, className, description }: { ti
       <div className="flex items-center gap-3">
         {back && (
           <button type="button" aria-label="뒤로" onClick={() => (back === true ? router.back() : router.push(back))} className="-ml-1 rounded p-1 hover:bg-bg-100">
-            <Icon name="back" />
+            <Icon name="back" size={24} className="text-ink-900" />
           </button>
         )}
         <div>
