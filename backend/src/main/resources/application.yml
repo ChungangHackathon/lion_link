@@ -65,7 +65,7 @@ app:
     cookie-same-site: ${COOKIE_SAME_SITE:Lax} # 프론트·백엔드 도메인이 다르면 None (cookie-secure: true 필요)
   email:
     enabled: ${MAIL_ENABLED:false} # false면 보내지 않고 로그만 남긴다 (로컬 기본값)
-    from: "${MAIL_FROM:LION:LINK <no-reply@lionlink.local>}"
+    from: '${MAIL_FROM:"LION:LINK" <no-reply@lionlink.local>}' # 표시 이름에 콜론이 있어 따옴표가 필요하다
     link-base-url: ${FRONTEND_URL:http://localhost:3000} # 메일 안 버튼과 수신 거부 링크가 가리킬 프론트 주소
   storage:
     bucket: ${S3_BUCKET:lionlink-uploads}
