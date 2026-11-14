@@ -2,7 +2,7 @@
 
 import type { PostCategory, ProfileStatus } from "@/lib/types";
 import type { ApiLionPart } from "./profile";
-import { api, type Page, type Slice } from "./client";
+import { api, ApiError, type Page, type Slice } from "./client";
 
 /** 서버 ID는 숫자, 프로토타입(mock) 데이터는 문자열이라 둘 다 받는다 */
 export type Id = number | string;
@@ -142,6 +142,15 @@ export interface PostWriteRequest {
   meetup?: { meetAt: string; place: string; capacity: number; companionIds?: Id[] };
   /** RECRUIT이면 필수 */
   recruit?: { seniorId: Id; capacity: number; deadline: string };
+  /** FILE-01로 올린 파일. 이미지 5장, 첨부파일 3개까지. 보낸 순서대로 저장된다 */
+  files?: PostFileInput[];
+}
+
+export interface PostFileInput {
+  type: "IMAGE" | "ATTACHMENT";
+  url: string;
+  name: string;
+  size: number;
 }
 
 /** POST-05 수정: 보낸 필드만 바뀐다. 익명 여부·함께하는 동문은 바꿀 수 없다 */
@@ -153,6 +162,8 @@ export interface PostUpdateRequest {
   deadline?: string | null;
   meetup?: { meetAt?: string; place?: string; capacity?: number };
   recruit?: { seniorId?: Id; capacity?: number; deadline?: string };
+  /** 보내면 파일 목록을 통째로 바꾼다 (남길 파일도 다시 보낸다). 빈 배열이면 모두 지운다 */
+  files?: PostFileInput[];
 }
 
 export interface LikeResult {
@@ -257,6 +268,65 @@ export function deleteComment(postId: Id, commentId: Id) {
 /** MEETUP-01 번개 참여 · 참여 취소 */
 export function setMeetupJoined(postId: Id, joined: boolean) {
   return api<MeetupParticipation>(`/posts/${postId}/meetup/members/me`, { method: joined ? "PUT" : "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// 번개 초대 (MEETUP-02) · 커피챗 모집 참여 (RECRUIT-01) · 파일 업로드 (FILE-01)
+// ---------------------------------------------------------------------------
+
+export interface RecruitParticipation {
+  postId: Id;
+  joined: boolean;
+  memberCount: number;
+  capacity: number;
+  status: RecruitStatus;
+  members: PostMember[];
+}
+
+/** MEETUP-02 번개 초대 (1~20명). 이미 참여·초대한 사람 등은 서버가 건너뛴다 */
+export function inviteToMeetup(postId: Id, userIds: Id[]) {
+  return api<{ sentCount: number; skippedUserIds: Id[] }>(`/posts/${postId}/meetup/invites`, { method: "POST", body: { userIds } });
+}
+
+/** RECRUIT-01 커피챗 모집 참여 (참여 취소는 아직 없음) */
+export function joinRecruit(postId: Id) {
+  return api<RecruitParticipation>(`/posts/${postId}/recruit/members/me`, { method: "PUT" });
+}
+
+export type UploadType = PostFileInput["type"];
+
+/** FILE-01 규칙: 형식과 크기 */
+export const UPLOAD_RULES: Record<UploadType, { exts: string[]; maxBytes: number; maxCount: number; accept: string }> = {
+  IMAGE: { exts: ["jpg", "jpeg", "png", "webp"], maxBytes: 10 * 1024 * 1024, maxCount: 5, accept: ".jpg,.jpeg,.png,.webp" },
+  ATTACHMENT: { exts: ["pdf", "hwp", "docx", "pptx", "xlsx", "zip"], maxBytes: 20 * 1024 * 1024, maxCount: 3, accept: ".pdf,.hwp,.docx,.pptx,.xlsx,.zip" },
+};
+
+/** 올리기 전에 형식·크기를 확인한다. 문제가 없으면 null */
+export function checkUpload(type: UploadType, file: File): string | null {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const rule = UPLOAD_RULES[type];
+  if (!rule.exts.includes(ext)) return "지원하지 않는 파일 형식이에요.";
+  if (file.size === 0) return "빈 파일은 올릴 수 없어요.";
+  if (file.size > rule.maxBytes) return "업로드할 수 있는 파일 크기를 넘었어요.";
+  return null;
+}
+
+/** FILE-01 업로드 주소 발급 */
+export function requestUploadUrl(type: UploadType, fileName: string, size: number) {
+  return api<{ uploadUrl: string; fileUrl: string; contentType: string; expiresAt: string }>("/files", { method: "POST", body: { type, fileName, size } });
+}
+
+/** 주소를 받아 S3에 바로 올리고, 글에 넣을 파일 정보를 돌려준다 */
+export async function uploadFile(type: UploadType, file: File): Promise<PostFileInput> {
+  const { uploadUrl, fileUrl, contentType } = await requestUploadUrl(type, file.name, file.size);
+  let res: Response;
+  try {
+    res = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": contentType }, body: file });
+  } catch {
+    throw new ApiError(0, "UPLOAD_FAILED", "파일을 올리지 못했어요. 잠시 후 다시 시도해주세요.");
+  }
+  if (!res.ok) throw new ApiError(res.status, "UPLOAD_FAILED", "파일을 올리지 못했어요. 잠시 후 다시 시도해주세요.");
+  return { type, url: fileUrl, name: file.name, size: file.size };
 }
 
 /** "2026-11-20", "19:00" → "2026-11-20T19:00:00+09:00" (서버는 KST 기준) */

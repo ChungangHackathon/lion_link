@@ -27,7 +27,7 @@ import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
 import { authorLabel, isImageUrl } from "@/components/domain/PostRow";
 
 /**
- * 커피챗 모집 참여·번개 초대·메시지는 동문 찾기(RECRUIT·MEETUP-02·채팅)를 연결한 뒤 연다.
+ * '이 인원으로 커피챗 신청하기'와 메시지는 커피챗·채팅 API를 연결한 뒤 연다.
  * API 모드에서는 그 버튼들을 잠가 두고, 프로토타입 모드에서는 예전처럼 mock store로 동작한다.
  */
 const PENDING_TIP = "곧 연결될 기능이에요";
@@ -51,10 +51,11 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   const [img, setImg] = useState<string | null>(null);
   const [request, setRequest] = useState(false);
   const [message, setMessage] = useState(false);
-  const [invite, setInvite] = useState(false);
+  const [inviteOpen, setInvite] = useState(false);
   const [liking, setLiking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   if (error && !post) {
     if (isApiError(error) && error.status === 404) return <EmptyState title="404 · 삭제되었거나 없는 글이에요" action={{ label: "커뮤니티로", href: "/community" }} />;
@@ -104,6 +105,35 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
       if (isApiError(e) && e.status === 409) reload();
     } finally {
       setJoining(false);
+    }
+  };
+
+  const joinRecruit = async () => {
+    if (joining) return;
+    setJoining(true);
+    try {
+      const res = await service.joinRecruit(post.id);
+      setData((p) => (p?.recruit ? { ...p, recruit: { ...p.recruit, joinedByMe: res.joined, memberCount: res.memberCount, capacity: res.capacity, status: res.status, members: res.members } } : p));
+      toast("참여했어요. 작성자가 신청하면 함께 들어가요.");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      if (isApiError(e) && e.status === 409) reload();
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const invite = async (ids: Id[]) => {
+    if (inviting || ids.length === 0) return;
+    setInviting(true);
+    try {
+      const res = await service.inviteToMeetup(post.id, ids);
+      // 고른 인원이 아니라 실제로 보낸 수를 보여준다 (MEETUP-02)
+      toast(res.sentCount > 0 ? `${res.sentCount}명에게 초대 알림을 보냈어요` : "이미 참여했거나 초대한 동문이에요");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -232,19 +262,16 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           <RecruitCard
             post={post}
             mine={mine}
-            ready={!!mockTarget}
+            applyReady={!!mockTarget}
+            busy={joining}
             onApply={() => setRequest(true)}
-            onJoin={() => {
-              store.applyRecruit(id);
-              toast("참여했어요. 작성자가 신청하면 함께 들어가요.");
-            }}
+            onJoin={joinRecruit}
             onCancel={() => setDel(true)}
           />
         ) : post.meetup ? (
           <MeetupCard
             post={post}
             mine={mine}
-            inviteReady={!API_ENABLED}
             busy={joining}
             blocked={blockedRel}
             onJoin={() => setMeetupJoined(true)}
@@ -339,7 +366,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
         />
       )}
       {message && mockAuthor && <MessageRequestModal open onClose={() => setMessage(false)} target={mockAuthor} />}
-      {!API_ENABLED && <AlumniPicker open={invite} onClose={() => setInvite(false)} onConfirm={(ids) => toast(`${ids.length}명에게 초대 알림을 보냈어요`)} max={20} title="번개 초대 알림 보내기" confirmLabel="알림 보내기" exclude={mockPost?.meetup?.memberIds} />}
+      <AlumniPicker open={inviteOpen} onClose={() => setInvite(false)} onConfirm={(ids) => void invite(ids)} max={20} title="번개 초대 알림 보내기" description="최대 20명까지 보낼 수 있어요. 자동으로 참여되지는 않아요." confirmLabel="알림 보내기" exclude={post.meetup?.members.map((m) => m.id).filter((x): x is Id => x !== null)} />
     </div>
   );
 }
@@ -490,7 +517,7 @@ function Locked({ children }: { children: string }) {
 }
 
 /** K-01 · K-03 RecruitCard 상태표 */
-function RecruitCard({ post, mine, ready, onApply, onJoin, onCancel }: { post: PostDetail; mine: boolean; ready: boolean; onApply: () => void; onJoin: () => void; onCancel: () => void }) {
+function RecruitCard({ post, mine, applyReady, busy, onApply, onJoin, onCancel }: { post: PostDetail; mine: boolean; applyReady: boolean; busy: boolean; onApply: () => void; onJoin: () => void; onCancel: () => void }) {
   const r = post.recruit!;
   const full = r.memberCount >= r.capacity;
   const label = r.status === "APPLIED" ? "신청 완료" : r.status === "ENDED" ? "모집 종료" : full ? "정원 마감" : "모집 중";
@@ -509,7 +536,7 @@ function RecruitCard({ post, mine, ready, onApply, onJoin, onCancel }: { post: P
       {r.isSenior ? null : mine ? (
         <>
           {r.status === "OPEN" ? (
-            !ready ? (
+            !applyReady ? (
               <Locked>이 인원으로 커피챗 신청하기</Locked>
             ) : r.senior.acceptGroup ? (
               <Button size="L" full disabled={r.memberCount < 2} onClick={onApply}>
@@ -541,10 +568,8 @@ function RecruitCard({ post, mine, ready, onApply, onJoin, onCancel }: { post: P
         <Button size="L" full disabled>
           {full ? "정원 마감" : label}
         </Button>
-      ) : !ready ? (
-        <Locked>참여하기</Locked>
       ) : (
-        <Button size="L" full onClick={onJoin}>
+        <Button size="L" full loading={busy} onClick={onJoin}>
           참여하기
         </Button>
       )}
@@ -553,7 +578,7 @@ function RecruitCard({ post, mine, ready, onApply, onJoin, onCancel }: { post: P
 }
 
 /** L-06 번개 상세 카드 · K-03 번개 states */
-function MeetupCard({ post, mine, inviteReady, busy, blocked, onJoin, onLeave, onInvite, onCancel }: { post: PostDetail; mine: boolean; inviteReady: boolean; busy: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void }) {
+function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCancel }: { post: PostDetail; mine: boolean; busy: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void }) {
   const m = post.meetup!;
   const past = m.status === "ENDED";
   const canceled = m.status === "CANCELED";
@@ -574,13 +599,9 @@ function MeetupCard({ post, mine, inviteReady, busy, blocked, onJoin, onLeave, o
       <MemberList members={m.members} />
       {mine ? (
         <>
-          {inviteReady ? (
-            <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
-              초대 알림 보내기
-            </Button>
-          ) : (
-            <Locked>초대 알림 보내기</Locked>
-          )}
+          <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
+            초대 알림 보내기
+          </Button>
           <Button size="L" full variant="danger" onClick={onCancel} disabled={past || canceled}>
             번개 취소
           </Button>
