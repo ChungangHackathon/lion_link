@@ -6,10 +6,10 @@
 
 import type { Alumni, CoffeeChat, Post } from "@/lib/types";
 import { ME_ID } from "@/lib/mock/users";
-import type { Page } from "../client";
+import type { Page, Slice } from "../client";
 import { ApiError } from "../client";
 import type { ApiLionPart } from "../profile";
-import type { CategoryCounts, Id, LikeResult, MeetupStatus, PostAuthor, PostDetail, PostFile, PostListQuery, PostMember, PostSummary, PostUpdateRequest, PostWriteRequest } from "../posts";
+import type { CategoryCounts, Id, LikeResult, MeetupParticipation, MeetupStatus, PostAuthor, PostComment, PostDetail, PostFile, PostListQuery, PostMember, PostSummary, PostUpdateRequest, PostWriteRequest } from "../posts";
 
 export interface MockPostState {
   posts: Post[];
@@ -23,6 +23,8 @@ export interface MockPostActions {
   updatePost: (id: string, patch: Partial<Post>) => void;
   deletePost: (id: string) => void;
 }
+
+const DELETED_COMMENT = "삭제된 댓글이에요.";
 
 const liked = new Set<string>();
 const delay = <T,>(value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), 120));
@@ -65,7 +67,7 @@ function toSummary(state: MockPostState, p: Post): PostSummary {
     isAnonymous: !!p.anonymous,
     author: author(state, p),
     viewCount: p.views,
-    commentCount: p.comments.length,
+    commentCount: p.comments.filter((c) => !isDeletedComment(c.text)).length,
     hasFile: !!(p.files?.length || p.images?.length),
     thumbnailUrl: p.images?.[0] ?? null,
     deadline: p.deadline ?? null,
@@ -102,7 +104,7 @@ function toDetail(state: MockPostState, p: Post): PostDetail {
     files,
     deadline: p.deadline ?? null,
     viewCount: p.views,
-    commentCount: p.comments.length,
+    commentCount: p.comments.filter((c) => !isDeletedComment(c.text)).length,
     likeCount: p.likes,
     likedByMe: liked.has(p.id),
     meetup: p.meetup
@@ -241,4 +243,76 @@ export function mockSetLike(state: MockPostState, actions: MockPostActions, id: 
 
 export function mockPopularKeywords(keywords: readonly string[], size: number) {
   return delay({ items: keywords.slice(0, size).map((keyword, i) => ({ keyword, count: keywords.length - i })) });
+}
+
+// ---------------------------------------------------------------------------
+// 댓글 · 번개 참여
+// ---------------------------------------------------------------------------
+
+/** 예전 mock 데이터는 마침표 없이 '삭제된 댓글이에요'로 표시했다 */
+function isDeletedComment(text: string) {
+  return text.startsWith("삭제된 댓글이에요");
+}
+
+function toComment(state: MockPostState, post: Post, c: Post["comments"][number]): PostComment {
+  const deleted = isDeletedComment(c.text);
+  // 서버 규칙: 익명 글의 작성자가 쓴 댓글만 익명
+  const anonymous = !!post.anonymous && c.authorId === post.authorId;
+  const a = state.alumni.find((x) => x.id === c.authorId);
+  return {
+    id: c.id,
+    postId: post.id,
+    content: deleted ? DELETED_COMMENT : c.text,
+    isAnonymous: anonymous,
+    author: deleted || anonymous ? null : a ? { id: a.id, name: a.name, generation: a.generation, lionParts: parts(a), photoUrl: null, headline: a.headline, isDeleted: false } : { id: null, name: null, generation: null, lionParts: null, photoUrl: null, headline: null, isDeleted: true },
+    deleted,
+    isMine: c.authorId === ME_ID,
+    createdAt: c.at,
+  };
+}
+
+export function mockListComments(state: MockPostState, postId: Id, page: number, size: number): Promise<Slice<PostComment>> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post) return Promise.reject(notFound());
+  const items = post.comments.slice(page * size, (page + 1) * size).map((c) => toComment(state, post, c));
+  return delay({ items, page, size, hasNext: (page + 1) * size < post.comments.length });
+}
+
+export function mockAddComment(state: MockPostState, actions: MockPostActions & { addComment: (postId: string, text: string, anonymous?: boolean) => void }, postId: Id, content: string): Promise<PostComment> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post) return Promise.reject(notFound());
+  const anonymous = !!post.anonymous && post.authorId === ME_ID;
+  actions.addComment(post.id, content, anonymous);
+  const created = { id: `c-${Date.now()}`, authorId: ME_ID, text: content, anonymous, at: new Date().toISOString() };
+  return delay(toComment(state, post, created));
+}
+
+export function mockRemoveComment(state: MockPostState, actions: MockPostActions, postId: Id, commentId: Id): Promise<void> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post) return Promise.reject(notFound());
+  actions.updatePost(post.id, { comments: post.comments.map((c) => (c.id === String(commentId) ? { ...c, text: DELETED_COMMENT } : c)) });
+  return delay(undefined);
+}
+
+export function mockSetMeetupJoined(state: MockPostState, actions: MockPostActions, postId: Id, joined: boolean): Promise<MeetupParticipation> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post) return Promise.reject(notFound());
+  if (!post.meetup) return Promise.reject(new ApiError(404, "MEETUP_NOT_FOUND", "번개 글이 아니에요."));
+  const m = post.meetup;
+  if (!joined && post.authorId === ME_ID) return Promise.reject(new ApiError(403, "HOST_CANNOT_LEAVE", "작성자는 참여를 취소할 수 없어요. 번개를 취소해 주세요."));
+  if (joined && !m.memberIds.includes(ME_ID)) {
+    if (meetupStatus(m) === "ENDED") return Promise.reject(new ApiError(409, "MEETUP_CLOSED", "이미 시작된 번개예요."));
+    if (m.memberIds.length >= m.max) return Promise.reject(new ApiError(409, "MEETUP_FULL", "정원이 다 찼어요."));
+  }
+  const memberIds = joined ? (m.memberIds.includes(ME_ID) ? m.memberIds : [...m.memberIds, ME_ID]) : m.memberIds.filter((id) => id !== ME_ID);
+  const next = { ...m, memberIds };
+  actions.updatePost(post.id, { meetup: next });
+  return delay({
+    postId,
+    joined,
+    participantCount: memberIds.length,
+    capacity: m.max,
+    status: meetupStatus(next),
+    members: memberIds.map((id) => member(state, id, post.authorId)),
+  });
 }

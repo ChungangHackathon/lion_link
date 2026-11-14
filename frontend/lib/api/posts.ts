@@ -2,7 +2,7 @@
 
 import type { PostCategory, ProfileStatus } from "@/lib/types";
 import type { ApiLionPart } from "./profile";
-import { api, type Page } from "./client";
+import { api, type Page, type Slice } from "./client";
 
 /** 서버 ID는 숫자, 프로토타입(mock) 데이터는 문자열이라 둘 다 받는다 */
 export type Id = number | string;
@@ -210,6 +210,53 @@ export function deletePost(id: Id) {
 /** POST-07 좋아요 · 좋아요 취소 */
 export function setPostLike(id: Id, liked: boolean) {
   return api<LikeResult>(`/posts/${id}/like`, { method: liked ? "PUT" : "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// 댓글 (COMMENT-01 ~ 03) · 번개 참여 (MEETUP-01)
+// ---------------------------------------------------------------------------
+
+export interface PostComment {
+  id: Id;
+  postId: Id;
+  /** 삭제된 댓글은 '삭제된 댓글이에요.' */
+  content: string;
+  /** 익명 글의 작성자가 쓴 댓글만 익명 (서버가 정한다) */
+  isAnonymous: boolean;
+  /** 익명·삭제된 댓글은 null */
+  author: PostAuthor | null;
+  deleted: boolean;
+  isMine: boolean;
+  createdAt: string;
+}
+
+export interface MeetupParticipation {
+  postId: Id;
+  joined: boolean;
+  participantCount: number;
+  capacity: number;
+  status: MeetupStatus;
+  members: PostMember[];
+}
+
+/** COMMENT-01 댓글 목록 (오래된 순) */
+export function listComments(postId: Id, page = 0, size = 20) {
+  return api<Slice<PostComment>>(`/posts/${postId}/comments`, { query: { page, size } });
+}
+
+/** COMMENT-02 댓글 작성 (1~500자) */
+export function createComment(postId: Id, content: string) {
+  return api<PostComment>(`/posts/${postId}/comments`, { method: "POST", body: { content } });
+}
+
+/** COMMENT-03 댓글 삭제 */
+export function deleteComment(postId: Id, commentId: Id) {
+  return api(`/posts/${postId}/comments/${commentId}`, { method: "DELETE" });
+}
+
+/** MEETUP-01 번개 참여 · 참여 취소 */
+export function setMeetupJoined(postId: Id, joined: boolean) {
+  return api<MeetupParticipation>(`/posts/${postId}/meetup/members/me`, { method: joined ? "PUT" : "DELETE" });
 }
 
 /** "2026-11-20", "19:00" → "2026-11-20T19:00:00+09:00" (서버는 KST 기준) */
