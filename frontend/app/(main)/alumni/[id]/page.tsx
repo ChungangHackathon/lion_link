@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use, useEffect, useState } from "react";
-import { useStore } from "@/lib/store";
 import { useSession } from "@/lib/session";
 import { ME_ID } from "@/lib/mock/users";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
@@ -23,7 +22,6 @@ import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
 import { ProfileSections } from "@/components/domain/ProfileSections";
 import { useBookmarkToggle } from "@/components/domain/AlumniCard";
 
-const PENDING_TIP = "곧 연결될 기능이에요";
 
 /** ★ P-01 동문 프로필 / 다른 동문 — 763 본문 + 387 ActionCard rail. ⊕R-01, →T-04 */
 function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
@@ -52,12 +50,9 @@ function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
 function AlumniProfile({ person }: { person: AlumniProfileView }) {
   const toast = useToast();
   const service = useAlumniService();
-  const { alumni } = useStore();
   const { saved, toggle } = useBookmarkToggle({ id: person.id, bookmarked: person.bookmarked });
   const [request, setRequest] = useState(false);
   const [message, setMessage] = useState(false);
-  // 커피챗 신청·메시지 모달은 아직 mock 동문으로만 동작한다 (커피챗·채팅 API 연결 전)
-  const mockPerson = API_ENABLED ? undefined : alumni.find((a) => a.id === String(person.id));
   const detail = person.detail;
 
   const openList = useApi((signal) => service.list({ available: true, size: 6 }, signal), [service]).data?.items.filter((a) => String(a.id) !== String(person.id)).slice(0, 5) ?? [];
@@ -160,17 +155,9 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
               <span className="flex h-10 w-full items-center justify-center rounded-[8px] bg-line-200 text-[13px] font-bold text-ink-400">커피챗 신청하기</span>
             </Tooltip>
           )}
-          {mockPerson ? (
-            <Button size="M" variant="secondary" full onClick={() => setMessage(true)} leading={<Icon name="chat" size={18} />}>
-              메시지 보내기
-            </Button>
-          ) : (
-            <Tooltip text={PENDING_TIP} className="w-full">
-              <Button size="M" variant="secondary" full disabled leading={<Icon name="chat" size={18} />}>
-                메시지 보내기
-              </Button>
-            </Tooltip>
-          )}
+          <Button size="M" variant="secondary" full onClick={() => setMessage(true)} leading={<Icon name="chat" size={18} />}>
+            메시지 보내기
+          </Button>
           <div className="mt-3 flex flex-col gap-2 text-[12px]">
             <p className="t-label2 text-ink-900">커피챗 설정</p>
             <div className="flex flex-wrap gap-1.5">
@@ -201,7 +188,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
       </aside>
 
       {request && <CoffeeRequestModal open onClose={() => setRequest(false)} target={{ id: person.id, name: person.name }} />}
-      {message && mockPerson && <MessageRequestModal open onClose={() => setMessage(false)} target={mockPerson} />}
+      {message && <MessageRequestModal open onClose={() => setMessage(false)} target={{ id: person.id, name: person.name, generation: person.generation, part: person.part, headline: person.headline }} />}
     </div>
   );
 }

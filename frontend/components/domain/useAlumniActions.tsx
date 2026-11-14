@@ -1,23 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { Alumni } from "@/lib/types";
-import { useStore } from "@/lib/store";
-import { API_ENABLED } from "@/lib/api/client";
+import type { LionPart } from "@/lib/types";
 import type { AlumniSummary } from "@/lib/api/alumni";
 import type { Id } from "@/lib/api/posts";
 import { CoffeeRequestModal } from "./CoffeeRequestModal";
-import { MessageRequestModal } from "./MessageRequestModal";
+import { MessageRequestModal, type MessageTarget } from "./MessageRequestModal";
 
-/**
- * Shared "커피챗 신청 / 메시지" modal state for any screen that renders AlumniCard.
- * 커피챗 신청은 두 모드 모두 열린다. 메시지 모달은 아직 mock 동문 데이터로만 동작해서,
- * API 모드에서는 onMessage를 주지 않는다(카드 버튼이 잠긴다). 채팅 API를 연결하면 연다.
- */
+/** Shared "커피챗 신청 / 메시지 요청" modal state for any screen that renders AlumniCard. */
 export function useAlumniActions() {
-  const { alumni } = useStore();
   const [request, setRequest] = useState<{ id: Id; name: string } | null>(null);
-  const [message, setMessage] = useState<Alumni | null>(null);
+  const [message, setMessage] = useState<MessageTarget | null>(null);
   const modals = (
     <>
       {request && <CoffeeRequestModal open onClose={() => setRequest(null)} target={request} />}
@@ -25,6 +18,6 @@ export function useAlumniActions() {
     </>
   );
   const onRequest = (p: AlumniSummary) => setRequest({ id: p.id, name: p.name });
-  const onMessage = API_ENABLED ? undefined : (p: AlumniSummary) => setMessage(alumni.find((a) => a.id === String(p.id)) ?? null);
+  const onMessage = (p: AlumniSummary) => setMessage({ id: p.id, name: p.name, generation: p.generation, part: (p.lionParts[0] as LionPart | undefined) ?? "ETC", headline: p.headline });
   return { onRequest, onMessage, modals };
 }
