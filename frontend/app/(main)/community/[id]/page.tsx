@@ -71,7 +71,6 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
 
   // 프로토타입 모드 전용: mock 동문·커피챗 데이터가 필요한 기능
   const mockPost = API_ENABLED ? undefined : store.posts.find((p) => p.id === id);
-  const mockAuthor = mockPost && !mockPost.anonymous ? store.alumni.find((a) => a.id === mockPost.authorId) : undefined;
   const blockedRel = !!mockPost?.meetup && (store.blocked.includes(mockPost.authorId) || mockPost.meetup.memberIds.some((m) => store.blocked.includes(m)));
 
   const toggleLike = async () => {
@@ -295,16 +294,10 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
                 <Button variant="secondary" className="flex-1" href={`/alumni/${author.id}`}>
                   프로필 보기
                 </Button>
-                {mockAuthor ? (
+                {author.id != null && !author.isDeleted && (
                   <Button variant="secondary" className="flex-1" onClick={() => setMessage(true)}>
                     메시지
                   </Button>
-                ) : (
-                  <Tooltip text={PENDING_TIP} className="flex-1">
-                    <Button variant="secondary" className="w-full" disabled>
-                      메시지
-                    </Button>
-                  </Tooltip>
                 )}
               </div>
             )}
@@ -362,7 +355,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           fromRecruitId={post.id}
         />
       )}
-      {message && mockAuthor && <MessageRequestModal open onClose={() => setMessage(false)} target={mockAuthor} />}
+      {message && author?.id != null && <MessageRequestModal open onClose={() => setMessage(false)} target={{ id: author.id, name: author.name ?? "", generation: author.generation, part: firstPart(author), headline: author.headline }} />}
       <AlumniPicker open={inviteOpen} onClose={() => setInvite(false)} onConfirm={(ids) => void invite(ids)} max={20} title="번개 초대 알림 보내기" description="최대 20명까지 보낼 수 있어요. 자동으로 참여되지는 않아요." confirmLabel="알림 보내기" exclude={post.meetup?.members.map((m) => m.id).filter((x): x is Id => x !== null)} />
     </div>
   );

@@ -123,6 +123,8 @@ function buildActions(set: React.Dispatch<React.SetStateAction<State>>) {
     },
     acceptMessageRequest: (roomId: string) => set((s) => ({ ...s, rooms: s.rooms.map((r) => (r.id === roomId ? { ...r, status: "ACTIVE", isRequest: false, messages: [...r.messages, { id: uid(), senderId: "system", text: "메시지 요청을 수락했어요. 이제 대화할 수 있어요.", at: now() }] } : r)) })),
     declineMessageRequest: (roomId: string, reason: string) => set((s) => ({ ...s, rooms: s.rooms.map((r) => (r.id === roomId ? { ...r, status: "DECLINED", messages: [...r.messages, { id: uid(), senderId: "system", text: `요청이 거절됐어요. 사유: ${reason}`, at: now() }] } : r)) })),
+    editRequestMessage: (roomId: string, text: string) => set((s) => ({ ...s, rooms: s.rooms.map((r) => (r.id === roomId ? { ...r, messages: r.messages.map((m, i) => (i === 0 ? { ...m, text } : m)) } : r)) })),
+    cancelMessageRequest: (roomId: string) => set((s) => ({ ...s, rooms: s.rooms.map((r) => (r.id === roomId ? { ...r, status: "CANCELED", messages: r.messages.slice(1) } : r)) })),
     leaveRoom: (roomId: string) => set((s) => ({ ...s, rooms: s.rooms.filter((r) => r.id !== roomId) })),
     markRoomRead: (roomId: string) => set((s) => ({ ...s, rooms: s.rooms.map((r) => (r.id === roomId && r.unread ? { ...r, unread: 0 } : r)) })),
 
