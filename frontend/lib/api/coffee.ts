@@ -119,6 +119,36 @@ export function withdrawCoffeeChat(id: Id) {
   return api<CoffeeChatDetail>(`/coffee-chats/${id}/withdraw`, { method: "POST" });
 }
 
+/** COFFEE-04 수락 (받는 사자, 대기 중). 일정 후보 1~3개, 한마디 0~200자 */
+export function acceptCoffeeChat(id: Id, body: { proposedSlots: string[]; responseMessage?: string }) {
+  return api<CoffeeChatDetail>(`/coffee-chats/${id}/accept`, { method: "POST", body });
+}
+
+/** COFFEE-05 거절 (받는 사자, 대기 중) */
+export function rejectCoffeeChat(id: Id, body: { rejectReason: CoffeeChatRejectReason; responseMessage?: string }) {
+  return api<CoffeeChatDetail>(`/coffee-chats/${id}/reject`, { method: "POST", body });
+}
+
+/** COFFEE-07 일정 확정·변경. 오프라인이면 장소 필수, 온라인이면 링크(선택) */
+export function scheduleCoffeeChat(id: Id, body: { scheduledAt: string; meetingMode: "ONLINE" | "OFFLINE"; meetingPlace?: string; meetingLink?: string }) {
+  return api<CoffeeChatDetail>(`/coffee-chats/${id}/schedule`, { method: "PUT", body });
+}
+
+/** COFFEE-08 커피챗 취소 (수락 이후). 사유 5~200자, 상대에게 보인다 */
+export function cancelCoffeeChat(id: Id, cancelReason: string) {
+  return api<CoffeeChatDetail>(`/coffee-chats/${id}/cancel`, { method: "POST", body: { cancelReason } });
+}
+
+/** COFFEE-09 만남 완료 (만남 시각이 지난 뒤) */
+export function completeCoffeeChat(id: Id) {
+  return api<CoffeeChatDetail>(`/coffee-chats/${id}/complete`, { method: "POST" });
+}
+
+/** COFFEE-10 함께 신청자 빠지기 */
+export function leaveCoffeeChat(id: Id) {
+  return api(`/coffee-chats/${id}/members/me`, { method: "DELETE" });
+}
+
 // ---------------------------------------------------------------------------
 // 라벨
 // ---------------------------------------------------------------------------

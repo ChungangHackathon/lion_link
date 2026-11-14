@@ -37,6 +37,16 @@ export function getMyProfileParts() {
   return api<{ lionParts: ApiLionPart[] }>("/me/profile");
 }
 
+/** PROFILE-12 커피챗 받기 설정 조회 (지금은 거절 창의 '당분간 쉬기'에 필요한 값만 쓴다) */
+export function getCoffeeDefaultMode() {
+  return api<{ defaultMode: "ON" | "OFF" }>("/me/coffee-settings");
+}
+
+/** PROFILE-15 기간 추가. 기본이 ON이면 쉬는 기간, OFF면 받는 기간. mergeOverlap이면 겹치는 기간과 합친다 */
+export function addCoffeePeriod(body: { startDate: string; endDate: string; mergeOverlap?: boolean }) {
+  return api<{ id: number; startDate: string; endDate: string }>("/me/coffee-periods", { method: "POST", body });
+}
+
 /** 입력한 링크에 http(s)://가 없으면 https://를 붙인다. 비어 있으면 undefined */
 export function normalizeLink(value: string): string | undefined {
   const v = value.trim();
