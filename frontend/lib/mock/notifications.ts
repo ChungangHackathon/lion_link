@@ -1,6 +1,7 @@
+import { MOCK_NOW } from "./now";
 import type { AppNotification, PendingSignup, Invite } from "@/lib/types";
 
-const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+const ago = (min: number) => new Date(MOCK_NOW - min * 60_000).toISOString();
 
 export const notifications: AppNotification[] = [
   { id: "n-1", tab: "COFFEE", actorId: "u-5", text: "님이 커피챗을 신청했어요", at: ago(1), read: false, href: "/coffee/c-1", quick: "coffee-request", targetId: "c-1" },
