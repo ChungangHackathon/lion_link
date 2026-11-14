@@ -59,7 +59,6 @@
   --color-part-plan-line: #dcd6f7;
 
   --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  --font-logo: var(--font-nanum), "Nanum Gothic", sans-serif;
 
   --radius-card: 12px;
   --shadow-dropdown: 0 8px 24px rgba(17, 24, 39, 0.08);
