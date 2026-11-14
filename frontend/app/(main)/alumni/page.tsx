@@ -8,7 +8,8 @@ import { ME_ID } from "@/lib/mock/users";
 import { INTEREST_OPTIONS, LION_PART_LABEL, PROFILE_STATUS_LABEL, type LionPart, type ProfileStatus } from "@/lib/types";
 import { Button, Chip } from "@/components/ui/Button";
 import { Checkbox, Switch } from "@/components/ui/Input";
-import { Glyph } from "@/components/ui/Icon";
+import { Icon } from "@/components/ui/Icon";
+import { Popover } from "@/components/ui/Modal";
 import { EmptyState, Skeleton } from "@/components/ui/Misc";
 import { AlumniCard } from "@/components/domain/AlumniCard";
 import { useAlumniActions } from "@/components/domain/useAlumniActions";
@@ -16,7 +17,8 @@ import { useAlumniActions } from "@/components/domain/useAlumniActions";
 const GENS = Array.from({ length: 14 }, (_, i) => i + 1);
 const PARTS: LionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
 const STATUSES = Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[];
-type Sort = "recommend" | "newest" | "generation";
+type Sort = "recommend" | "generation" | "generation-desc" | "newest";
+const SORT_LABEL: Record<Sort, string> = { recommend: "추천순", generation: "앞 기수부터", "generation-desc": "최근 기수부터", newest: "최근 가입순" };
 
 export default function AlumniPage() {
   return (
@@ -26,7 +28,7 @@ export default function AlumniPage() {
   );
 }
 
-/** ★ S-01 동문 목록 / 기본 · ◇ S-03 검색·필터 적용됨 · [S] S-04 상태 모음 (4열 → 3열 카드 그리드 + 왼쪽 필터 패널) */
+/** ★ S-01 동문 목록 / 기본 · ◇ S-03 검색·필터 적용됨 · [S] S-04 상태 모음 (왼쪽 필터 패널 + 4열 카드 그리드) */
 function AlumniList() {
   const { alumni, blocked } = useStore();
   const { onRequest, onMessage, modals } = useAlumniActions();
@@ -42,6 +44,7 @@ function AlumniList() {
   const [interests, setInterests] = useState<string[]>([]);
   const [moreInterests, setMoreInterests] = useState(false);
   const [sort, setSort] = useState<Sort>("recommend");
+  const [sortOpen, setSortOpen] = useState(false);
 
   const toggle = <T,>(set: React.Dispatch<React.SetStateAction<T[]>>, v: T) => set((s) => (s.includes(v) ? s.filter((x) => x !== v) : [...s, v]));
   const reset = () => {
@@ -53,7 +56,11 @@ function AlumniList() {
     setInterests([]);
     router.replace("/alumni");
   };
-  const applied = onlyOpen || gens.length > 0 || parts.length > 0 || statuses.length > 0 || interests.length > 0 || q.trim().length > 0;
+  const appliedCount = Number(onlyOpen) + Number(gens.length > 0) + parts.length + statuses.length + interests.length + Number(q.trim().length > 0);
+  const applied = appliedCount > 0;
+  const sortedGens = [...gens].sort((a, b) => a - b);
+  const contiguous = sortedGens.length > 1 && sortedGens[sortedGens.length - 1] - sortedGens[0] === sortedGens.length - 1;
+  const genLabel = contiguous ? `${sortedGens[0]}~${sortedGens[sortedGens.length - 1]}기` : sortedGens.map((g) => `${g}기`).join(", ");
 
   const list = useMemo(() => {
     const kw = q.trim().toLowerCase();
@@ -69,6 +76,7 @@ function AlumniList() {
         (!kw || `${a.name} ${a.company ?? ""} ${a.role ?? ""} ${a.headline} ${a.skills.join(" ")}`.toLowerCase().includes(kw)),
     );
     if (sort === "generation") r.sort((a, b) => a.generation - b.generation);
+    else if (sort === "generation-desc") r.sort((a, b) => b.generation - a.generation);
     else if (sort === "newest") r.reverse();
     else r.sort((a, b) => Number(b.receive === "OPEN") - Number(a.receive === "OPEN") || Number(b.part === me.part) - Number(a.part === me.part));
     return r;
@@ -82,25 +90,25 @@ function AlumniList() {
   };
 
   return (
-    <div className="grid grid-cols-[264px_1fr] gap-[44px]">
+    <div className="grid grid-cols-[264px_minmax(0,1fr)] gap-[43px] min-[1320px]:-mx-[26px]">
       {/* FilterPanel */}
-      <aside className="flex h-fit flex-col gap-4 rounded-[12px] border border-line-200 bg-white p-5">
+      <aside className="flex h-fit flex-col gap-4 rounded-[10px] border border-line-200 bg-white p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-[20px] font-bold text-ink-900">필터</h2>
-          <button type="button" onClick={reset} className="rounded-full bg-bg-100 px-2.5 py-1 text-[12px] font-semibold text-ink-700 hover:bg-line-200">
+          <h2 className="t-title3 text-ink-900">필터</h2>
+          <button type="button" onClick={reset} className="rounded-full border border-light-layout bg-light-card px-2.5 py-[3px] t-label2 text-[#5a6170] hover:bg-light-layout">
             초기화
           </button>
         </div>
         <div className="flex items-center justify-between">
-          <div>
-            <p className="t-label1 text-ink-900">지금 커피챗 받는 동문만</p>
-            <p className="text-[12px] text-ink-500">오늘 기준</p>
+          <div className="flex flex-col gap-0.5">
+            <p className="t-body-bold text-ink-900">지금 커피챗 받는 동문만</p>
+            <p className="t-label2 text-ink-500">오늘 기준</p>
           </div>
           <Switch checked={onlyOpen} onChange={setOnlyOpen} label="지금 커피챗 받는 동문만" />
         </div>
         <hr className="border-line-200" />
-        <FilterGroup title="기수 (복수 선택)">
-          <div className="flex flex-wrap gap-2">
+        <FilterGroup title="기수 (복수 선택)" small>
+          <div className="flex flex-wrap gap-1.5">
             {GENS.map((g) => (
               <Chip key={g} selected={gens.includes(g)} onClick={() => toggle(setGens, g)}>
                 {g}기
@@ -125,7 +133,7 @@ function AlumniList() {
           {(moreInterests ? INTEREST_OPTIONS : INTEREST_OPTIONS.slice(0, 5)).map((i) => (
             <Checkbox key={i} label={i} checked={interests.includes(i)} onChange={() => toggle(setInterests, i as string)} />
           ))}
-          <button type="button" onClick={() => setMoreInterests((m) => !m)} className="w-fit text-[13px] text-ink-500 underline underline-offset-2">
+          <button type="button" onClick={() => setMoreInterests((m) => !m)} className="w-fit t-caption1 text-ink-500 underline underline-offset-2">
             {moreInterests ? "접기" : `+ ${INTEREST_OPTIONS.length - 5}개 더보기`}
           </button>
         </FilterGroup>
@@ -134,77 +142,113 @@ function AlumniList() {
       <section className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h1 className="t-title text-ink-900">동문 찾기</h1>
-          <p className="t-body2 text-ink-500">{applied ? `${list.length}명의 동문이 조건에 맞아요` : `총 ${alumni.length - 1}명의 동문`}</p>
+          <p className="t-body-bold font-medium text-ink-500">{applied ? `검색 결과 ${list.length}명` : `총 ${alumni.length - 1}명의 동문`}</p>
         </div>
 
-        <label className="flex h-10 items-center gap-2 rounded-[8px] border border-line-300 bg-white px-3 focus-within:border-ink-800">
-          <Glyph name="search" className="text-ink-400" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름, 회사, 직무, 기술" className="min-w-0 flex-1 text-[15px] outline-none placeholder:text-ink-400" />
+        <label className="flex h-10 items-center gap-2 rounded-[8px] border border-line-300 bg-white px-[14px] focus-within:border-ink-700">
+          <Icon name="search" size={18} className="text-ink-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름, 회사, 직무, 기술" className="min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-400" />
           {q && (
             <button type="button" aria-label="지우기" onClick={() => setQ("")} className="text-ink-400 hover:text-ink-900">
-              ✕
+              <Icon name="close" size={16} />
             </button>
           )}
         </label>
 
-        <div className="flex items-center justify-between">
-          <div className="flex flex-wrap gap-2">
-            <Chip size="M" selected={quick.samePart} onClick={() => setParts(quick.samePart ? [] : [me.part])}>
-              나와 같은 파트 선배
-            </Chip>
-            <Chip size="M" selected={quick.open} onClick={() => setOnlyOpen((o) => !o)}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-0.5 t-caption1 text-ink-500">빠른 필터</span>
+            <QuickChip icon="users" selected={quick.samePart} onClick={() => setParts(quick.samePart ? [] : [me.part])}>
+              나와 같은 파트
+            </QuickChip>
+            <QuickChip icon="coffee" selected={quick.open} onClick={() => setOnlyOpen((o) => !o)}>
               지금 커피챗 가능
-            </Chip>
-            <Chip size="M" selected={quick.employed} onClick={() => setStatuses(quick.employed ? [] : ["EMPLOYED"])}>
+            </QuickChip>
+            <QuickChip icon="user" selected={quick.employed} onClick={() => setStatuses(quick.employed ? [] : ["EMPLOYED"])}>
               재직 중
-            </Chip>
+            </QuickChip>
           </div>
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="h-9 rounded-[6px] border border-line-300 bg-white px-2 text-[13px] text-ink-700">
-            <option value="recommend">추천순</option>
-            <option value="generation">기수순</option>
-            <option value="newest">최근 가입순</option>
-          </select>
+          <div className="relative shrink-0">
+            <button type="button" aria-haspopup="listbox" aria-expanded={sortOpen} onClick={() => setSortOpen((o) => !o)} className="flex h-9 items-center gap-1.5 rounded-[8px] border border-line-300 bg-white px-3 t-label2 text-ink-900 hover:bg-bg-50">
+              <Icon name="filter" size={16} className="text-ink-700" />
+              {SORT_LABEL[sort]}
+              <Icon name="chevron-down" size={16} className="text-ink-700" />
+            </button>
+            <Popover open={sortOpen} onClose={() => setSortOpen(false)} className="w-[220px] p-2">
+              <ul role="listbox" aria-label="정렬">
+                {(Object.keys(SORT_LABEL) as Sort[]).map((k) => (
+                  <li key={k}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={sort === k}
+                      onClick={() => {
+                        setSort(k);
+                        setSortOpen(false);
+                      }}
+                      className={cn("flex h-[34px] w-full items-center rounded-[6px] px-3 text-left text-[14px]", sort === k ? "bg-bg-100 font-bold text-ink-900" : "font-medium text-ink-900 hover:bg-bg-50")}
+                    >
+                      {SORT_LABEL[k]}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Popover>
+          </div>
         </div>
 
         {applied && (
-          <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink-500">
-            적용된 필터:
-            {gens.map((g) => (
-              <AppliedTag key={`g${g}`} onRemove={() => toggle(setGens, g)}>
-                {g}기
-              </AppliedTag>
-            ))}
-            {parts.map((p) => (
-              <AppliedTag key={p} onRemove={() => toggle(setParts, p)}>
-                {LION_PART_LABEL[p]}
-              </AppliedTag>
-            ))}
-            {statuses.map((s) => (
-              <AppliedTag key={s} onRemove={() => toggle(setStatuses, s)}>
-                {PROFILE_STATUS_LABEL[s]}
-              </AppliedTag>
-            ))}
-            {interests.map((i) => (
-              <AppliedTag key={i} onRemove={() => toggle(setInterests, i)}>
-                {i}
-              </AppliedTag>
-            ))}
-            {onlyOpen && <AppliedTag onRemove={() => setOnlyOpen(false)}>커피챗 가능</AppliedTag>}
-            {q.trim() && <AppliedTag onRemove={() => setQ("")}>“{q.trim()}”</AppliedTag>}
+          <div className="flex items-center gap-2 rounded-[8px] bg-bg-100 px-3 py-2">
+            <span className="flex shrink-0 items-center gap-1.5 t-caption1 text-ink-500">
+              적용된 필터
+              <span className="grid h-[17px] min-w-[17px] place-items-center rounded-full bg-primary px-[5px] text-[11px] font-bold leading-none text-white">{appliedCount}</span>
+            </span>
+            <span className="h-4 w-px shrink-0 bg-line-300" />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+              {q.trim() && (
+                <AppliedTag label="검색" onRemove={() => setQ("")}>
+                  {q.trim()}
+                </AppliedTag>
+              )}
+              {gens.length > 0 && (
+                <AppliedTag label="기수" onRemove={() => setGens([])}>
+                  {genLabel}
+                </AppliedTag>
+              )}
+              {parts.map((p) => (
+                <AppliedTag key={p} label="파트" onRemove={() => toggle(setParts, p)}>
+                  {LION_PART_LABEL[p]}
+                </AppliedTag>
+              ))}
+              {statuses.map((s) => (
+                <AppliedTag key={s} label="상태" onRemove={() => toggle(setStatuses, s)}>
+                  {PROFILE_STATUS_LABEL[s]}
+                </AppliedTag>
+              ))}
+              {interests.map((i) => (
+                <AppliedTag key={i} label="관심" onRemove={() => toggle(setInterests, i)}>
+                  {i}
+                </AppliedTag>
+              ))}
+              {onlyOpen && <AppliedTag onRemove={() => setOnlyOpen(false)}>지금 받는 동문</AppliedTag>}
+            </div>
+            <button type="button" onClick={reset} className="shrink-0 t-caption1 text-primary hover:underline">
+              모두 지우기
+            </button>
           </div>
         )}
 
         {list.length === 0 ? (
-          <EmptyState title={q.trim() ? `“${q.trim()}”에 맞는 동문이 없어요` : "조건에 맞는 동문이 없어요"} description="필터를 줄이거나 다른 검색어로 찾아보세요" action={{ label: "필터 초기화", onClick: reset }} />
+          <EmptyState icon="image" title={q.trim() ? `“${q.trim()}”에 맞는 동문이 없어요. 다른 키워드로 찾아보세요.` : "조건에 맞는 동문이 없어요"} description={q.trim() ? undefined : "필터를 줄이거나 다른 검색어로 찾아보세요"} action={{ label: "필터 초기화", onClick: reset }} />
         ) : (
-          <div className="grid grid-cols-3 gap-x-[50px] gap-y-[55px] py-4">
+          <div className="grid grid-cols-4 gap-x-[17px] gap-y-[40px] pt-5">
             {list.map((a) => (
               <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} className="w-full" />
             ))}
           </div>
         )}
-        {list.length > 9 && (
-          <div className="flex justify-center">
+        {list.length > 12 && (
+          <div className="flex justify-center pt-2">
             <Button variant="secondary">더 보기</Button>
           </div>
         )}
@@ -214,19 +258,33 @@ function AlumniList() {
   );
 }
 
-function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function FilterGroup({ title, children, small }: { title: string; children: React.ReactNode; small?: boolean }) {
   return (
-    <div className="flex flex-col gap-3">
-      <p className="t-label1 text-ink-900">{title}</p>
+    <div className="flex flex-col gap-2.5">
+      <p className={cn("text-ink-700", small ? "t-label1" : "t-body-bold")}>{title}</p>
       <div className="flex flex-col gap-2.5">{children}</div>
     </div>
   );
 }
 
-function AppliedTag({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+/** 빠른 필터 칩 — 선택되면 연한 파랑 + 체크 */
+function QuickChip({ icon, selected, onClick, children }: { icon: "users" | "coffee" | "user"; selected: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onRemove} className={cn("inline-flex items-center gap-1 rounded-full bg-part-be-bg px-2.5 py-1 text-[12px] font-semibold text-primary hover:bg-part-be-line")}>
-      {children} ✕
+    <button type="button" aria-pressed={selected} onClick={onClick} className={cn("flex h-9 items-center gap-1.5 rounded-full border px-[14px] t-label2 transition-colors", selected ? "border-blue-100 bg-part-be-bg text-primary" : "border-line-200 bg-white text-ink-900 hover:bg-bg-50")}>
+      <Icon name={selected ? "check" : icon} size={15} className={selected ? "text-primary" : "text-ink-700"} />
+      {children}
     </button>
+  );
+}
+
+function AppliedTag({ label, children, onRemove }: { label?: string; children: React.ReactNode; onRemove: () => void }) {
+  return (
+    <span className="inline-flex h-[26px] items-center gap-1 rounded-[4px] border border-line-200 bg-white pl-2 pr-1 text-[12px] text-ink-500">
+      {label}
+      <b className="font-semibold text-ink-900">{children}</b>
+      <button type="button" aria-label="필터 지우기" onClick={onRemove} className="grid size-[18px] place-items-center rounded text-ink-700 hover:bg-bg-100">
+        <Icon name="close" size={12} />
+      </button>
+    </span>
   );
 }
