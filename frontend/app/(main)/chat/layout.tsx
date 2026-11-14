@@ -11,6 +11,7 @@ import { roomTitle, userName, type RoomSummary } from "@/lib/api/chat";
 import { avatarPeople, myIdOf, partOf } from "@/lib/api/chatView";
 import { ME_ID } from "@/lib/mock/users";
 import { useApi } from "@/lib/api/useApi";
+import { useChatRealtime, usePersonalEvents } from "@/lib/api/chatRealtime";
 import { ChatRefreshContext, useChatService } from "@/lib/api/useChatService";
 import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
 import { CountBadge } from "@/components/ui/Badge";
@@ -18,7 +19,7 @@ import { Glyph } from "@/components/ui/Icon";
 import { Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 
-/** 실시간 연결(WebSocket) 전까지 목록을 다시 불러오는 간격 */
+/** 실시간 연결(WebSocket)이 안 될 때 목록을 다시 불러오는 간격 */
 const POLL_MS = 10_000;
 
 /**
@@ -42,14 +43,29 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     reloadCounts();
   };
 
+  // 실시간: 내 방에 새 메시지·상태 변화(ROOM_UPDATED)나 새 요청(REQUEST_RECEIVED)이 오면 목록과 숫자를 다시 불러온다
+  const { connected, onReconnect } = useChatRealtime();
+  usePersonalEvents(() => {
+    reloadRooms();
+    reloadCounts();
+  });
+  useEffect(
+    () =>
+      onReconnect(() => {
+        reloadRooms();
+        reloadCounts();
+      }),
+    [onReconnect, reloadRooms, reloadCounts],
+  );
+  // 연결이 안 될 때만 폴링한다
   useEffect(() => {
-    if (!API_ENABLED) return;
+    if (!API_ENABLED || connected) return;
     const timer = setInterval(() => {
       reloadRooms();
       reloadCounts();
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [reloadRooms, reloadCounts]);
+  }, [reloadRooms, reloadCounts, connected]);
 
   const kw = q.trim().toLowerCase();
   const list = (rooms.data?.items ?? []).filter((r) => !kw || `${roomTitle(r)} ${[r.partner, ...r.members].map(userName).join(" ")}`.toLowerCase().includes(kw));

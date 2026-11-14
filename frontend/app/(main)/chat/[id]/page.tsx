@@ -14,6 +14,7 @@ import { avatarPeople, myIdOf, newClientId, partOf } from "@/lib/api/chatView";
 import { addDays } from "@/lib/api/coffeeSettings";
 import type { Id } from "@/lib/api/posts";
 import { useApi } from "@/lib/api/useApi";
+import { useChatRealtime, usePersonalEvents } from "@/lib/api/chatRealtime";
 import { useChatRefresh, useChatService, type ChatService } from "@/lib/api/useChatService";
 import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
 import { PartTag, StatusBadge } from "@/components/ui/Badge";
@@ -25,7 +26,7 @@ import { ConfirmModal, Modal, Popover } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { statusTone } from "@/components/domain/CoffeeChatDetail";
 
-/** 실시간 연결(WebSocket) 전까지 새 메시지를 확인하는 간격 */
+/** 실시간 연결(WebSocket)이 안 될 때 새 메시지를 확인하는 간격 */
 const POLL_MS = 4_000;
 const MEETUP_STATUS_LABEL = { OPEN: "모집 중", FULL: "정원 마감", ENDED: "끝남", CANCELED: "취소됨" } as const;
 
@@ -107,9 +108,59 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       .catch(() => undefined);
   }, [lastId, lastFromOther, roomId, service, refreshList]);
 
-  // 새 메시지 확인 (after 커서). 수락 대기 중이면 방 상태가 바뀌었는지도 본다
+  // ── 실시간 (방 채널 MESSAGE · READ, 개인 채널, 재연결) ──
+  const { connected, subscribeRoom, onReconnect } = useChatRealtime();
+  const live = useRef({ status: room.status, type: room.type, myId, lastId });
   useEffect(() => {
-    if (!API_ENABLED || ended) return;
+    live.current = { status: room.status, type: room.type, myId, lastId };
+  });
+  const countsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** 단체방에서 누가 읽으면 최근 메시지들의 '안 읽은 사람 수'를 서버 값으로 다시 맞춘다 */
+  const refreshCounts = () => {
+    if (countsTimer.current) clearTimeout(countsTimer.current);
+    countsTimer.current = setTimeout(async () => {
+      try {
+        const page = await service.listMessages(roomId);
+        const fresh = new Map(page.items.map((m) => [String(m.id), m.unreadCount]));
+        setMessages((ms) => ms.map((m) => (fresh.has(String(m.id)) ? { ...m, unreadCount: fresh.get(String(m.id))! } : m)));
+      } catch {
+        // 다음 읽음 소식 때 다시 맞춘다
+      }
+    }, 300);
+  };
+  const refreshCountsRef = useRef(refreshCounts);
+  useEffect(() => {
+    refreshCountsRef.current = refreshCounts;
+  });
+  useEffect(
+    () =>
+      subscribeRoom(roomId, (e) => {
+        if (e.type === "MESSAGE") {
+          setMessages((ms) => mergeNew(ms, [e.message]));
+          // 수락 대기 중이던 방에 안내 메시지가 오면 방 상태가 바뀐 것이다
+          if (live.current.status !== "ACTIVE" && e.message.type === "SYSTEM") reloadRoom();
+        } else if (e.type === "READ" && live.current.type === "GROUP" && String(e.userId) !== live.current.myId) refreshCountsRef.current();
+      }),
+    [subscribeRoom, roomId, reloadRoom],
+  );
+  usePersonalEvents((e) => {
+    if (String(e.roomId) === String(roomId) && room.status !== "ACTIVE") reloadRoom();
+  });
+  useEffect(
+    () =>
+      onReconnect(async () => {
+        const after = live.current.lastId;
+        if (after == null) return;
+        const page = await service.listMessages(roomId, { after }).catch(() => null);
+        if (page?.items.length) setMessages((ms) => mergeNew(ms, page.items));
+      }),
+    [onReconnect, service, roomId],
+  );
+  useEffect(() => () => void (countsTimer.current && clearTimeout(countsTimer.current)), []);
+
+  // 연결이 안 될 때만 폴링: 새 메시지 확인 (after 커서). 수락 대기 중이면 방 상태가 바뀌었는지도 본다
+  useEffect(() => {
+    if (!API_ENABLED || ended || connected) return;
     const timer = setInterval(async () => {
       try {
         if (room.status !== "ACTIVE") {
@@ -124,7 +175,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       }
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [service, roomId, lastId, room.status, ended, reloadRoom]);
+  }, [service, roomId, lastId, room.status, ended, reloadRoom, connected]);
 
   const loadOlder = async () => {
     const first = confirmed[0];

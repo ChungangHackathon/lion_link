@@ -7,10 +7,11 @@ import { API_ENABLED } from "@/lib/api/client";
 import { useApi } from "@/lib/api/useApi";
 import { useNotificationService } from "@/lib/api/useNotificationService";
 import { useChatService } from "@/lib/api/useChatService";
+import { useCoffeeService } from "@/lib/api/useCoffeeService";
+import { useChatRealtime, usePersonalEvents } from "@/lib/api/chatRealtime";
+import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/lib/session";
-import { useStore } from "@/lib/store";
-import { ME_ID } from "@/lib/mock/users";
 import { Avatar } from "@/components/ui/Avatar";
 import { CountBadge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
@@ -28,11 +29,10 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, user } = useSession();
-  const { coffeeChats } = useStore();
+  const toast = useToast();
   const [open, setOpen] = useState<"bell" | "me" | null>(null);
 
   const mode = variant ?? (session.status === "PENDING" ? "pending" : "default");
-  const pendingCoffee = coffeeChats.filter((c) => c.receiverId === ME_ID && c.status === "PENDING").length;
 
   // 종 배지: 안 읽은 알림 수 (NOTI-01 unreadCounts.all). 승인 회원만 부를 수 있다
   const notiService = useNotificationService();
@@ -40,23 +40,32 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const badge = useApi((signal) => notiService.list("ALL", signal), [notiService], badgeEnabled);
   const unreadNoti = badgeEnabled ? badge.data?.unreadCounts.all ?? 0 : 0;
   const reloadBadge = badge.reload;
-  // 채팅 배지: 안 읽은 메시지 + 받은 메시지 요청 (CHAT-15)
+  // 채팅 배지: 안 읽은 메시지 + 받은 메시지 요청 (CHAT-15). 실시간 연결이 있으면 개인 채널 소식에 맞춰 다시 센다
   const chatService = useChatService();
   const chatCounts = useApi((signal) => chatService.unreadCount(signal), [chatService], badgeEnabled);
   const unreadChat = badgeEnabled && chatCounts.data ? chatCounts.data.unreadMessages + chatCounts.data.messageRequests : 0;
   const reloadChat = chatCounts.reload;
+  const { connected } = useChatRealtime();
+  usePersonalEvents((e) => {
+    reloadChat();
+    if (e.type === "REQUEST_RECEIVED" && !pathname.startsWith("/chat/requests")) toast("새 메시지 요청이 왔어요");
+  });
+  // [내 커피챗] 숫자: 내가 받은 대기 중 신청 수 (COFFEE-02 pendingReceivedCount). 화면을 옮길 때마다 다시 센다
+  const coffeeService = useCoffeeService();
+  const coffeeCounts = useApi((signal) => coffeeService.list("RECEIVED", "PENDING", 0, 1, signal), [coffeeService, pathname], badgeEnabled);
+  const pendingCoffee = badgeEnabled ? coffeeCounts.data?.pendingReceivedCount ?? 0 : 0;
   useEffect(() => {
-    // 실시간 연결 전까지는 1분마다(채팅 화면에서는 더 자주) 새로 확인한다
+    // 알림은 1분마다 확인한다. 채팅은 실시간 연결이 없을 때만 폴링한다(채팅 화면에서는 더 자주)
     if (!API_ENABLED || !badgeEnabled) return;
     const timer = setInterval(
       () => {
         reloadBadge();
-        reloadChat();
+        if (!connected) reloadChat();
       },
-      pathname.startsWith("/chat") ? 10_000 : 60_000,
+      pathname.startsWith("/chat") && !connected ? 10_000 : 60_000,
     );
     return () => clearInterval(timer);
-  }, [badgeEnabled, reloadBadge, reloadChat, pathname]);
+  }, [badgeEnabled, reloadBadge, reloadChat, pathname, connected]);
 
   const NAV = [
     { href: "/alumni", label: "동문 찾기", count: 0 },
