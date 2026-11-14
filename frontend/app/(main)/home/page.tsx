@@ -17,7 +17,8 @@ import { Card } from "@/components/ui/Misc";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { AlumniCard } from "@/components/domain/AlumniCard";
-import { useAlumniActions } from "@/components/domain/useAlumniActions";
+import { useMockAlumniActions } from "@/components/domain/useAlumniActions";
+import { summaryFromMock } from "@/lib/api/mock/alumni";
 
 const NEWS_TABS = ["전체", "공모전·채용", "지금 사자는", "자료"] as const;
 const DAY = ["일", "월", "화", "수", "목", "금", "토"];
@@ -25,8 +26,9 @@ const DAY = ["일", "월", "화", "수", "목", "금", "토"];
 /** ★ H-01 홈 / 전체 — 3단 300 / 576 / 312. ◇ H-04 승인 후 첫 방문 (첫 커피챗 가이드). */
 export default function HomePage() {
   const { user, session, update } = useSession();
-  const { alumni, coffeeChats, rooms, posts, bookmarks, settings, setSettings } = useStore();
-  const { onRequest, onMessage, modals } = useAlumniActions();
+  const { alumni, coffeeChats, rooms, posts, bookmarks, settings, setSettings, toggleBookmark } = useStore();
+  // 홈은 아직 mock 데이터를 쓴다 (HOME API 연결 전)
+  const { onRequest, onMessage, modals } = useMockAlumniActions();
   const toast = useToast();
   const [tab, setTab] = useState<(typeof NEWS_TABS)[number]>("전체");
   const [rest, setRest] = useState(false); // H-06 쉬기 팝업
@@ -126,7 +128,7 @@ export default function HomePage() {
           </div>
           <div className="flex gap-5 py-5">
             {recommended.map((a) => (
-              <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} />
+              <AlumniCard key={a.id} person={summaryFromMock(a, bookmarks)} onRequest={() => onRequest(a)} onMessage={() => onMessage(a)} onBookmark={() => toggleBookmark(a.id)} />
             ))}
           </div>
         </div>

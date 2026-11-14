@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { Suspense, useState } from "react";
-import { useStore } from "@/lib/store";
 import { LION_PART_LABEL, POST_CATEGORIES, POST_CATEGORY_HINT, POST_CATEGORY_LABEL, type PostCategory } from "@/lib/types";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
+import type { AlumniSummary } from "@/lib/api/alumni";
 import { fromKstDateTime, toKstDateTime, type Id, type PostDetail, type PostUpdateRequest, type PostWriteRequest } from "@/lib/api/posts";
 import { isHttpUrl, normalizeLink } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
@@ -68,7 +68,6 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
   const router = useRouter();
   const toast = useToast();
   const service = usePostService();
-  const { alumni } = useStore();
   const counts = useApi(() => service.categoryCounts(), [service]).data;
   const meetAt = editing?.meetup ? fromKstDateTime(editing.meetup.meetAt) : undefined;
 
@@ -82,9 +81,10 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
   const [meetTime, setMeetTime] = useState(meetAt?.time ?? "19:00");
   const [place, setPlace] = useState(editing?.meetup?.place ?? "");
   const [cap, setCap] = useState(editing?.meetup?.capacity ?? editing?.recruit?.capacity ?? (initialCategory === "RECRUIT" ? 4 : 6));
-  const [companions, setCompanions] = useState<string[]>([]);
+  const [companions, setCompanions] = useState<AlumniSummary[]>([]);
   // 커피챗 모집
-  const [targetId, setTargetId] = useState<Id | null>(editing?.recruit?.senior.id ?? null);
+  const [picked, setPicked] = useState<AlumniSummary | null>(null);
+  const targetId: Id | null = picked?.id ?? editing?.recruit?.senior.id ?? null;
   const [deadline, setDeadline] = useState(editing?.recruit ? editing.recruit.deadline.slice(0, 10) : "");
   const [picker, setPicker] = useState<"companion" | "target" | null>(null);
   const [leave, setLeave] = useState(false);
@@ -92,17 +92,16 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
   const [invite, setInvite] = useState<Id | null>(null); // L-11 → post id
   const [saving, setSaving] = useState(false);
 
-  const mockTarget = targetId ? alumni.find((a) => a.id === String(targetId)) : undefined;
-  const target = mockTarget
-    ? { name: mockTarget.name, generation: mockTarget.generation, part: mockTarget.part, acceptGroup: mockTarget.allowGroup }
-    : editing?.recruit && String(editing.recruit.senior.id) === String(targetId)
+  const target = picked
+    ? { name: picked.name, generation: picked.generation, part: picked.lionParts[0] ?? ("ETC" as const), acceptGroup: picked.coffeeChat.acceptGroup }
+    : editing?.recruit
       ? { name: editing.recruit.senior.name ?? "알 수 없음", generation: editing.recruit.senior.generation ?? 0, part: editing.recruit.senior.lionParts?.[0] ?? ("ETC" as const), acceptGroup: editing.recruit.senior.acceptGroup }
       : undefined;
   const members = editing?.meetup?.participantCount ?? editing?.recruit?.memberCount ?? 1;
   const locked = !!editing && (!!editing.meetup || !!editing.recruit) && members > 1;
   const lockedAll = !!editing?.recruit && editing.recruit.status !== "OPEN";
   const minCap = Math.max(2, editing?.meetup?.participantCount ?? editing?.recruit?.memberCount ?? 2);
-  const canPickAlumni = !API_ENABLED; // 동문 목록 API 연결 전
+  const canInvite = !API_ENABLED; // 번개 초대(MEETUP-02) 연결 전
   const dirty = title.length > 0 || body.length > 0;
 
   const normalizedLinks = links.map(normalizeLink).filter((l): l is string => !!l);
@@ -137,10 +136,10 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
       }
 
       const req: PostWriteRequest = { ...base, isAnonymous: cat === "FREE" ? anonymous : undefined };
-      if (meetup) req.meetup = { ...meetup, companionIds: companions.length ? companions : undefined };
+      if (meetup) req.meetup = { ...meetup, companionIds: companions.length ? companions.map((a) => a.id) : undefined };
       if (cat === "RECRUIT") req.recruit = { seniorId: targetId!, capacity: cap, deadline };
       const res = await service.create(req);
-      if (cat === "MEETUP" && canPickAlumni) {
+      if (cat === "MEETUP" && canInvite) {
         setNotify(res.id);
         return;
       }
@@ -191,8 +190,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
                 type="button"
                 role="radio"
                 aria-checked={cat === c}
-                disabled={((locked || lockedAll) && cat !== c) || (c === "RECRUIT" && !canPickAlumni && !editing?.recruit) || (!!editing && editing.isAnonymous && c !== "FREE")}
-                title={c === "RECRUIT" && !canPickAlumni && !editing?.recruit ? "커피챗 모집은 동문 찾기를 연결한 뒤 쓸 수 있어요" : undefined}
+                disabled={((locked || lockedAll) && cat !== c) || (!!editing && editing.isAnonymous && c !== "FREE")}
                 onClick={() => { setCat(c); setCap(c === "RECRUIT" ? 4 : 6); }}
                 className={cn("h-8 rounded-full border px-3.5 t-label2 transition-colors disabled:opacity-40", cat === c ? "border-light-text bg-blue-100/60 text-navy" : "border-line-300 bg-white font-medium text-ink-700 hover:bg-bg-50")}
               >
@@ -239,7 +237,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           {timeError && <p className="-mt-2 t-caption2 text-orange">{timeError}</p>}
           <Input label="장소" required placeholder="예) 흑석역 2번 출구" value={place} onChange={(e) => setPlace(e.target.value)} />
           <Counter label="정원" hint="2~30명, 작성자 포함" value={cap} min={minCap} max={30} onChange={setCap} error={cap < minCap ? "지금 참여 인원보다 적게 정할 수 없어요" : undefined} />
-          {!editing && canPickAlumni && (
+          {!editing && (
             <div className="flex items-center justify-between">
               <div>
                 <p className="t-label1 text-ink-700">함께하는 동문 (선택)</p>
@@ -252,17 +250,14 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           )}
           {companions.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {companions.map((id) => {
-                const a = alumni.find((x) => x.id === id);
-                return (
-                  <span key={id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold">
-                    <Avatar name={a?.name} part={a?.part} size={32} className="!size-6 !text-[11px]" /> {a?.name}
-                    <button type="button" onClick={() => setCompanions((c) => c.filter((x) => x !== id))} className="text-ink-400">
-                      ✕
-                    </button>
-                  </span>
-                );
-              })}
+              {companions.map((a) => (
+                <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold">
+                  <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" /> {a.name}
+                  <button type="button" aria-label={`${a.name} 빼기`} onClick={() => setCompanions((c) => c.filter((x) => x.id !== a.id))} className="text-ink-400">
+                    ✕
+                  </button>
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -285,7 +280,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
               )}
               {locked && <p className="text-[12px] text-ink-500">참여자가 있어 신청할 사자를 바꿀 수 없어요</p>}
             </div>
-            <Button size="S" variant="secondary" disabled={locked || lockedAll || !canPickAlumni} onClick={() => setPicker("target")}>
+            <Button size="S" variant="secondary" disabled={locked || lockedAll} onClick={() => setPicker("target")}>
               사자 선택
             </Button>
           </div>
@@ -321,8 +316,9 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
       )}
       </Card>
 
-      {canPickAlumni && <AlumniPicker open={picker === "companion"} onClose={() => setPicker(null)} onConfirm={setCompanions} initial={companions} max={cap - 1} title="함께하는 동문 추가" description="등록하면 바로 참여자가 돼요" />}
-      {canPickAlumni && <AlumniPicker open={picker === "target"} onClose={() => setPicker(null)} onConfirm={(ids) => setTargetId(ids[0])} single title="신청할 사자 선택" description="여러 명 신청을 받는 사자만 보여요" filter={(a) => a.allowGroup && a.receive === "OPEN"} confirmLabel="선택" />}
+      <AlumniPicker open={picker === "companion"} onClose={() => setPicker(null)} onConfirm={(_, people) => setCompanions(people)} initial={companions} max={cap - 1} title="함께하는 동문 추가" description="등록하면 바로 참여자가 돼요" />
+      {/* 커피챗 모집의 사자는 오늘 받는 중이면서 여러 명 신청을 받는 사자만 (POST-03 recruit.seniorId) */}
+      <AlumniPicker open={picker === "target"} onClose={() => setPicker(null)} onConfirm={(_, people) => setPicked(people[0] ?? null)} single title="신청할 사자 선택" description="여러 명 신청을 받는 사자만 보여요" query={{ available: true }} filter={(a) => a.coffeeChat.acceptGroup} confirmLabel="선택" />
 
       <ConfirmModal open={leave} onClose={() => setLeave(false)} onConfirm={() => router.back()} title="작성 중인 내용이 사라져요. 나갈까요?" confirmLabel="나가기" />
       {/* ◇[O] CF-14 번개 알림 확인 */}
