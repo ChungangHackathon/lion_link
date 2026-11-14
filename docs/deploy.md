@@ -26,7 +26,7 @@
 | `S3_PUBLIC_URL` | X | 파일 주소 앞부분. CloudFront를 쓸 때만. 비우면 `https://{버킷}.s3.{지역}.amazonaws.com` |
 | `MAIL_ENABLED` | X | `true`일 때만 메일을 실제로 보내 (기본 `false`, 로그만 남김) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | 메일을 켜면 O | SMTP (Gmail, AWS SES 등). 포트 기본 587 |
-| `MAIL_FROM` | 메일을 켜면 O | 보내는 사람. 예: `LION:LINK <no-reply@도메인>` |
+| `MAIL_FROM` | 메일을 켜면 O | 보내는 사람. 예: `"LION:LINK" <no-reply@도메인>`. 표시 이름에 콜론이 있어 따옴표로 감싸야 한다. 빼면 메일을 만들 때 실패한다 |
 | `SWAGGER_ENABLED` | X | 운영에서 Swagger를 켤 때만 `true` |
 
 ## 3. 구글 로그인
