@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-/** Wordmark "멋사동네" — NanumGothic ExtraBold 28, 멋사 blue / 동네 orange */
-export function Logo({ href = "/home", className, size = 28 }: { href?: string; className?: string; size?: number }) {
+/**
+ * GNB 워드마크 "멋사동네" (수정 화면 GNB 967:16637) — OkDanDan Bold 45, 멋사 CAU BLUE #004C97 / 동네 LION ORANGE #FF6000.
+ * 폰트 파일은 재배포가 안 돼서 Figma에서 윤곽선으로 내보낸 SVG(public/brand/logo.svg, 128×36)를 쓴다.
+ */
+export function Logo({ href = "/home", className, height = 36 }: { href?: string; className?: string; height?: number }) {
   return (
-    <Link href={href} className={cn("inline-flex items-baseline font-logo font-extrabold leading-none tracking-tight select-none", className)} style={{ fontSize: size }} aria-label="멋사동네 홈">
-      <span className="text-primary">멋사</span>
-      <span className="text-orange">동네</span>
+    <Link href={href} className={cn("inline-flex shrink-0 select-none", className)} aria-label="멋사동네 홈">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/logo.svg" alt="멋사동네" width={(height * 128) / 36} height={height} draggable={false} />
     </Link>
   );
 }
