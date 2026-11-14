@@ -29,6 +29,8 @@ await api(`/posts/${id}/like`, { method: "PUT" });
 
 영역별 API 함수는 `lib/api/{영역}.ts`에 모아요 (예: `lib/api/auth.ts`). 아직 연결하지 않은 화면은 API 모드에서도 `lib/mock/*`와 `lib/store.tsx`(메모리)를 그대로 써요.
 
+화면에서 불러올 때는 `useApi(load, deps)`를 써요. 커뮤니티처럼 프로토타입 모드도 계속 지원해야 하는 영역은 `usePostService()`처럼 서비스 훅을 두고, 프로토타입 모드에서는 `lib/api/mock/*`가 mock 데이터를 실제 API 응답 모양으로 바꿔 돌려줘요. 그래서 화면 코드는 한 가지 모양(API 응답)만 다뤄요.
+
 ## 구조
 
 ```
