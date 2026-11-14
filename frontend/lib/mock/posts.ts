@@ -13,8 +13,8 @@ export const posts: Post[] = [
   {
     id: "p-1",
     category: "RECRUIT",
-    title: "김사자 선배님께 같이 커피챗 신청하실 분?",
-    body: "핀테크 백엔드 커리어가 궁금한 13·14기 같이 김사자 선배님께 커피챗 신청해요! 질문은 제가 대표로 정리할게요.",
+    title: "김민준 사자님께 같이 커피챗 신청하실 분?",
+    body: "핀테크 백엔드 커리어가 궁금한 13·14기 같이 김민준 사자님께 커피챗 신청해요! 질문은 제가 대표로 정리할게요.",
     authorId: ME_ID,
     keywords: ["백엔드", "이직", "커피챗"],
     views: 42,
@@ -75,7 +75,7 @@ export const posts: Post[] = [
   {
     id: "p-5",
     category: "RECRUIT",
-    title: "김민준 선배님과 같이 커피챗 하실 분 구합니다!!",
+    title: "김민준 사자님과 같이 커피챗 하실 분 구합니다!!",
     body: "UX 디자인 커리어 궁금한 분들 같이 신청해요.",
     authorId: "u-3",
     keywords: ["디자인", "커피챗"],
@@ -128,7 +128,7 @@ export const posts: Post[] = [
     id: "p-8",
     category: "EVENT",
     title: "11/20 현직자 백엔드 세미나 (310관)",
-    body: "7기 김사자 선배님이 백엔드 아키텍처 세미나를 열어요. 310관 B101, 19시. 신청은 댓글로!",
+    body: "7기 김민준 사자님이 백엔드 아키텍처 세미나를 열어요. 310관 B101, 19시. 신청은 댓글로!",
     authorId: "u-1",
     keywords: ["세미나", "백엔드"],
     views: 95,

@@ -41,7 +41,7 @@ export const alumni: Alumni[] = [
   },
   {
     id: "u-1",
-    name: "김사자",
+    name: "김민준",
     generation: 7,
     part: "BACKEND",
     status: "EMPLOYED",

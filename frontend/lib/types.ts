@@ -101,7 +101,7 @@ export type MeetingMode = "ONLINE" | "OFFLINE" | "ANY";
 export interface CoffeeChat {
   id: string;
   status: CoffeeChatStatus;
-  /** 받는 사자 (선배) */
+  /** 받는 사자 (사자) */
   receiverId: string;
   /** 대표 신청자 */
   requesterId: string;
@@ -198,7 +198,7 @@ export interface Post {
   edited?: boolean;
   // 모집글 (RECRUIT)
   recruit?: {
-    targetId: string; // 신청할 선배
+    targetId: string; // 신청할 사자
     status: RecruitStatus;
     max: number;
     memberIds: string[];

@@ -17,7 +17,7 @@ export const coffeeChats: CoffeeChat[] = [
     requesterId: "u-5",
     memberIds: [],
     topic: "프론트엔드 인턴 준비",
-    message: "안녕하세요! 13기 선배님 인턴 지원 경험이 궁금해서 신청드려요.",
+    message: "안녕하세요! 13기 사자님 인턴 지원 경험이 궁금해서 신청드려요.",
     questions: ["인턴 지원 시 포트폴리오는 어느 정도 준비하셨나요?", "React 외에 공부하면 좋은 것이 있을까요?"],
     mode: "ONLINE",
     candidates: [d(3), d(4, 20), d(6, 14)],
