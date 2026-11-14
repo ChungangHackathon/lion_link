@@ -17,7 +17,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 @ConfigurationProperties(prefix = "app.email")
 public record EmailProperties(
 		@DefaultValue("false") boolean enabled,
-		@DefaultValue("LION:LINK <no-reply@lionlink.local>") String from,
+		// 표시 이름에 콜론이 있으면 따옴표로 감싸야 한다. 안 그러면 메일을 만들 때 주소 해석이 실패한다
+		@DefaultValue("\"LION:LINK\" <no-reply@lionlink.local>") String from,
 		@DefaultValue("http://localhost:3000") String linkBaseUrl,
 		@DefaultValue("3") int maxAttempts,
 		@DefaultValue("10m") Duration retryDelay,

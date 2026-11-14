@@ -85,7 +85,10 @@ public class EmailNotificationService {
 			emailSender.send(emailLog.getToEmail(), content.get().subject(), content.get().html());
 			emailLog.markSent(now);
 		} catch (RuntimeException e) {
-			log.warn("Email send failed. id={}, attempt={}, reason={}", emailLog.getId(), emailLog.getAttemptCount() + 1, e.getMessage());
+			// 속 원인까지 남긴다. 겉 메시지만으로는 주소 형식 오류인지 접속 실패인지 알 수 없다
+			Throwable cause = e.getCause();
+			log.warn("Email send failed. id={}, attempt={}, reason={}", emailLog.getId(), emailLog.getAttemptCount() + 1,
+					cause == null ? e.getMessage() : e.getMessage() + ": " + cause.getMessage());
 			emailLog.fail(now, properties.maxAttempts(), properties.retryDelay());
 		}
 	}
