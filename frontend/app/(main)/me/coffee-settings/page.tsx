@@ -3,70 +3,181 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { useStore } from "@/lib/store";
 import { formatDate } from "@/lib/format";
+import { errorMessage, isApiError } from "@/lib/api/client";
+import type { CoffeeTopic, TimeSlot, Weekday } from "@/lib/api/alumni";
+import { COFFEE_TOPIC_LABEL } from "@/lib/api/coffee";
+import { addDays, PERIOD_LIMIT, periodError, todayKst, type CoffeePeriod, type CoffeeSettings } from "@/lib/api/coffeeSettings";
+import { useApi } from "@/lib/api/useApi";
+import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
 import { Button, Chip } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Input, Select, Switch } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
-import { Card } from "@/components/ui/Misc";
+import { Card, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 
-const TOPICS = ["취업 준비", "커리어·이직", "학업·전공", "프로젝트·개발", "창업", "멋사 활동", "기타"];
-const TIMES = ["오전", "오후", "저녁"];
-const WEEK = ["월", "화", "수", "목", "금", "토", "일"];
+const TOPICS: CoffeeTopic[] = ["JOB_PREP", "CAREER", "STUDY", "PROJECT_DEV", "STARTUP", "LION_ACTIVITY", "ETC"];
+const TIMES: { code: TimeSlot; label: string }[] = [
+  { code: "MORNING", label: "오전" },
+  { code: "AFTERNOON", label: "오후" },
+  { code: "EVENING", label: "저녁" },
+];
+const WEEK: { code: Weekday; label: string }[] = [
+  { code: "MON", label: "월" },
+  { code: "TUE", label: "화" },
+  { code: "WED", label: "수" },
+  { code: "THU", label: "목" },
+  { code: "FRI", label: "금" },
+  { code: "SAT", label: "토" },
+  { code: "SUN", label: "일" },
+];
+
+/** 칸 키: "EVENING-MON" */
+const slotKey = (t: TimeSlot, d: Weekday) => `${t}-${d}`;
+const toKeys = (slots: CoffeeSettings["availableSlots"]) => slots.flatMap((s) => s.times.map((t) => slotKey(t, s.day)));
+const toSlots = (keys: string[]): CoffeeSettings["availableSlots"] =>
+  WEEK.map((d) => ({ day: d.code, times: TIMES.filter((t) => keys.includes(slotKey(t.code, d.code))).map((t) => t.code) })).filter((s) => s.times.length > 0);
 
 /** 체크한 칸을 "평일 저녁 · 토 오후"처럼 한 줄로 */
-function summarize(slots: string[]) {
+function summarize(keys: string[]) {
   const out: string[] = [];
   for (const t of TIMES) {
-    const days = WEEK.filter((d) => slots.includes(`${t}-${d}`));
+    const days = WEEK.filter((d) => keys.includes(slotKey(t.code, d.code))).map((d) => d.label);
     if (!days.length) continue;
-    const weekdays = WEEK.slice(0, 5);
+    const weekdays = WEEK.slice(0, 5).map((d) => d.label);
     const hasAllWeekdays = weekdays.every((d) => days.includes(d));
     const rest = days.filter((d) => !(hasAllWeekdays && weekdays.includes(d)));
-    if (hasAllWeekdays) out.push(`평일 ${t}`);
-    if (rest.length) out.push(`${rest.join("·")} ${t}`);
+    if (hasAllWeekdays) out.push(`평일 ${t.label}`);
+    if (rest.length) out.push(`${rest.join("·")} ${t.label}`);
   }
   return out.join(" · ");
 }
 
-/** ★ CS-01 커피챗 설정 / 받기 상태 · ◇[O] CS-03 기간 추가 · ◇[O] CF-5 기본 상태 변경 확인 · [S] CS-04 */
+/** ★ CS-01 커피챗 설정 / 받기 상태 · ◇[O] CS-03 기간 추가 · ◇[O] CF-5 기본 상태 변경 확인 · [S] CS-04 (PROFILE-12·13·15) */
 export default function CoffeeSettingsPage() {
+  const service = useCoffeeSettingsService();
+  // 프로토타입 모드에서는 store가 바뀔 때마다 service가 바뀌므로, 처음 불러온 값으로 양식을 채운다
+  const [loader] = useState(service);
+  const { data, error, reload } = useApi(() => loader.get(), [loader]);
+  if (error && !data) return <EmptyState title="커피챗 설정을 불러오지 못했어요" description={errorMessage(error)} action={{ label: "다시 시도", onClick: reload }} />;
+  if (!data) return <Skeleton className="h-[600px] w-full" />;
+  return <SettingsForm initial={data} />;
+}
+
+function SettingsForm({ initial }: { initial: CoffeeSettings }) {
   const toast = useToast();
-  const { settings, setSettings } = useStore();
-  const [base, setBase] = useState<"OPEN" | "CLOSED">(settings.mode === "CLOSED" || settings.mode === "SCHEDULED" ? "CLOSED" : "OPEN");
-  const [topics, setTopics] = useState<string[]>(settings.keywords);
-  const [modes, setModes] = useState(settings.modes);
-  const [group, setGroup] = useState(settings.allowGroup);
-  const [slots, setSlots] = useState<string[]>(["저녁-월", "저녁-화", "저녁-수", "저녁-목", "저녁-금", "오전-토", "오후-토", "오후-일"]);
-  const [regions, setRegions] = useState(settings.regions);
-  const [periods, setPeriods] = useState(settings.periods.length ? settings.periods : [{ id: "p1", from: "2026-11-14", to: "2026-11-20", kind: "REST" as const }]);
+  const service = useCoffeeSettingsService();
+  const [saved, setSaved] = useState(initial);
+  const [base, setBase] = useState<"OPEN" | "CLOSED">(initial.defaultMode === "ON" ? "OPEN" : "CLOSED");
+  const [topics, setTopics] = useState<CoffeeTopic[]>(initial.topics);
+  const [modes, setModes] = useState(initial.modes);
+  const [group, setGroup] = useState(initial.acceptGroup);
+  const [slots, setSlots] = useState<string[]>(toKeys(initial.availableSlots));
+  const [regions, setRegions] = useState(initial.preferredArea ?? "");
+  const [periods, setPeriods] = useState<CoffeePeriod[]>(initial.periods);
+  const [clearPending, setClearPending] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [confirmBase, setConfirmBase] = useState<"OPEN" | "CLOSED" | null>(null);
+  const [confirmSave, setConfirmSave] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // 기간을 추가·삭제하면 오늘 상태가 바뀔 수 있어서 설정을 다시 불러온다 (다음 렌더의 service로 부른다)
+  const [refreshTick, setRefreshTick] = useState(0);
+  const fresh = useApi(() => service.get(), [refreshTick], refreshTick > 0).data;
+  const [seenFresh, setSeenFresh] = useState(fresh);
+  if (fresh && fresh !== seenFresh) {
+    setSeenFresh(fresh);
+    setSaved(fresh);
+    setPeriods(fresh.periods);
+  }
 
+  const savedBase = saved.defaultMode === "ON" ? "OPEN" : "CLOSED";
+  const baseDirty = base !== savedBase;
   const kind = base === "OPEN" ? "REST" : "OPEN";
-  const today = new Date().toISOString().slice(0, 10);
-  const activeRest = periods.find((p) => p.kind === "REST" && p.from <= today && today <= p.to);
-  const nextOpen = periods.filter((p) => p.kind === "OPEN").sort((a, b) => a.from.localeCompare(b.from))[0];
+  const shownPeriods = clearPending ? [] : periods;
 
-  const statusText = base === "OPEN" ? (activeRest ? `${formatDate(activeRest.to)}까지 쉬는 중이에요` : "지금 커피챗을 받고 있어요") : nextOpen ? `${formatDate(nextOpen.from)}부터 커피챗을 받아요` : "지금은 커피챗을 받지 않아요";
+  // 상태 문구: 저장된 서버 상태 기준. 기본 상태를 바꾸고 아직 저장 전이면 저장 후 모습을 안내한다
+  const status = saved.status;
+  const next = status.nextAvailableDate ? formatDate(status.nextAvailableDate) : null;
+  const statusText = baseDirty
+    ? base === "OPEN"
+      ? "저장하면 커피챗을 받기 시작해요"
+      : "저장하면 커피챗을 받지 않아요"
+    : status.availability === "AVAILABLE"
+      ? "지금 커피챗을 받고 있어요"
+      : status.availability === "RESTING"
+        ? next
+          ? `쉬는 중이에요 · ${next}부터 다시 받아요`
+          : "지금은 쉬는 중이에요"
+        : next
+          ? `${next}부터 커피챗을 받아요`
+          : "지금은 커피챗을 받지 않아요";
+  const receiving = baseDirty ? base === "OPEN" : status.availability === "AVAILABLE";
+  const resting = !baseDirty && status.availability === "RESTING";
 
   const changeBase = (v: "OPEN" | "CLOSED") => {
     if (v === base) return;
+    if (v === savedBase) {
+      setBase(v);
+      setClearPending(false);
+      return;
+    }
     if (periods.length) return setConfirmBase(v); // CF-5
     setBase(v);
   };
 
-  const save = () => {
+  const save = async (confirmClear = clearPending) => {
     if (modes.length === 0) return toast("가능한 방식을 1개 이상 골라주세요", { kind: "error" });
-    const mode = base === "OPEN" ? (activeRest ? "RESTING" : "OPEN") : nextOpen ? "SCHEDULED" : "CLOSED";
-    setSettings({ mode, times: summarize(slots) || settings.times, keywords: topics, modes, allowGroup: group, regions, periods, restUntil: activeRest ? formatDate(activeRest.to) : undefined, openFrom: nextOpen ? formatDate(nextOpen.from) : undefined });
-    toast("커피챗 설정을 저장했어요");
+    if (regions.trim().length > 30) return toast("선호 지역은 30자 이내로 적어주세요", { kind: "error" });
+    setSaving(true);
+    try {
+      const res = await service.save({
+        defaultMode: base === "OPEN" ? "ON" : "OFF",
+        acceptGroup: group,
+        topics,
+        modes,
+        availableSlots: toSlots(slots),
+        preferredArea: regions.trim() || undefined,
+        confirmClearPeriods: confirmClear || undefined,
+      });
+      setSaved(res);
+      setPeriods(res.periods);
+      setClearPending(false);
+      setBase(res.defaultMode === "ON" ? "OPEN" : "CLOSED");
+      toast("커피챗 설정을 저장했어요");
+    } catch (e) {
+      if (isApiError(e, "PERIODS_WILL_BE_CLEARED")) setConfirmSave(true);
+      else toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const receiving = base === "OPEN" && !activeRest;
+  const addPeriod = async (startDate: string, endDate: string) => {
+    try {
+      const p = await service.addPeriod({ startDate, endDate });
+      setPeriods((s) => [...s.filter((x) => String(x.id) !== String(p.id)), p].sort((a, b) => a.startDate.localeCompare(b.startDate)));
+      setAddOpen(false);
+      toast(kind === "REST" ? "쉬는 기간을 추가했어요" : "커피챗 받는 기간을 추가했어요");
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    }
+  };
+
+  const removePeriod = async (id: CoffeePeriod["id"]) => {
+    try {
+      await service.removePeriod(id);
+      setPeriods((s) => s.filter((x) => String(x.id) !== String(id)));
+      toast("기간을 지웠어요");
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    }
+  };
+
   const timeSummary = summarize(slots);
+  const calendarPeriods = shownPeriods.map((p) => ({ from: p.startDate, to: p.endDate, kind: saved.periodKind }));
 
   return (
     <div className="flex flex-col gap-5">
@@ -90,7 +201,7 @@ export default function CoffeeSettingsPage() {
               </span>
               <div className="flex flex-col gap-0.5">
                 <p className="t-title3 text-ink-900">{statusText}</p>
-                <p className="t-caption1 text-ink-700">{receiving ? "사자들이 내 프로필에서 바로 신청할 수 있어요" : base === "OPEN" ? "쉬는 기간이 끝나면 자동으로 다시 받아요" : "받기를 켜면 사자들이 신청할 수 있어요"}</p>
+                <p className="t-caption1 text-ink-700">{baseDirty ? "오른쪽 아래 [저장]을 눌러야 반영돼요" : receiving ? "사자들이 내 프로필에서 바로 신청할 수 있어요" : resting ? "쉬는 기간이 끝나면 자동으로 다시 받아요" : "받기를 켜면 사자들이 신청할 수 있어요"}</p>
               </div>
             </div>
             <div role="radiogroup" aria-label="기본 상태" className="grid grid-cols-2 gap-2">
@@ -105,22 +216,30 @@ export default function CoffeeSettingsPage() {
           <Card className="flex flex-col gap-3 rounded-[14px] p-6">
             <div className="flex items-center justify-between">
               <p className="t-body-bold text-ink-900">
-                {kind === "REST" ? "쉬는 기간" : "커피챗 받는 기간"} <span className="t-caption1 text-ink-400">({periods.length}/5)</span>
+                {kind === "REST" ? "쉬는 기간" : "커피챗 받는 기간"} <span className="t-caption1 text-ink-400">({shownPeriods.length}/{PERIOD_LIMIT})</span>
               </p>
-              <button type="button" disabled={periods.length >= 5} onClick={() => setAddOpen(true)} className="t-label2 text-ink-900 underline underline-offset-2 disabled:text-ink-400 disabled:no-underline">
+              <button type="button" disabled={shownPeriods.length >= PERIOD_LIMIT || baseDirty} onClick={() => setAddOpen(true)} className="t-label2 text-ink-900 underline underline-offset-2 disabled:text-ink-400 disabled:no-underline">
                 + 기간 추가
               </button>
             </div>
-            <p className="t-caption1 text-ink-500">{periods.length >= 5 ? "기간은 5개까지 등록할 수 있어요. 지난 기간을 지우고 추가해주세요." : kind === "REST" ? "이 기간에는 커피챗을 받지 않아요 · 최대 5개" : "이 기간에만 커피챗을 받아요 · 최대 5개"}</p>
+            <p className="t-caption1 text-ink-500">
+              {baseDirty
+                ? "기본 상태를 바꾼 뒤에는 저장하고 나서 기간을 추가할 수 있어요."
+                : shownPeriods.length >= PERIOD_LIMIT
+                  ? "기간은 5개까지 등록할 수 있어요. 지난 기간을 지우고 추가해주세요."
+                  : kind === "REST"
+                    ? "이 기간에는 커피챗을 받지 않아요 · 최대 5개 · 추가·삭제는 바로 저장돼요"
+                    : "이 기간에만 커피챗을 받아요 · 최대 5개 · 추가·삭제는 바로 저장돼요"}
+            </p>
             <ul className="flex flex-col gap-2">
-              {periods.length === 0 && <li className="rounded-[8px] bg-bg-50 px-4 py-3 text-[13px] text-ink-500">등록한 기간이 없어요</li>}
-              {periods.map((p) => (
+              {shownPeriods.length === 0 && <li className="rounded-[8px] bg-bg-50 px-4 py-3 text-[13px] text-ink-500">{clearPending ? "저장하면 등록한 기간이 모두 지워져요" : "등록한 기간이 없어요"}</li>}
+              {shownPeriods.map((p) => (
                 <li key={p.id} className="flex items-center justify-between rounded-[8px] bg-light-card px-4 py-3">
                   <span className="flex items-center gap-2 t-label1 text-ink-900">
                     <Icon name="calendar" size={16} className="text-ink-700" />
-                    {formatDate(p.from)}({DAY(p.from)}) ~ {formatDate(p.to)}({DAY(p.to)})
+                    {formatDate(p.startDate)}({DAY(p.startDate)}) ~ {formatDate(p.endDate)}({DAY(p.endDate)})
                   </span>
-                  <button type="button" onClick={() => setPeriods((x) => x.filter((y) => y.id !== p.id))} className="t-caption1 text-ink-500 hover:text-orange">
+                  <button type="button" onClick={() => void removePeriod(p.id)} className="t-caption1 text-ink-500 hover:text-orange">
                     삭제
                   </button>
                 </li>
@@ -133,7 +252,7 @@ export default function CoffeeSettingsPage() {
               <div className="flex flex-wrap gap-2">
                 {TOPICS.map((t) => (
                   <SoftChip key={t} selected={topics.includes(t)} onClick={() => setTopics((x) => (x.includes(t) ? x.filter((y) => y !== t) : [...x, t]))}>
-                    {t}
+                    {COFFEE_TOPIC_LABEL[t]}
                   </SoftChip>
                 ))}
               </div>
@@ -150,7 +269,10 @@ export default function CoffeeSettingsPage() {
             <div className="flex items-center justify-between rounded-[10px] bg-bg-100 px-4 py-3.5">
               <div className="flex flex-col gap-0.5">
                 <p className="t-body-bold text-ink-900">여러 명 커피챗 받기</p>
-                <p className="text-[12px] text-ink-500">끄면 1:1 신청만 받아요{!group && " · 진행 중인 여러 명 커피챗은 그대로 이어져요"}</p>
+                <p className="text-[12px] text-ink-500">
+                  끄면 1:1 신청만 받아요{!group && " · 진행 중인 여러 명 커피챗은 그대로 이어져요"}
+                  {!group && saved.acceptGroup && " · 나를 신청할 사자로 고른 모집 중인 커피챗 모집글은 저장하면 마감돼요"}
+                </p>
               </div>
               <Switch checked={group} onChange={setGroup} label="여러 명 커피챗 받기" />
             </div>
@@ -160,24 +282,24 @@ export default function CoffeeSettingsPage() {
                   <tr className="t-caption1 text-ink-500">
                     <th className="w-14" />
                     {WEEK.map((d) => (
-                      <th key={d} scope="col" className="font-normal">
-                        {d}
+                      <th key={d.code} scope="col" className="font-normal">
+                        {d.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {TIMES.map((t) => (
-                    <tr key={t}>
+                    <tr key={t.code}>
                       <th scope="row" className="text-left t-caption1 font-normal text-ink-700">
-                        {t}
+                        {t.label}
                       </th>
                       {WEEK.map((d) => {
-                        const key = `${t}-${d}`;
+                        const key = slotKey(t.code, d.code);
                         const on = slots.includes(key);
                         return (
-                          <td key={d}>
-                            <button type="button" role="checkbox" aria-checked={on} aria-label={`${d}요일 ${t}`} onClick={() => setSlots((x) => (on ? x.filter((y) => y !== key) : [...x, key]))} className={cn("mx-auto grid size-[18px] place-items-center rounded-[4px] border", on ? "border-primary bg-primary text-white" : "border-line-200 bg-white hover:border-ink-400")}>
+                          <td key={d.code}>
+                            <button type="button" role="checkbox" aria-checked={on} aria-label={`${d.label}요일 ${t.label}`} onClick={() => setSlots((x) => (on ? x.filter((y) => y !== key) : [...x, key]))} className={cn("mx-auto grid size-[18px] place-items-center rounded-[4px] border", on ? "border-primary bg-primary text-white" : "border-line-200 bg-white hover:border-ink-400")}>
                               {on && <Icon name="check" size={12} />}
                             </button>
                           </td>
@@ -194,7 +316,7 @@ export default function CoffeeSettingsPage() {
 
         {/* ── 오른쪽: 달력 · 미리보기 · 저장 ── */}
         <aside className="sticky top-[88px] flex flex-col gap-5">
-          <MiniCalendar periods={periods} large />
+          <MiniCalendar periods={calendarPeriods} large />
           <div className="flex flex-col gap-3">
             <p className="flex items-center gap-2 t-label2 text-ink-900">
               <Icon name="monitor" size={16} /> 내 프로필에 이렇게 보여요
@@ -208,7 +330,7 @@ export default function CoffeeSettingsPage() {
                 </span>
               </div>
               <span className={cn("flex w-fit items-center gap-1.5 rounded-full px-2.5 py-[5px] t-caption1", receiving ? "bg-[#e8f7ed] text-[#179952]" : "bg-bg-100 text-ink-500")}>
-                <span className={cn("size-[7px] rounded-full", receiving ? "bg-green" : "bg-ink-400")} /> {receiving ? "지금 커피챗 받는 중" : base === "OPEN" ? "쉬는 중" : "커피챗 받지 않음"}
+                <span className={cn("size-[7px] rounded-full", receiving ? "bg-green" : "bg-ink-400")} /> {receiving ? "지금 커피챗 받는 중" : resting ? "쉬는 중" : "커피챗 받지 않음"}
               </span>
               <Preview icon="clock" k="가능 시간대" v={timeSummary || "미정"} />
               <Preview icon="monitor" k="방식" v={modes.map((m) => (m === "ONLINE" ? "온라인" : "오프라인")).join(" · ") || "—"} />
@@ -218,23 +340,47 @@ export default function CoffeeSettingsPage() {
                 {topics.length === 0 && <span className="text-[12px] text-ink-400">아직 고르지 않았어요</span>}
                 {topics.map((k) => (
                   <span key={k} className="rounded-[6px] bg-bg-100 px-2 py-1 t-label2 text-ink-700">
-                    {k}
+                    {COFFEE_TOPIC_LABEL[k]}
                   </span>
                 ))}
               </div>
             </Card>
           </div>
-          <Button size="L" full onClick={save}>
+          <Button size="L" full loading={saving} onClick={() => void save()}>
             저장
           </Button>
           <p className="t-caption1 text-ink-500">저장하면 내 프로필 커피챗 카드에 바로 반영돼요</p>
         </aside>
       </div>
 
-      {/* CS-03 기간 추가 */}
-      <PeriodModal open={addOpen} onClose={() => setAddOpen(false)} kind={kind} existing={periods} onConfirm={(from, to) => { setPeriods((s) => [...s, { id: Math.random().toString(36).slice(2), from, to, kind }]); setAddOpen(false); }} />
-      {/* CF-5 */}
-      <ConfirmModal open={!!confirmBase} onClose={() => setConfirmBase(null)} onConfirm={() => { setBase(confirmBase!); setPeriods([]); setConfirmBase(null); }} title="등록한 기간이 모두 지워져요. 바꿀까요?" description="기본 상태를 바꾸면 쉬는 기간·커피챗 받는 기간이 모두 삭제돼요." confirmLabel="바꾸기" />
+      {/* CS-03 기간 추가 (PROFILE-15) */}
+      {addOpen && <PeriodModal open onClose={() => setAddOpen(false)} kind={kind} existing={periods} onConfirm={addPeriod} />}
+      {/* CF-5: 기본 상태를 바꾸면 저장할 때 기간이 모두 지워진다 (confirmClearPeriods) */}
+      <ConfirmModal
+        open={!!confirmBase}
+        onClose={() => setConfirmBase(null)}
+        onConfirm={() => {
+          setBase(confirmBase!);
+          setClearPending(true);
+          setConfirmBase(null);
+        }}
+        title="등록한 기간이 모두 지워져요. 바꿀까요?"
+        description="기본 상태를 바꾸면 쉬는 기간·커피챗 받는 기간이 모두 삭제돼요. [저장]을 눌러야 반영돼요."
+        confirmLabel="바꾸기"
+      />
+      {/* 저장했는데 서버가 기간 삭제 확인을 요구할 때 (다른 기기에서 기간을 추가한 경우 등) */}
+      <ConfirmModal
+        open={confirmSave}
+        onClose={() => setConfirmSave(false)}
+        onConfirm={() => {
+          setConfirmSave(false);
+          setClearPending(true);
+          void save(true);
+        }}
+        title="등록한 기간이 모두 지워져요. 바꿀까요?"
+        description="기본 상태를 바꾸면 쉬는 기간·커피챗 받는 기간이 모두 삭제돼요."
+        confirmLabel="바꾸고 저장"
+      />
     </div>
   );
 }
@@ -318,25 +464,21 @@ function MiniCalendar({ periods, large }: { periods: { from: string; to: string;
 }
 
 /** ◇[O] CS-03 기간 추가 모달 */
-function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boolean; onClose: () => void; kind: "REST" | "OPEN"; existing: { from: string; to: string }[]; onConfirm: (from: string, to: string) => void }) {
-  const today = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const plus = (n: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + n);
-    return fmt(d);
-  };
+function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boolean; onClose: () => void; kind: "REST" | "OPEN"; existing: CoffeePeriod[]; onConfirm: (from: string, to: string) => Promise<void> }) {
+  const today = todayKst();
+  const plus = (n: number) => addDays(today, n);
   const [preset, setPreset] = useState<"1w" | "2w" | "1m" | "custom">("1w");
-  const [from, setFrom] = useState(fmt(today));
-  const [to, setTo] = useState(plus(7));
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(plus(6));
+  const [busy, setBusy] = useState(false);
   const apply = (p: typeof preset) => {
     setPreset(p);
     if (p !== "custom") {
-      setFrom(fmt(today));
-      setTo(plus(p === "1w" ? 7 : p === "2w" ? 14 : 30));
+      setFrom(today);
+      setTo(plus(p === "1w" ? 6 : p === "2w" ? 13 : 29));
     }
   };
-  const error = to < from ? "종료일이 시작일보다 빨라요" : existing.some((e) => from <= e.to && e.from <= to) ? "이미 등록한 기간과 겹쳐요" : undefined;
+  const error = periodError(from, to, existing) ?? undefined;
   return (
     <Modal
       open={open}
@@ -348,7 +490,14 @@ function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boole
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button disabled={!!error} onClick={() => onConfirm(from, to)}>
+          <Button
+            disabled={!!error}
+            loading={busy}
+            onClick={() => {
+              setBusy(true);
+              onConfirm(from, to).finally(() => setBusy(false));
+            }}
+          >
             저장
           </Button>
         </>
@@ -369,7 +518,7 @@ function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boole
             직접 선택
           </Chip>
         </div>
-        <MiniCalendar periods={[...existing.map((e) => ({ ...e, kind: "REST" as const })), { from, to, kind: "OPEN" }]} />
+        <MiniCalendar periods={[...existing.map((e) => ({ from: e.startDate, to: e.endDate, kind: "REST" as const })), { from, to, kind: "OPEN" }]} />
         <div className="grid grid-cols-2 gap-3">
           <Select label="시작일" value={from} onChange={(e) => { setPreset("custom"); setFrom(e.target.value); }}>
             {Array.from({ length: 60 }, (_, i) => plus(i)).map((d) => (
