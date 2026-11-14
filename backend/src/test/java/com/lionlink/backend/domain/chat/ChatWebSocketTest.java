@@ -95,13 +95,14 @@ class ChatWebSocketTest {
 
 		chatRequestService.accept(kim, roomId);
 		BlockingQueue<Map<String, Object>> roomQueue = subscribe(connect(me), "/topic/chat-rooms/" + roomId);
-		chatRoomService.send(kim, roomId, new ChatMessageSendRequest("반가워요", null));
+		chatRoomService.send(kim, roomId, new ChatMessageSendRequest("반가워요", "c-1"));
 
 		Map<String, Object> event = roomQueue.poll(TIMEOUT, TimeUnit.SECONDS);
 		assertThat(event).containsEntry("type", "MESSAGE");
 		@SuppressWarnings("unchecked")
 		Map<String, Object> message = (Map<String, Object>) event.get("message");
-		assertThat(message).containsEntry("content", "반가워요").containsEntry("unreadCount", 1);
+		// clientMsgId가 실려야 보낸 사람 화면이 미리 그려 둔 메시지와 짝지어 지울 수 있다
+		assertThat(message).containsEntry("content", "반가워요").containsEntry("unreadCount", 1).containsEntry("clientMsgId", "c-1");
 		assertThat((String) message.get("createdAt")).endsWith("+09:00");
 	}
 

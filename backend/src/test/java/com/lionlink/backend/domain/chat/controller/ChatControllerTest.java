@@ -187,6 +187,7 @@ class ChatControllerTest {
 				.andExpect(jsonPath("$.type").value("TEXT"))
 				.andExpect(jsonPath("$.senderId").value(me))
 				.andExpect(jsonPath("$.unreadCount").value(1))
+				.andExpect(jsonPath("$.clientMsgId").value("c-1"))
 				.andExpect(jsonPath("$.createdAt").value(endsWith("+09:00")))
 				.andReturn().getResponse().getContentAsString();
 		Long messageId = ((Number) JsonPath.read(sent, "$.id")).longValue();
