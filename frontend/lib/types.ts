@@ -235,6 +235,8 @@ export interface PendingSignup {
   part: LionPart;
   appliedAt: string;
   match: "MATCH" | "CHECK"; // 동문 명단 대조 결과
+  /** AD-10 참고 열: 같은 이름·기수가 이미 있음 / 반려 후 재신청 */
+  note?: "DUPLICATE" | "REAPPLY";
   status: UserStatus;
 }
 
