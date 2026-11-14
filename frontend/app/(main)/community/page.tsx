@@ -8,9 +8,10 @@ import { useStore } from "@/lib/store";
 import { POPULAR_KEYWORDS } from "@/lib/mock/posts";
 import { POST_CATEGORIES, POST_CATEGORY_LABEL, type PostCategory } from "@/lib/types";
 import { daysLeft, formatDateTime } from "@/lib/format";
-import { StatusBadge, Tag } from "@/components/ui/Badge";
+import { AvatarGroup } from "@/components/ui/Avatar";
+import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Glyph } from "@/components/ui/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { Card, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { PostRow } from "@/components/domain/PostRow";
 
@@ -51,10 +52,10 @@ function Community() {
     <div className="grid grid-cols-[220px_1fr_312px] gap-6">
       {/* Left: 글쓰기 + 카테고리 */}
       <aside className="flex flex-col gap-4">
-        <Button size="L" full href="/community/new">
+        <Button size="L" full href="/community/new" className="text-[18px] font-bold shadow-[0_2px_4px_rgba(0,0,0,0.15)]" leading={<Icon name="edit" size={24} />}>
           글쓰기
         </Button>
-        <Card className="p-2">
+        <Card className="rounded-[10px] p-2">
           {(["ALL", ...POST_CATEGORIES] as const).map((c) => (
             <button
               key={c}
@@ -64,7 +65,7 @@ function Community() {
                 setPage(1);
                 router.replace(c === "ALL" ? "/community" : `/community?cat=${c}`);
               }}
-              className={cn("flex w-full items-center justify-between rounded-[6px] px-4 py-2.5 text-[15px] hover:bg-bg-50", cat === c ? "bg-bg-100 font-bold text-ink-900" : "text-ink-700")}
+              className={cn("flex w-full items-center justify-between rounded-[6px] px-3 py-[9px] text-[14px] hover:bg-bg-50", cat === c ? "bg-bg-100 font-bold text-ink-900" : "font-medium text-ink-700")}
             >
               {c === "ALL" ? "전체" : POST_CATEGORY_LABEL[c]}
               <span className="text-[12px] text-ink-400">{count(c)}</span>
@@ -74,13 +75,13 @@ function Community() {
       </aside>
 
       {/* Center: list */}
-      <Card className="flex min-w-0 flex-col">
-        <div className="flex items-center justify-between gap-4 px-6 pt-6 pb-2">
-          <label className="flex h-10 w-[360px] items-center gap-2 rounded-[8px] border border-line-300 px-3 focus-within:border-ink-800">
-            <Glyph name="search" className="text-ink-400" />
+      <Card className="flex h-fit min-w-0 flex-col rounded-[10px]">
+        <div className="flex items-center justify-between gap-4 px-5 pb-2 pt-5">
+          <label className="flex h-10 w-[380px] items-center gap-2 rounded-[8px] border border-line-300 px-3 focus-within:border-ink-700">
+            <Icon name="search" size={18} className="text-ink-400" />
             <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} placeholder={`${cat === "ALL" ? "전체" : POST_CATEGORY_LABEL[cat]} 카테고리에서 제목·본문 검색`} className="min-w-0 flex-1 text-[14px] outline-none placeholder:text-ink-400" />
           </label>
-          <select value={sort} onChange={(e) => setSort(e.target.value as "newest" | "popular")} className="h-9 rounded-[6px] border-0 bg-transparent text-[14px] text-ink-900">
+          <select aria-label="정렬" value={sort} onChange={(e) => setSort(e.target.value as "newest" | "popular")} className="h-9 rounded-[6px] border-0 bg-transparent t-label2 text-ink-900">
             <option value="newest">최신순</option>
             <option value="popular">조회순</option>
           </select>
@@ -101,7 +102,7 @@ function Community() {
               ‹
             </button>
             {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-              <button key={n} type="button" onClick={() => setPage(n)} className={cn("grid size-8 place-items-center rounded-[6px]", page === n ? "bg-ink-900 font-bold text-white" : "text-ink-700 hover:bg-bg-100")}>
+              <button key={n} type="button" onClick={() => setPage(n)} className={cn("grid size-8 place-items-center rounded-full", page === n ? "bg-primary font-bold text-white" : "text-ink-700 hover:bg-bg-100")}>
                 {n}
               </button>
             ))}
@@ -114,46 +115,63 @@ function Community() {
 
       {/* Right rail */}
       <aside className="flex flex-col gap-4">
-        <Card className="flex flex-col gap-3 p-5">
-          <h2 className="text-[16px] font-bold text-ink-900">모집 중인 번개·커피챗</h2>
+        <Card className="flex flex-col gap-2 rounded-[10px] p-5">
+          <h2 className="t-title3 text-ink-900">모집 중인 번개·커피챗</h2>
           <ul>
             {recruits.length === 0 && <li className="py-3 text-[13px] text-ink-500">모집 중인 글이 없어요</li>}
-            {recruits.map((p) => (
-              <li key={p.id} className="border-b border-line-200 py-3 last:border-b-0">
-                <Link href={`/community/${p.id}`} className="flex flex-col gap-1.5 hover:underline">
-                  <span className="flex items-center gap-2 text-[12px] text-ink-500">
-                    <StatusBadge tone="outline">모집 중</StatusBadge>
-                    {p.recruit ? `참여 ${p.recruit.memberIds.length}/${p.recruit.max} · 마감 ${daysLeft(p.recruit.deadline)}` : p.meetup ? `참여 ${p.meetup.memberIds.length}/${p.meetup.max} · ${formatDateTime(p.meetup.at)}` : ""}
-                  </span>
-                  <span className="truncate text-[14px] font-semibold text-ink-900">{p.title}</span>
-                </Link>
-              </li>
-            ))}
+            {recruits.map((p) => {
+              const ids = p.recruit?.memberIds ?? p.meetup?.memberIds ?? [];
+              const max = p.recruit?.max ?? p.meetup?.max ?? 0;
+              const people = ids.map((id) => alumni.find((a) => a.id === id)).filter((a) => !!a);
+              return (
+                <li key={p.id} className="border-b border-line-200 py-3 last:border-b-0">
+                  <Link href={`/community/${p.id}`} className="group flex flex-col gap-2">
+                    <span className="flex items-center gap-2 text-[12px] text-ink-500">
+                      <StatusBadge tone="outline">모집 중</StatusBadge>
+                      {p.recruit ? `마감 ${daysLeft(p.recruit.deadline)}` : p.meetup ? formatDateTime(p.meetup.at) : ""}
+                    </span>
+                    <span className="truncate t-label2 text-ink-900 group-hover:underline">{p.title}</span>
+                    <span className="flex items-center gap-2 t-caption2 text-ink-700">
+                      {people.length > 0 && <AvatarGroup people={people.map((a) => ({ name: a!.name, part: a!.part }))} size={28} />}
+                      {ids.length}/{max}명
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </Card>
         {popular.length > 0 && (
-          <Card className="flex flex-col gap-3 p-5">
-            <h2 className="text-[16px] font-bold text-ink-900">이번 주 많이 본 글</h2>
-            <ol className="flex flex-col gap-2.5">
+          <Card className="flex flex-col gap-1 rounded-[10px] p-5 shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
+            <h2 className="pb-2 t-title3 text-ink-900">이번 주 많이 본 글</h2>
+            <ol>
               {popular.map((p, i) => (
-                <li key={p.id} className="flex gap-2.5">
-                  <span className="w-3 text-[14px] font-bold text-ink-900">{i + 1}</span>
-                  <Link href={`/community/${p.id}`} className="flex min-w-0 flex-col gap-1 hover:underline">
-                    <span className="truncate text-[14px] font-semibold text-ink-900">{p.title}</span>
-                    <span className="flex items-center gap-1.5 text-[12px] text-ink-500">
-                      <Tag>{POST_CATEGORY_LABEL[p.category]}</Tag> 댓글 {p.comments.length}
+                <li key={p.id} className="border-b border-line-200 py-3 last:border-b-0">
+                  <Link href={`/community/${p.id}`} className="group flex gap-4">
+                    <span className={cn("w-3 text-[18px] font-bold leading-6", i === 0 ? "text-orange" : "text-primary")}>{i + 1}</span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <span className="truncate t-label1 text-ink-900 group-hover:underline">{p.title}</span>
+                      <span className="flex items-center justify-between t-caption1">
+                        <span className="font-medium text-primary">{POST_CATEGORY_LABEL[p.category]}</span>
+                        <span className="flex items-center gap-1 text-ink-700">
+                          <Icon name="chat" size={13} /> {p.comments.length}
+                        </span>
+                      </span>
                     </span>
                   </Link>
                 </li>
               ))}
             </ol>
+            <button type="button" onClick={() => setSort("popular")} className="w-fit pt-2 t-label2 text-ink-900 hover:underline">
+              더보기
+            </button>
           </Card>
         )}
-        <Card className="flex flex-col gap-3 p-5">
-          <h2 className="text-[16px] font-bold text-ink-900">인기 키워드</h2>
+        <Card className="flex flex-col gap-4 rounded-[10px] p-5">
+          <h2 className="t-title3 text-ink-900">인기 키워드</h2>
           <div className="flex flex-wrap gap-2">
             {POPULAR_KEYWORDS.map((k) => (
-              <button key={k} type="button" onClick={() => { setQ(k); setCat("ALL"); setPage(1); }} className="rounded-full border border-line-300 px-3.5 py-1.5 text-[13px] font-semibold text-ink-700 hover:bg-bg-100">
+              <button key={k} type="button" onClick={() => { setQ(k); setCat("ALL"); setPage(1); }} className="rounded-full border border-line-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-ink-700 hover:bg-bg-100">
                 #{k}
               </button>
             ))}
