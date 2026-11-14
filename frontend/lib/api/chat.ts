@@ -25,6 +25,8 @@ export interface ChatMessage {
   senderId: Id | null;
   content: string;
   deleted: boolean;
+  /** 보낼 때 붙인 재전송 방지 id. 실시간으로 되돌아온 내 메시지를 알아보는 데 쓴다 (SYSTEM은 null) */
+  clientMsgId: string | null;
   createdAt: string;
   editedAt: string | null;
   /** 보낸 사람을 뺀 참여자 중 아직 안 읽은 사람 수 (단체방에서 내 메시지 옆 숫자) */

@@ -59,6 +59,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   const router = useRouter();
   const toast = useToast();
   const refreshList = useChatRefresh();
+  const { connected, subscribeRoom, onReconnect, countsChanged } = useChatRealtime();
   const { me, user } = useSession();
   const myId = myIdOf(me, ME_ID);
   const myName = me?.name ?? user?.name ?? "나";
@@ -104,12 +105,14 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
     if (!lastFromOther) return;
     service
       .read(roomId, lastId)
-      .then(refreshList)
+      .then(() => {
+        refreshList();
+        countsChanged();
+      })
       .catch(() => undefined);
-  }, [lastId, lastFromOther, roomId, service, refreshList]);
+  }, [lastId, lastFromOther, roomId, service, refreshList, countsChanged]);
 
   // ── 실시간 (방 채널 MESSAGE · READ, 개인 채널, 재연결) ──
-  const { connected, subscribeRoom, onReconnect } = useChatRealtime();
   const live = useRef({ status: room.status, type: room.type, myId, lastId });
   useEffect(() => {
     live.current = { status: room.status, type: room.type, myId, lastId };
@@ -208,7 +211,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
     const content = text.trim();
     if (!content || content.length > 1000 || !room.canSend) return;
     const clientId = newClientId();
-    setMessages((ms) => [...ms, { id: `tmp-${clientId}`, clientId, state: "sending", type: "TEXT", senderId: myId, content, deleted: false, createdAt: new Date().toISOString(), editedAt: null, unreadCount: 0 }]);
+    setMessages((ms) => [...ms, { id: `tmp-${clientId}`, clientId, state: "sending", type: "TEXT", senderId: myId, content, deleted: false, clientMsgId: clientId, createdAt: new Date().toISOString(), editedAt: null, unreadCount: 0 }]);
     setText("");
     void deliver(content, clientId);
   };
@@ -238,6 +241,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       await service.leave(roomId);
       toast(ended ? "목록에서 지웠어요" : "채팅방을 나갔어요");
       refreshList();
+      countsChanged();
       router.push("/chat");
     } catch (e) {
       toast(errorMessage(e), { kind: "error" });
@@ -506,8 +510,10 @@ function mergeNew(ms: Item[], incoming: ChatMessage[]): Item[] {
   const known = new Set(ms.filter((m) => !m.state).map((m) => String(m.id)));
   const fresh = incoming.filter((m) => !known.has(String(m.id)));
   if (!fresh.length) return ms;
+  // 내가 보낸 메시지가 실시간으로 돌아오면 보내는 중이던 임시 메시지를 치운다 (clientMsgId로 짝지음)
+  const arrived = new Set(fresh.map((m) => m.clientMsgId).filter((id): id is string => !!id));
   const confirmed = ms.filter((m) => !m.state);
-  const local = ms.filter((m) => m.state);
+  const local = ms.filter((m) => m.state && !(m.clientId && arrived.has(m.clientId)));
   return [...confirmed, ...fresh, ...local];
 }
 

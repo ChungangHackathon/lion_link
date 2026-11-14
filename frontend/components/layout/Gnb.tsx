@@ -45,11 +45,13 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const chatCounts = useApi((signal) => chatService.unreadCount(signal), [chatService], badgeEnabled);
   const unreadChat = badgeEnabled && chatCounts.data ? chatCounts.data.unreadMessages + chatCounts.data.messageRequests : 0;
   const reloadChat = chatCounts.reload;
-  const { connected } = useChatRealtime();
+  const { connected, onCountsChanged } = useChatRealtime();
   usePersonalEvents((e) => {
     reloadChat();
     if (e.type === "REQUEST_RECEIVED" && !pathname.startsWith("/chat/requests")) toast("새 메시지 요청이 왔어요");
   });
+  // 내가 읽거나 방을 나간 변화는 개인 채널로 오지 않으므로 채팅 화면이 직접 알려 준다
+  useEffect(() => onCountsChanged(reloadChat), [onCountsChanged, reloadChat]);
   // [내 커피챗] 숫자: 내가 받은 대기 중 신청 수 (COFFEE-02 pendingReceivedCount). 화면을 옮길 때마다 다시 센다
   const coffeeService = useCoffeeService();
   const coffeeCounts = useApi((signal) => coffeeService.list("RECEIVED", "PENDING", 0, 1, signal), [coffeeService, pathname], badgeEnabled);

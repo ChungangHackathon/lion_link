@@ -26,10 +26,17 @@ interface Realtime {
   onPersonal: (handler: (e: PersonalEvent) => void) => () => void;
   /** 끊겼다가 다시 연결됐을 때 (놓친 메시지를 after로 받아오는 데 쓴다) */
   onReconnect: (handler: () => void) => () => void;
+  /**
+   * 내가 읽거나 방을 나가서 안 읽은 수가 바뀌었다고 알린다.
+   * 읽음(CHAT-12)은 서버가 방 채널로만 보내서 개인 채널 소식이 오지 않으므로 화면이 직접 알린다.
+   */
+  countsChanged: () => void;
+  /** countsChanged를 받는다 (상단 메뉴 '채팅' 숫자) */
+  onCountsChanged: (handler: () => void) => () => void;
 }
 
 const noop = () => () => undefined;
-const OFF: Realtime = { connected: false, subscribeRoom: noop, onPersonal: noop, onReconnect: noop };
+const OFF: Realtime = { connected: false, subscribeRoom: noop, onPersonal: noop, onReconnect: noop, countsChanged: () => undefined, onCountsChanged: noop };
 const RealtimeContext = createContext<Realtime>(OFF);
 export const useChatRealtime = () => useContext(RealtimeContext);
 
@@ -53,6 +60,7 @@ export function ChatRealtimeProvider({ enabled, children }: { enabled: boolean; 
   const rooms = useRef(new Map<string, { handlers: Set<(e: RoomEvent) => void>; sub: StompSubscription | null }>());
   const personal = useRef(new Set<(e: PersonalEvent) => void>());
   const reconnects = useRef(new Set<() => void>());
+  const counts = useRef(new Set<() => void>());
   const [api] = useState<Omit<Realtime, "connected">>(() => ({
     subscribeRoom: (roomId, handler) => {
       const key = String(roomId);
@@ -85,6 +93,11 @@ export function ChatRealtimeProvider({ enabled, children }: { enabled: boolean; 
     onReconnect: (handler) => {
       reconnects.current.add(handler);
       return () => reconnects.current.delete(handler);
+    },
+    countsChanged: () => counts.current.forEach((h) => h()),
+    onCountsChanged: (handler) => {
+      counts.current.add(handler);
+      return () => counts.current.delete(handler);
     },
   }));
 
