@@ -16,9 +16,9 @@ export const notifications: AppNotification[] = [
 
 export const pendingSignups: PendingSignup[] = [
   { id: "s-1", name: "박중앙", generation: 13, email: "jungang@cau.ac.kr", part: "FRONTEND", appliedAt: ago(60 * 2), match: "MATCH", status: "PENDING" },
-  { id: "s-2", name: "김한강", generation: 14, email: "hangang@gmail.com", part: "BACKEND", appliedAt: ago(60 * 5), match: "CHECK", status: "PENDING" },
+  { id: "s-2", name: "김한강", generation: 14, email: "hangang@gmail.com", part: "BACKEND", appliedAt: ago(60 * 5), match: "CHECK", note: "DUPLICATE", status: "PENDING" },
   { id: "s-3", name: "이노을", generation: 12, email: "noeul@cau.ac.kr", part: "DESIGN", appliedAt: ago(60 * 26), match: "MATCH", status: "PENDING" },
-  { id: "s-4", name: "정바다", generation: 11, email: "bada@naver.com", part: "PLANNING", appliedAt: ago(60 * 50), match: "CHECK", status: "PENDING" },
+  { id: "s-4", name: "정바다", generation: 11, email: "bada@naver.com", part: "PLANNING", appliedAt: ago(60 * 50), match: "CHECK", note: "REAPPLY", status: "PENDING" },
   { id: "s-5", name: "최하늘", generation: 13, email: "sky@cau.ac.kr", part: "FRONTEND", appliedAt: ago(60 * 80), match: "MATCH", status: "APPROVED" },
   { id: "s-6", name: "강별", generation: 9, email: "star@gmail.com", part: "BACKEND", appliedAt: ago(60 * 100), match: "CHECK", status: "REJECTED" },
 ];

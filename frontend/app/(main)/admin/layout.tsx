@@ -26,7 +26,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         title="관리자 페이지"
         items={[
           { href: "/admin", label: "가입 승인", count: pending },
-          { href: "/admin/invites", label: "초대 관리" },
           { href: "/admin/posts", label: "게시글 관리" },
         ]}
       />
