@@ -17,14 +17,21 @@ import { Button, Chip } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { Card, EmptyState, Skeleton, Tooltip } from "@/components/ui/Misc";
+import { Card, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 import { isImageUrl } from "@/components/domain/PostRow";
+import { SectionListModal } from "@/components/domain/ProfileSectionEditor";
+import type { SectionKey } from "@/lib/api/profileSections";
 
 type Section = "basic" | "about" | "contact" | "career" | "education" | "lion" | "project" | "skills" | "links" | "certs";
-/** 이번 작업에서 연결한 편집. 목록형 섹션(경력·학력·멋사 활동·프로젝트·자격증 등)은 다음 작업(PROFILE-11)에서 연다 */
-const LIST_SECTIONS: Section[] = ["career", "education", "lion", "project", "certs"];
-const PENDING_TIP = "곧 연결될 기능이에요";
+/** 목록형 섹션 (PROFILE-11) → 한 팝업에서 편집하는 API 섹션들 */
+const LIST_SECTIONS: Partial<Record<Section, { title: string; keys: SectionKey[] }>> = {
+  career: { title: "경력 편집", keys: ["careers"] },
+  education: { title: "학력 편집", keys: ["educations"] },
+  lion: { title: "멋사 활동 편집", keys: ["lionActivities", "lionProjects"] },
+  project: { title: "프로젝트 편집", keys: ["projects"] },
+  certs: { title: "자격증·수상·대외활동·언어 편집", keys: ["certifications", "awards", "activities", "languages"] },
+};
 const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
 const ADDABLE: { key: Section; label: string; desc: string }[] = [
   { key: "about", label: "소개", desc: "나를 소개하는 글" },
@@ -55,6 +62,8 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
   const coffeeService = useCoffeeSettingsService();
   const coffee = useApi(() => coffeeService.get(), [coffeeService]).data;
   const [edit, setEdit] = useState<Section | null>(null);
+  /** 목록형 섹션을 '추가'로 열면 비어 있는 첫 섹션의 폼부터 연다 */
+  const [startAdding, setStartAdding] = useState<SectionKey | undefined>();
   const [addOpen, setAddOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -88,8 +97,9 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
     }
   };
 
-  const openSection = (s: Section) => {
-    if (LIST_SECTIONS.includes(s)) return toast("경력·학력 같은 목록형 항목 편집은 곧 연결돼요");
+  const openSection = (s: Section, adding = false) => {
+    const list = LIST_SECTIONS[s];
+    setStartAdding(adding && list && list.keys.every((k) => p[k].length === 0) ? list.keys[0] : undefined);
     setEdit(s);
   };
 
@@ -241,7 +251,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           </MySection>
         )}
         {sections.careers.length > 0 && (
-          <MySection title="경력" locked>
+          <MySection title="경력" onEdit={() => openSection("career")} note={p.visibility.company === "PRIVATE" ? "회사명 비공개" : undefined}>
             <ul className="flex flex-col gap-4">
               {sections.careers.map((c, i) => (
                 <ItemRow key={i} title={c.company} sub={`${c.role}${c.type ? ` · ${c.type}` : ""}`} meta={c.from ? `${c.from} ~ ${c.to}${c.duration ? ` · ${c.duration}` : ""}` : "시작 시점을 입력해주세요"} />
@@ -250,7 +260,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           </MySection>
         )}
         {educations.length > 0 && (
-          <MySection title="학력" locked>
+          <MySection title="학력" onEdit={() => openSection("education")}>
             <ul className="flex flex-col gap-4">
               {educations.map((e, i) => (
                 <ItemRow key={i} title={e.school} sub={[e.major, e.degree].filter(Boolean).join(" · ")} meta={e.from ? `${e.from} ~ ${e.to}` : undefined} />
@@ -259,7 +269,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           </MySection>
         )}
         {sections.lion.length > 0 && (
-          <MySection title="멋사 활동" locked>
+          <MySection title="멋사 활동" onEdit={() => openSection("lion")}>
             <ul className="flex flex-col gap-2">
               {sections.lion.map((l, i) => (
                 <li key={i} className="rounded-[8px] border border-line-200 bg-bg-50 px-[15px] py-3 t-body-bold font-medium text-ink-900">
@@ -271,7 +281,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           </MySection>
         )}
         {sections.projects.length > 0 && (
-          <MySection title="프로젝트" locked>
+          <MySection title="프로젝트" onEdit={() => openSection("project")}>
             <ul className="flex flex-col gap-4">
               {sections.projects.map((pj, i) => (
                 <ItemRow key={i} title={pj.name} sub={pj.type} meta={pj.from ? `${pj.from} ~ ${pj.to}` : undefined} />
@@ -280,7 +290,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           </MySection>
         )}
         {sections.certs.length > 0 && (
-          <MySection title="자격증·수상·대외활동·언어" locked>
+          <MySection title="자격증·수상·대외활동·언어" onEdit={() => openSection("certs")}>
             <dl className="flex flex-col gap-2 text-[14px]">
               {sections.certs.map((c, i) => (
                 <div key={i} className="flex gap-4">
@@ -321,21 +331,33 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
         <ul className="grid grid-cols-2 gap-2">
           {ADDABLE.map((a) => {
             const added = a.key === "about" ? !!p.bio : a.key === "career" ? p.careers.length > 0 : a.key === "education" ? p.educations.length > 0 : a.key === "lion" ? p.lionActivities.length > 0 : a.key === "project" ? p.projects.length > 0 : a.key === "skills" ? p.skills.length > 0 : a.key === "links" ? p.links.length > 0 : sections.certs.length > 0;
-            const locked = LIST_SECTIONS.includes(a.key);
             return (
               <li key={a.key}>
-                <button type="button" onClick={() => { setAddOpen(false); openSection(a.key); }} className={cn("flex w-full items-center justify-between rounded-[8px] border px-4 py-3 text-left hover:bg-bg-50", added ? "border-line-200" : "border-line-300", locked && "opacity-60")}>
+                <button type="button" onClick={() => { setAddOpen(false); openSection(a.key, !added); }} className={cn("flex w-full items-center justify-between rounded-[8px] border px-4 py-3 text-left hover:bg-bg-50", added ? "border-line-200" : "border-line-300")}>
                   <span className="flex flex-col">
                     <span className="t-label1 text-ink-900">{a.label}</span>
                     <span className="text-[12px] text-ink-500">{a.desc}</span>
                   </span>
-                  <span className="text-[12px] text-ink-400">{locked ? "곧 연결" : added ? "편집" : "+ 추가"}</span>
+                  <span className="text-[12px] text-ink-400">{added ? "편집" : "+ 추가"}</span>
                 </button>
               </li>
             );
           })}
         </ul>
       </Modal>
+
+      {/* 목록형 섹션 편집 (PROFILE-11) */}
+      {edit && LIST_SECTIONS[edit] && (
+        <SectionListModal
+          title={LIST_SECTIONS[edit]!.title}
+          sections={LIST_SECTIONS[edit]!.keys}
+          profile={p}
+          service={service}
+          startAdding={startAdding}
+          onClose={() => setEdit(null)}
+          onChanged={update}
+        />
+      )}
 
       {/* E-12 기본 정보 편집 (PROFILE-04) */}
       {edit === "basic" && (
@@ -716,7 +738,7 @@ function LinksModal({ links, scope, onClose, onSave }: { links: MyProfile["links
   );
 }
 
-function MySection({ title, onEdit, locked, note, children }: { title: string; onEdit?: () => void; locked?: boolean; note?: string; children: React.ReactNode }) {
+function MySection({ title, onEdit, note, children }: { title: string; onEdit: () => void; note?: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
@@ -728,17 +750,9 @@ function MySection({ title, onEdit, locked, note, children }: { title: string; o
             </span>
           )}
         </h2>
-        {locked ? (
-          <Tooltip text={PENDING_TIP}>
-            <span aria-label={`${title} 편집`} className="flex items-center gap-1 px-1 py-0.5 text-[12px] text-ink-400">
-              <Icon name="edit" size={14} /> 편집
-            </span>
-          </Tooltip>
-        ) : (
-          <button type="button" onClick={onEdit} aria-label={`${title} 편집`} className="flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-ink-700 hover:bg-bg-100">
-            <Icon name="edit" size={14} /> 편집
-          </button>
-        )}
+        <button type="button" onClick={onEdit} aria-label={`${title} 편집`} className="flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-ink-700 hover:bg-bg-100">
+          <Icon name="edit" size={14} /> 편집
+        </button>
       </div>
       {children}
     </section>

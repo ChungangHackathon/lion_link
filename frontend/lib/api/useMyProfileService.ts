@@ -9,6 +9,9 @@ import { API_ENABLED } from "./client";
 import type { LinkType } from "./alumni";
 import type { ApiLionPart } from "./profile";
 import * as my from "./myProfile";
+import { ApiError } from "./client";
+import { addSectionItem, deleteSectionItem, SECTION_SCHEMA, sortItems, updateSectionItem, type SectionBody, type SectionItem, type SectionKey } from "./profileSections";
+import type { Id } from "./posts";
 import type { BasicInfo, MyProfile, Visibility } from "./myProfile";
 
 /**
@@ -25,6 +28,10 @@ export interface MyProfileService {
   updateLinks: (links: MyProfile["links"]) => Promise<{ links: MyProfile["links"] }>;
   updateContact: (body: { email: string; phone: string | null }) => Promise<{ email: string; phone: string | null }>;
   updateVisibility: (patch: Partial<Visibility>) => Promise<{ visibility: Visibility }>;
+  /** PROFILE-11 목록형 섹션 */
+  addItem: (section: SectionKey, body: SectionBody) => Promise<SectionItem>;
+  updateItem: (section: SectionKey, id: Id, body: SectionBody) => Promise<SectionItem>;
+  deleteItem: (section: SectionKey, id: Id) => Promise<void>;
 }
 
 const apiService: MyProfileService = {
@@ -37,6 +44,9 @@ const apiService: MyProfileService = {
   updateLinks: my.updateLinks,
   updateContact: my.updateContact,
   updateVisibility: my.updateVisibility,
+  addItem: addSectionItem,
+  updateItem: updateSectionItem,
+  deleteItem: deleteSectionItem,
 };
 
 // ---------------------------------------------------------------------------
@@ -49,6 +59,8 @@ const LINK_FROM_LABEL: Record<string, LinkType> = { 깃허브: "GITHUB", 링크�
 const SCOPE: Record<"ALL" | "CONNECTED" | "ME", my.Scope> = { ALL: "PUBLIC", CONNECTED: "CONNECTED", ME: "PRIVATE" };
 
 let mockProfile: MyProfile | null = null;
+let mockSeq = 1000;
+const fail = (status: number, code: string, message: string) => Promise.reject(new ApiError(status, code, message));
 
 function buildMock(me: Alumni): MyProfile {
   const d = profileDetail(ME_ID);
@@ -72,7 +84,7 @@ function buildMock(me: Alumni): MyProfile {
     visibility: { email: SCOPE[d.email?.visibility ?? "CONNECTED"], phone: SCOPE[d.phone?.visibility ?? "CONNECTED"], links: SCOPE[d.links[0]?.visibility ?? "ALL"], company: "PUBLIC" },
     careers: d.careers.map((c) => ({ id: seq++, company: c.company, jobTitle: c.role, employmentType: null, startYm: ym(c.from), endYm: c.to === "현재" ? null : ym(c.to), isCurrent: c.to === "현재", description: null })),
     educations: d.educations.map((e) => ({ id: seq++, school: e.school, major: e.major, degree: e.degree === "학사" ? "BACHELOR" : e.degree === "석사" ? "MASTER" : null, startYm: ym(e.from), endYm: ym(e.to), isCurrent: e.to === "재학 중" })),
-    lionActivities: d.lion.map((l) => ({ id: seq++, generation: l.generation, role: l.role.includes("운영진") ? ("STAFF" as const) : ("LION" as const), parts: l.part === "ETC" ? [] : [l.part] })),
+    lionActivities: d.lion.map((l) => ({ id: seq++, generation: l.generation, role: l.role.includes("운영진") ? ("STAFF" as const) : ("LION" as const), parts: l.part === "ETC" ? [] : [l.part], isDefault: l.generation === me.generation })),
     lionProjects: d.lion.flatMap((l) => l.projects.map((p) => ({ id: seq++, name: p.name, eventType: "ETC" as const, generation: l.generation, myRole: p.role, description: p.desc, link: p.link ? `https://${p.link}` : null }))),
     projects: d.projects.map((p) => ({ id: seq++, name: p.name, role: p.type, description: null, link: null, startYm: ym(p.from), endYm: ym(p.to), tags: p.skills })),
     certifications: d.certs.filter((c) => c.kind === "자격증").map((c) => ({ id: seq++, name: c.text, issuer: null, acquiredYm: null })),
@@ -122,6 +134,30 @@ export function useMyProfileService(): MyProfileService {
         return delay(body);
       },
       updateVisibility: (v) => delay({ visibility: patch({ visibility: { ...current().visibility, ...v } }).visibility }),
+      addItem: (section, body) => {
+        const list = current()[section] as SectionItem[];
+        if (list.length >= SECTION_SCHEMA[section].max) return fail(409, "LIMIT_EXCEEDED", `${SECTION_SCHEMA[section].label}은(는) ${SECTION_SCHEMA[section].max}개까지 추가할 수 있어요`);
+        if (section === "lionActivities" && list.some((x) => (x as { generation: number }).generation === body.generation)) return fail(409, "DUPLICATE_ITEM", "이미 추가한 기수예요");
+        if (section === "languages" && list.some((x) => (x as { language: string }).language === body.language)) return fail(409, "DUPLICATE_ITEM", "이미 추가한 언어예요");
+        const item = { endYm: null, ...body, id: mockSeq++ } as unknown as SectionItem;
+        patch({ [section]: sortItems([...list, item]) });
+        return delay(item);
+      },
+      updateItem: (section, id, body) => {
+        const list = current()[section] as SectionItem[];
+        const prev = list.find((x) => x.id === id);
+        if (!prev) return fail(404, "NOT_FOUND", "항목을 찾을 수 없어요");
+        const item = { endYm: null, ...body, id, ...("isDefault" in prev && prev.isDefault ? { isDefault: true, generation: prev.generation } : {}) } as unknown as SectionItem;
+        patch({ [section]: sortItems(list.map((x) => (x.id === id ? item : x))) });
+        return delay(item);
+      },
+      deleteItem: (section, id) => {
+        const list = current()[section] as SectionItem[];
+        const prev = list.find((x) => x.id === id);
+        if (prev && "isDefault" in prev && prev.isDefault) return fail(403, "DEFAULT_ITEM_NOT_DELETABLE", "가입 기수 활동은 지울 수 없어요");
+        patch({ [section]: list.filter((x) => x.id !== id) });
+        return delay(undefined);
+      },
     };
   }, [store]);
 }
