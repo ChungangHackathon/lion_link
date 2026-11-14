@@ -70,7 +70,7 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
                         <span className="t-body-bold text-ink-900">{r.title ?? others[0]?.name}</span>
                         <span className="ml-1.5 text-[12px] text-ink-500">{r.type === "GROUP" ? `${r.memberIds.length}명` : `${others[0]?.generation}기`}</span>
                       </p>
-                      <span className="shrink-0 text-[11px] text-ink-400">{last ? timeAgo(last.at) : ""}</span>
+                      <span suppressHydrationWarning className="shrink-0 text-[11px] text-ink-400">{last ? timeAgo(last.at) : ""}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <p className={cn("truncate text-[13px]", declined ? "text-ink-400" : "text-ink-700")}>{declined ? "거절됨" : mineRequest ? "수락 대기 중" : last ? `${r.type === "GROUP" && last.senderId !== "system" && last.senderId !== ME_ID ? `${alumni.find((a) => a.id === last.senderId)?.name}: ` : ""}${last.text}` : ""}</p>

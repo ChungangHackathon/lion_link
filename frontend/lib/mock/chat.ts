@@ -1,7 +1,8 @@
+import { MOCK_NOW } from "./now";
 import type { ChatRoom } from "@/lib/types";
 import { ME_ID } from "./users";
 
-const at = (minAgo: number) => new Date(Date.now() - minAgo * 60_000).toISOString();
+const at = (minAgo: number) => new Date(MOCK_NOW - minAgo * 60_000).toISOString();
 
 export const chatRooms: ChatRoom[] = [
   {

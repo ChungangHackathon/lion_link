@@ -1,7 +1,8 @@
+import { MOCK_NOW } from "./now";
 import type { Post } from "@/lib/types";
 import { ME_ID } from "./users";
 
-const ago = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+const ago = (h: number) => new Date(MOCK_NOW - h * 3600_000).toISOString();
 const later = (d: number, hour = 19) => {
   const t = new Date();
   t.setDate(t.getDate() + d);
