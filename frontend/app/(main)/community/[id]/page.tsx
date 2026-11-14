@@ -13,7 +13,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge, Tag } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Misc";
-import { Glyph } from "@/components/ui/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { ConfirmModal, Modal, Popover } from "@/components/ui/Modal";
 import { Card, EmptyState, Tooltip } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
@@ -30,6 +30,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   const { posts, alumni, coffeeChats, blocked, addComment, likePost, deletePost, joinMeetup, leaveMeetup, applyRecruit, setRecruitStatus } = useStore();
   const post = posts.find((p) => p.id === id);
   const [comment, setComment] = useState("");
+  const [anonComment, setAnonComment] = useState(false);
   const [more, setMore] = useState(false);
   const [del, setDel] = useState(false);
   const [img, setImg] = useState<string | null>(null);
@@ -47,24 +48,24 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   const submitComment = () => {
     const t = comment.trim();
     if (!t || t.length > 500) return;
-    addComment(post.id, t, post.anonymous && mine);
+    addComment(post.id, t, anonComment || (!!post.anonymous && mine));
     setComment("");
   };
 
   return (
-    <div className="grid grid-cols-[1fr_384px] gap-6">
+    <div className="grid grid-cols-[minmax(0,792px)_384px] justify-between gap-6">
       <div className="flex flex-col gap-4">
-        <Link href={`/community?cat=${post.category}`} className="text-[13px] text-ink-500 hover:underline">
-          ← {POST_CATEGORY_LABEL[post.category]} 목록
-        </Link>
-        <Card className="p-8">
+        <Card className="rounded-[10px] px-[30px] pb-8 pt-6">
+          <Link href={`/community?cat=${post.category}`} className="mb-5 flex w-fit items-center gap-1.5 t-caption1 text-ink-500 hover:underline">
+            <Icon name="menu" size={14} /> {POST_CATEGORY_LABEL[post.category]} 목록
+          </Link>
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-1.5">
-                <Tag className="font-semibold">{POST_CATEGORY_LABEL[post.category]}</Tag>
-                {post.deadline && <span className="rounded-[4px] border-[0.5px] border-orange bg-orange-back px-2 py-0.5 text-[12px] font-semibold">{daysLeft(post.deadline)}</span>}
+                <span className="rounded-[4px] bg-bg-100 px-2 py-1 t-caption2 text-ink-700">{POST_CATEGORY_LABEL[post.category]}</span>
+                {post.deadline && <span className="grid h-[19px] min-w-[39px] place-items-center rounded-[4px] border-[0.5px] border-orange bg-orange-back px-1.5 t-caption2 text-orange-badge">{daysLeft(post.deadline)}</span>}
               </div>
-              <h1 className="text-[28px] font-bold leading-[36px] text-ink-900">{post.title}</h1>
+              <h1 className="t-title text-ink-900">{post.title}</h1>
               <div className="flex items-center gap-3">
                 {(post.recruit || post.meetup) && <Avatar name={post.anonymous ? undefined : author?.name} part={author?.part} size={40} />}
                 <p className="text-[13px] text-ink-500">
@@ -73,7 +74,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
                       {author?.name} · {author?.generation}기
                     </span>
                   ) : null}
-                  {formatDate(post.createdAt)}
+                  {new Date(post.createdAt).getMonth() + 1}월 {new Date(post.createdAt).getDate()}일
                   {post.edited && " · 수정됨"} · 조회 {post.views}
                 </p>
               </div>
@@ -81,7 +82,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
             {(mine || isAdmin) && (
               <div className="relative">
                 <button type="button" aria-label="더보기" onClick={() => setMore((m) => !m)} className="rounded p-1 hover:bg-bg-100">
-                  <Glyph name="more" size={22} />
+                  <Icon name="more" size={22} />
                 </button>
                 <Popover open={more} onClose={() => setMore(false)} className="w-[140px] p-2">
                   {mine && (
@@ -97,50 +98,52 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
             )}
           </div>
 
-          <hr className="my-6 border-line-200" />
-          <p className="whitespace-pre-line text-[16px] leading-7 text-ink-900">{post.body}</p>
-
-          {post.images?.map((src, i) => (
-            <button key={i} type="button" onClick={() => setImg(src)} className="mt-6 grid h-[260px] w-full place-items-center rounded-[8px] border border-line-200 bg-bg-100 text-[13px] text-ink-400 hover:bg-line-200">
-              <span className="flex flex-col items-center gap-1">
-                <Glyph name="image" size={22} /> Image
-              </span>
-            </button>
-          ))}
-
+          <hr className="my-5 border-line-200" />
           {(post.files?.length || post.links?.length) ? (
-            <div className="mt-6 flex flex-col gap-2">
-              <p className="text-[13px] text-ink-500">첨부파일 · 링크</p>
+            <div className="mb-5 flex flex-col gap-2">
               {post.files?.map((f) => (
                 <div key={f.name} className="flex items-center justify-between rounded-[8px] border border-line-200 px-4 py-3 text-[14px]">
                   <span className="flex items-center gap-2 text-ink-900">
-                    <Glyph name="link" size={16} className="text-ink-400" /> {f.name}
+                    <Icon name="clip" size={18} className="text-ink-700" /> {f.name}
                   </span>
                   <span className="flex items-center gap-3 text-[12px] text-ink-500">
-                    {f.size} <Glyph name="chevron-down" size={16} />
+                    {f.size}
+                    <button type="button" aria-label={`${f.name} 내려받기`} onClick={() => toast("다운로드는 백엔드 연결 후 동작해요")} className="rounded p-1 text-ink-700 hover:bg-bg-100">
+                      <Icon name="download" size={18} />
+                    </button>
                   </span>
                 </div>
               ))}
               {post.links?.map((l) => (
                 <a key={l} href={l} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-[8px] border border-line-200 px-4 py-3 text-[14px] text-ink-900 underline hover:bg-bg-50">
-                  <Glyph name="link" size={16} className="text-ink-400" /> {l}
+                  <Icon name="link" size={18} className="text-ink-700" /> {l}
                 </a>
               ))}
             </div>
           ) : null}
+          <p className="whitespace-pre-line text-[16px] leading-[26px] text-ink-900">{post.body}</p>
 
-          <div className="mt-6 flex items-center gap-3">
+          {post.images?.map((src, i) => (
+            <button key={i} type="button" onClick={() => setImg(src)} className="mt-6 grid h-[260px] w-full place-items-center rounded-[8px] border border-line-200 bg-bg-100 text-[13px] text-ink-400 hover:bg-line-200">
+              <span className="flex flex-col items-center gap-1">
+                <Icon name="image" size={22} /> Image
+              </span>
+            </button>
+          ))}
+
+
+          <div className="mt-6 flex items-center gap-3 border-b border-line-200 pb-6">
             <button type="button" onClick={() => likePost(post.id)} className="flex items-center gap-1.5 rounded-full border border-line-300 px-3.5 py-1.5 text-[13px] text-ink-700 hover:bg-bg-100">
-              <Glyph name="heart" size={16} /> {post.likes}
+              <Icon name="heart" size={16} /> {post.likes}
             </button>
             <span className="flex items-center gap-1.5 text-[13px] text-ink-500">
-              <Glyph name="comment" size={16} /> {post.comments.length}
+              <Icon name="comment" size={16} /> {post.comments.length}
             </span>
           </div>
 
           {/* Comments */}
           <section className="mt-8 flex flex-col gap-4">
-            <h2 className="text-[16px] font-bold text-ink-900">댓글 {post.comments.length}</h2>
+            <h2 className="t-body-bold text-ink-900">댓글 {post.comments.length}</h2>
             {post.comments.length === 0 && <p className="py-4 text-[14px] text-ink-500">첫 댓글을 남겨보세요</p>}
             <ul>
               {post.comments.map((c) => {
@@ -152,7 +155,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
                     <Avatar name={anon ? undefined : ca?.name} part={ca?.part} size={32} withdrawn={!ca} />
                     <div className="flex flex-col gap-1">
                       <p className="text-[13px]">
-                        <span className="font-bold text-ink-900">{anon ? "익명" : ca?.name ?? "탈퇴한 사자"}</span>
+                        <span className="font-bold text-ink-900">{anon ? "익명의 사자" : ca?.name ?? "탈퇴한 사자"}</span>
                         <span className="ml-1.5 text-ink-500">
                           {!anon && ca && `${ca.generation}기 · `}
                           {timeAgo(c.at)}
@@ -165,9 +168,12 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
                 );
               })}
             </ul>
-            <form onSubmit={(e) => { e.preventDefault(); submitComment(); }} className="flex gap-2">
-              <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder="댓글을 입력하세요 (1~500자)" className="h-10 flex-1 rounded-[6px] border border-line-300 px-3 text-[14px] outline-none placeholder:text-ink-400 focus:border-ink-800" maxLength={500} />
-              <Button type="submit" disabled={!comment.trim()}>
+            <form onSubmit={(e) => { e.preventDefault(); submitComment(); }} className="flex items-center gap-2">
+              <input aria-label="댓글" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="댓글을 입력하세요 (1~500자)" maxLength={500} className="h-10 flex-1 rounded-[6px] border border-line-300 px-3 text-[14px] outline-none placeholder:text-ink-400 focus:border-ink-700" />
+              <label className="flex shrink-0 cursor-pointer items-center gap-1.5 t-caption1 text-ink-700">
+                <input type="checkbox" checked={anonComment} onChange={(e) => setAnonComment(e.target.checked)} className="size-4 accent-[#004c97]" /> 익명
+              </label>
+              <Button type="submit" size="S" className="h-10" disabled={!comment.trim()}>
                 등록
               </Button>
             </form>
@@ -184,7 +190,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
         ) : null}
 
         {!post.anonymous && author && !post.recruit && !post.meetup && (
-          <Card className="flex flex-col gap-3 p-5">
+          <Card className="flex flex-col gap-3 rounded-[10px] p-5">
             <p className="text-[13px] text-ink-500">작성자</p>
             <div className="flex items-center gap-3">
               <Avatar name={author.name} part={author.part} size={48} />
@@ -211,8 +217,8 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           </Card>
         )}
 
-        <Card className="flex flex-col gap-3 p-5">
-          <h2 className="text-[16px] font-bold text-ink-900">{POST_CATEGORY_LABEL[post.category]}의 다른 글</h2>
+        <Card className="flex flex-col gap-3 rounded-[10px] p-5">
+          <h2 className="t-body-bold text-ink-900">{POST_CATEGORY_LABEL[post.category]}의 다른 글</h2>
           <ul>
             {others.length === 0 && <li className="py-2 text-[13px] text-ink-500">다른 글이 없어요</li>}
             {others.map((p) => {
@@ -237,7 +243,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
       <Modal open={!!img} onClose={() => setImg(null)} width={960}>
         <div className="grid h-[520px] place-items-center rounded-[8px] bg-bg-100 text-ink-400">
           <span className="flex flex-col items-center gap-2">
-            <Glyph name="image" size={40} /> 이미지 크게 보기
+            <Icon name="image" size={40} /> 이미지 크게 보기
           </span>
         </div>
       </Modal>
@@ -265,7 +271,7 @@ function RecruitCard({ post, target, mine, onApply, onJoin, onCancel }: { post: 
         <span className="text-[13px] text-ink-500">마감 {daysLeft(r.deadline)}</span>
       </div>
       <p className="text-[17px] font-bold text-ink-900">
-        {target.name}({target.generation}기) 선배 · 참여 {r.memberIds.length}/{r.max}명
+        {target.name}({target.generation}기) 사자 · 참여 {r.memberIds.length}/{r.max}명
       </p>
       <p className="text-[13px] text-ink-500">참여자</p>
       <ul className="flex flex-col gap-2">
@@ -289,7 +295,7 @@ function RecruitCard({ post, target, mine, onApply, onJoin, onCancel }: { post: 
                 이 인원으로 커피챗 신청하기
               </Button>
             ) : (
-              <Tooltip text="이 선배는 지금 1:1 커피챗만 받아요">
+              <Tooltip text="이 사자는 지금 1:1 커피챗만 받아요">
                 <span className="flex h-12 w-full items-center justify-center rounded-[8px] bg-line-200 text-[15px] font-bold text-ink-400">이 인원으로 커피챗 신청하기</span>
               </Tooltip>
             )
@@ -305,7 +311,7 @@ function RecruitCard({ post, target, mine, onApply, onJoin, onCancel }: { post: 
       ) : joined ? (
         <p className="rounded-[8px] bg-bg-50 px-4 py-3 text-center text-[13px] text-ink-700">{r.status === "APPLIED" ? "참여가 닫혔어요. 빠지기는 커피챗 상세에서 할 수 있어요." : "참여 중이에요. 작성자가 신청하면 함께 들어가요."}</p>
       ) : hasActive ? (
-        <Tooltip text="이미 이 선배와 진행 중인 커피챗이 있어요">
+        <Tooltip text="이미 이 사자와 진행 중인 커피챗이 있어요">
           <span className="flex h-12 w-full items-center justify-center rounded-[8px] bg-line-200 text-[15px] font-bold text-ink-400">참여하기</span>
         </Tooltip>
       ) : (
@@ -335,7 +341,7 @@ function MeetupCard({ post, mine, onJoin, onLeave, onInvite, onCancel }: { post:
         참여 {m.memberIds.length}/{m.max}명 · {formatDateTime(m.at)}
       </p>
       <p className="flex items-center gap-1 text-[13px] text-ink-700">
-        <Glyph name="pin" size={14} /> {m.place}
+        <Icon name="pin" size={14} /> {m.place}
       </p>
       <p className="text-[13px] text-ink-500">참여자</p>
       <ul className="flex flex-col gap-2">
