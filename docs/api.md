@@ -1967,12 +1967,13 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 ### 메시지 객체
 
 ```json
-{ "id": 501, "type": "TEXT", "senderId": 12, "content": "안녕하세요!", "deleted": false,
+{ "id": 501, "type": "TEXT", "senderId": 12, "content": "안녕하세요!", "deleted": false, "clientMsgId": "c-1",
   "createdAt": "2026-11-13T19:00:00+09:00", "editedAt": null, "unreadCount": 1 }
 ```
 
 - `type`은 `TEXT` 일반 메시지, `SYSTEM` 안내(커피챗 수락·일정 확정 등). `SYSTEM`은 `senderId`가 `null`이야
 - `unreadCount`는 보낸 사람을 뺀 참여자 중 아직 이 메시지를 안 읽은 사람 수야. 단체방에서 내 메시지 옆에 숫자로 보여줘. `SYSTEM`은 `0`
+- `clientMsgId`는 보낼 때 붙인 값(CHAT-11) 그대로야. 방 채널로 돌아온 내 메시지를 알아보고 화면에 미리 그려 둔 메시지와 짝지을 때 써. 보낼 때 안 넣었거나 `SYSTEM`이면 `null`
 
 ### CHAT-01 메시지 요청 보내기
 
