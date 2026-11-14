@@ -35,6 +35,5 @@ export const MY_NAV: NavItem[] = [
   { href: "/me/coffee-settings", label: "커피챗 설정" },
   { href: "/me/notifications", label: "알림 설정" },
   { href: "/me/bookmarks", label: "관심 동문" },
-  { href: "/me/blocked", label: "차단 목록" },
   { href: "/me/settings", label: "설정" },
 ];
