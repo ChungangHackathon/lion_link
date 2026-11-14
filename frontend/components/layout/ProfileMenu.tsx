@@ -45,7 +45,7 @@ export function ProfileMenu({ onNavigate }: { onNavigate?: () => void }) {
         type="button"
         onClick={() => {
           onNavigate?.();
-          logout();
+          void logout();
           router.push("/login");
         }}
         className="flex items-center gap-2 rounded-[6px] px-3 py-[10px] text-left text-[14px] leading-[18px] font-medium text-ink-500 hover:bg-bg-100"

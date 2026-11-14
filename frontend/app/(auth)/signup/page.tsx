@@ -1,41 +1,110 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/lib/session";
 import { VillageHero } from "@/components/brand/VillageHero";
+import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
+import { getGoogleInfo, landingPath, reapply, signup, updateSignupInfo } from "@/lib/api/auth";
 
 /**
  * ★ A-01 가입 신청 / 이름·기수 입력 → (A-04 구글 계정 선택) → O-01 온보딩 → A-13 승인 대기.
  * 초대 링크 가입은 없어졌고, 누구나 신청한 뒤 운영진이 동문인지 확인해요.
+ *
+ * 같은 화면을 세 가지로 쓴다 (API 모드).
+ *  - 로그인 전: 구글 로그인 뒤 돌아온 가입 신청 (AUTH-09 → AUTH-02)
+ *  - 승인 대기: [가입 정보 고치기] (AUTH-06)
+ *  - 반려: [다시 신청하기] (AUTH-07)
  */
 export default function SignupPage() {
   const router = useRouter();
-  const { login } = useSession();
+  const toast = useToast();
+  const { login, ready: sessionReady, me, setMe, refreshMe } = useSession();
   const [name, setName] = useState("");
   const [gen, setGen] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [terms, setTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState(false);
+  const prefilled = useRef(false);
+
+  const mode: "signup" | "edit" | "reapply" = me?.status === "PENDING" ? "edit" : me?.status === "REJECTED" ? "reapply" : "signup";
 
   const genNum = Number(gen.replace(/[^0-9]/g, ""));
-  const nameOk = name.trim().length >= 2;
+  const nameOk = name.trim().length >= 2 && name.trim().length <= 20;
   const genOk = genNum >= 1 && genNum <= 14;
-  const ready = nameOk && genOk && agreed;
+  const ready = nameOk && genOk && (mode !== "signup" || agreed);
 
-  const submit = (e: React.FormEvent) => {
+  // 칸 미리 채우기: 로그인했으면 내 정보, 아니면 구글 계정 이름(AUTH-09)
+  useEffect(() => {
+    if (!API_ENABLED || !sessionReady || prefilled.current) return;
+    prefilled.current = true;
+
+    if (me) {
+      if (me.status === "APPROVED") {
+        router.replace(landingPath(me));
+        return;
+      }
+      setName(me.name);
+      setGen(String(me.generation));
+      return;
+    }
+
+    getGoogleInfo()
+      .then((info) => {
+        if (info.name) setName((v) => v || info.name || "");
+      })
+      .catch((error) => {
+        if (isApiError(error, "UNAUTHENTICATED")) {
+          toast("가입 신청 시간이 지났어요. 구글 로그인부터 다시 해주세요.", { kind: "error" });
+          router.replace("/login");
+        } else {
+          toast(errorMessage(error), { kind: "error" });
+        }
+      });
+  }, [sessionReady, me, router, toast]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
     if (!ready) return;
     setLoading(true);
-    setTimeout(() => {
-      login({ status: "PENDING", userId: "u-me" });
-      router.push("/onboarding");
-    }, 500);
+
+    if (!API_ENABLED) {
+      setTimeout(() => {
+        login({ status: "PENDING", userId: "u-me" });
+        router.push("/onboarding");
+      }, 500);
+      return;
+    }
+
+    const info = { name: name.trim(), generation: genNum };
+    try {
+      if (mode === "signup") {
+        const res = await signup({ ...info, privacyAgreed: agreed });
+        setMe(res.user);
+        router.push(landingPath(res.user));
+      } else {
+        const next = mode === "edit" ? await updateSignupInfo(info) : await reapply(info);
+        setMe(next);
+        toast(mode === "edit" ? "가입 정보를 고쳤어요" : "다시 신청했어요. 운영진이 확인할게요", { kind: "success" });
+        router.push(landingPath(next));
+      }
+    } catch (error) {
+      toast(errorMessage(error), { kind: "error" });
+      if (isApiError(error, "UNAUTHENTICATED") && mode === "signup") {
+        router.replace("/login");
+      } else if (isApiError(error) && error.status === 409) {
+        // 이미 가입됨·이미 승인됨 등 상태가 바뀜 → 내 정보를 다시 불러와 맞는 화면으로
+        const latest = await refreshMe();
+        if (latest) router.replace(landingPath(latest));
+      }
+      setLoading(false);
+    }
   };
 
   const field = "h-10 w-full rounded-[6px] border bg-white px-3 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-ink-700";
@@ -55,16 +124,18 @@ export default function SignupPage() {
               <input value={gen} onChange={(e) => setGen(e.target.value)} placeholder="13기" inputMode="numeric" aria-invalid={touched && !genOk} className={`${field} ${touched && !genOk ? "border-orange" : "border-line-300"}`} />
             </label>
           </div>
-          <p className="t-label2 text-bg-100">{touched && !nameOk ? "이름을 2글자 이상 입력해주세요." : touched && !genOk ? "기수는 1~14기 사이로 입력해주세요." : "이름·기수는 승인 전까지 고칠 수 있어요."}</p>
+          <p className="t-label2 text-bg-100">{touched && !nameOk ? "이름은 2~20글자로 입력해주세요." : touched && !genOk ? "기수는 1~14기 사이로 입력해주세요." : "이름·기수는 승인 전까지 고칠 수 있어요."}</p>
         </div>
-        <div className={`flex items-center justify-between rounded-[8px] border bg-white p-4 ${touched && !agreed ? "border-orange" : "border-line-200"}`}>
-          <Checkbox label="[필수] 개인정보 수집·이용 동의" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-          <button type="button" className="t-caption1 text-ink-500 hover:underline" onClick={() => setTerms(true)}>
-            전문 보기
-          </button>
-        </div>
+        {mode === "signup" && (
+          <div className={`flex items-center justify-between rounded-[8px] border bg-white p-4 ${touched && !agreed ? "border-orange" : "border-line-200"}`}>
+            <Checkbox label="[필수] 개인정보 수집·이용 동의" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+            <button type="button" className="t-caption1 text-ink-500 hover:underline" onClick={() => setTerms(true)}>
+              전문 보기
+            </button>
+          </div>
+        )}
         <Button type="submit" size="L" full loading={loading}>
-          가입 신청하기
+          {mode === "edit" ? "가입 정보 저장하기" : mode === "reapply" ? "다시 신청하기" : "가입 신청하기"}
         </Button>
         <p className="text-center t-caption1 text-ink-500">운영진이 동문인지 확인한 뒤 승인해요. 보통 1~2일 걸려요.</p>
       </form>

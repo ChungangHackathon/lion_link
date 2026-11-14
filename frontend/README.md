@@ -8,7 +8,26 @@ npm run dev     # http://localhost:3000
 npm run build
 ```
 
-백엔드 연동 전이라 모든 데이터는 `lib/mock/*`의 더미이고, 상태는 `lib/store.tsx`(메모리)와 `lib/session.tsx`(localStorage)에 들어 있어요. `/login` 하단의 ‘프로토타입’ 버튼으로 **회원 / 승인 대기 / 관리자 / 가입 신청** 상태를 바꿔 모든 흐름을 볼 수 있어요.
+## 백엔드 연결
+
+```bash
+cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+- `NEXT_PUBLIC_API_URL`이 있으면 **API 모드**예요. 로그인·가입 신청·승인 대기·반려 화면이 실제 API(`docs/api.md` 1. 계정·인증)로 동작해요.
+- 비워 두면 **프로토타입 모드**예요. 모든 데이터가 `lib/mock/*`의 더미이고, `/login` 하단의 ‘프로토타입’ 버튼으로 **회원 / 승인 대기 / 관리자 / 가입 신청** 상태를 바꿔 모든 흐름을 볼 수 있어요.
+- 로컬 백엔드의 `FRONTEND_URL`은 기본값 `http://localhost:3000`이라 따로 설정할 게 없어요. 구글 로그인을 하려면 백엔드에 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`이 있어야 해요.
+
+API 호출은 `lib/api/client.ts`의 `api()`를 써요. 토큰 헤더, 401일 때 재발급 1회, 에러(`ApiError`의 `code`·`message`)를 공통으로 처리해요.
+
+```ts
+import { api, type Page } from "@/lib/api/client";
+
+const posts = await api<Page<Post>>("/posts", { query: { page: 0, size: 20 } });
+await api(`/posts/${id}/like`, { method: "PUT" });
+```
+
+영역별 API 함수는 `lib/api/{영역}.ts`에 모아요 (예: `lib/api/auth.ts`). 아직 연결하지 않은 화면은 API 모드에서도 `lib/mock/*`와 `lib/store.tsx`(메모리)를 그대로 써요.
 
 ## 구조
 

@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Misc";
 /** ◇ X-03 설정 / 기본 · ◇[O] CF-3 탈퇴 확인 → A-04c 구글 본인 확인 → 로그인 */
 export default function SettingsPage() {
   const router = useRouter();
-  const { session, logout } = useSession();
+  const { session, me, logout } = useSession();
   const [confirm, setConfirm] = useState(false);
   const isAdmin = session.role === "ADMIN";
   return (
@@ -19,7 +19,7 @@ export default function SettingsPage() {
       <Card className="flex flex-col divide-y divide-line-200 px-6">
         <div className="flex items-center justify-between py-4 text-[14px]">
           <span className="text-ink-500">로그인 계정</span>
-          <span className="text-ink-900">jungang.park@gmail.com (구글)</span>
+          <span className="text-ink-900">{me?.email ?? "jungang.park@gmail.com"} (구글)</span>
         </div>
         <div className="flex items-center justify-between py-4 text-[14px]">
           <span className="text-ink-500">가입일</span>
@@ -49,7 +49,7 @@ export default function SettingsPage() {
               variant="danger"
               onClick={() => {
                 // A-04c 구글 계정 선택 / 탈퇴 본인 확인 (구글 화면 · 디자인 대상 아님)
-                logout();
+                void logout();
                 router.push("/login");
               }}
             >

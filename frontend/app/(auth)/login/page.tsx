@@ -1,21 +1,43 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/layout/AuthShell";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { API_ENABLED, GOOGLE_LOGIN_URL } from "@/lib/api/client";
+import { googleErrorMessage, landingPath } from "@/lib/api/auth";
 import { useSession } from "@/lib/session";
 
 /** ★ A-10 로그인 / 기본 → A-04b(구글) → H-01. "계정에 문제가 있나요?" → CF-2 */
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useSession();
+  const { login, ready, me } = useSession();
+  const toast = useToast();
   const [help, setHelp] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 구글 로그인 실패로 돌아오면 ?error={code}가 붙어 있다
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (!code) return;
+    toast(googleErrorMessage(code), { kind: "error" });
+    router.replace("/login");
+  }, [toast, router]);
+
+  // 이미 로그인돼 있으면 상태에 맞는 화면으로 보낸다
+  useEffect(() => {
+    if (ready && me) router.replace(landingPath(me));
+  }, [ready, me, router]);
+
   const google = () => {
     setLoading(true);
+    if (API_ENABLED) {
+      // AUTH-01: 서버가 구글 로그인 화면으로 보내고, 끝나면 /auth/callback 또는 /signup으로 돌아온다
+      window.location.href = GOOGLE_LOGIN_URL;
+      return;
+    }
     // A-04b: 구글 계정 선택 (구글 화면 · 디자인 대상 아님) → 로그인 완료
     setTimeout(() => {
       login({ role: "MEMBER", status: "APPROVED" });
@@ -40,12 +62,14 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {/* 데모 전용: 역할 바꿔 로그인 */}
-      <div className="mt-2 flex flex-wrap justify-center gap-2 border-t border-dashed border-line-300 pt-4">
-        <DemoLogin label="승인 대기 회원으로" onClick={() => { login({ status: "PENDING" }); router.push("/pending"); }} />
-        <DemoLogin label="관리자(정운영)로" onClick={() => { login({ role: "ADMIN" }); router.push("/admin"); }} />
-        <DemoLogin label="가입 신청 화면 보기" onClick={() => router.push("/signup")} />
-      </div>
+      {/* 프로토타입 모드(NEXT_PUBLIC_API_URL 없음) 전용: 역할 바꿔 로그인 */}
+      {!API_ENABLED && (
+        <div className="mt-2 flex flex-wrap justify-center gap-2 border-t border-dashed border-line-300 pt-4">
+          <DemoLogin label="승인 대기 회원으로" onClick={() => { login({ status: "PENDING" }); router.push("/pending"); }} />
+          <DemoLogin label="관리자(정운영)로" onClick={() => { login({ role: "ADMIN" }); router.push("/admin"); }} />
+          <DemoLogin label="가입 신청 화면 보기" onClick={() => router.push("/signup")} />
+        </div>
+      )}
 
       <ConfirmModal
         open={help}
