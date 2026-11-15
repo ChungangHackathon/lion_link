@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.lionlink.backend.domain.profile.section.career.Career;
 import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
 import com.lionlink.backend.support.AuthIntegrationTest;
 import com.lionlink.backend.support.TestUsers;
@@ -37,6 +38,10 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	private static final String EMPLOYED_BODY = """
 			{'lionParts':['FRONTEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
 			 'company':'핀테크A','jobTitle':'백엔드 개발자','link':'https://github.com/lion','headline':'핀테크 백엔드 개발자'}""";
+
+	private static final String EMPLOYED_SWITCH = """
+			{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND'],
+			 'company':'%s','jobTitle':'%s'}""";
 
 	// ---------- PROFILE-04 기본 정보 ----------
 
@@ -110,15 +115,92 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 재직으로_바꿔도_경력을_만들지_않는다() throws Exception {
+	void 재직으로_바꾸고_재직_경력이_없으면_회사와_직무로_경력을_만든다() throws Exception {
 		Session lion = onboarded(STUDENT_BODY);
 
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("  핀테크B ", " 서버 개발자 "))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("EMPLOYED"));
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.careers", hasSize(1)))
+				.andExpect(jsonPath("$.careers[0].company").value("핀테크B"))
+				.andExpect(jsonPath("$.careers[0].jobTitle").value("서버 개발자"))
+				.andExpect(jsonPath("$.careers[0].isCurrent").value(true))
+				.andExpect(jsonPath("$.careers[0].employmentType").value(nullValue()))
+				.andExpect(jsonPath("$.careers[0].startYm").value(nullValue()));
+	}
+
+	@Test
+	void 재직으로_바꾸는데_회사나_직무가_없으면_400이고_프로필도_바뀌지_않는다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND']}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+				.andExpect(jsonPath("$.fieldErrors[?(@.field=='company')]").exists())
+				.andExpect(jsonPath("$.fieldErrors[?(@.field=='jobTitle')]").exists());
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "  "))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors", hasSize(1)))
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("jobTitle"));
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.status").value("STUDENT"))
+				.andExpect(jsonPath("$.careers", hasSize(0)));
+	}
+
+	@Test
+	void 회사명이_30자를_넘으면_400() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("가".repeat(31), "개발자"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[0].field").value("company"));
+	}
+
+	@Test
+	void 이미_재직_경력이_있으면_회사와_직무는_무시한다() throws Exception {
+		Session lion = onboarded(EMPLOYED_BODY);
+
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("다른회사", "다른직무")).andExpect(status().isOk());
 		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND']}")
 				.andExpect(status().isOk());
 
 		getMyProfile(lion)
-				.andExpect(jsonPath("$.status").value("EMPLOYED"))
-				.andExpect(jsonPath("$.careers", hasSize(0)));
+				.andExpect(jsonPath("$.careers", hasSize(1)))
+				.andExpect(jsonPath("$.careers[0].company").value("핀테크A"))
+				.andExpect(jsonPath("$.careers[0].jobTitle").value("백엔드 개발자"));
+	}
+
+	@Test
+	void 재직_경력이_없고_경력이_10개면_409_LIMIT_EXCEEDED() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+		for (int i = 0; i < 10; i++) {
+			entityManager.persist(Career.builder().userId(lion.userId()).company("회사" + i).title("개발자").build());
+		}
+		entityManager.flush();
+		entityManager.clear();
+
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "서버 개발자"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.status").value("STUDENT"))
+				.andExpect(jsonPath("$.careers", hasSize(10)));
+	}
+
+	@Test
+	void 재직으로_바꿔도_대표_파트가_가입_기수_멋사_활동과_계속_동기화된다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "서버 개발자").replace("BACKEND", "DESIGN"))
+				.andExpect(status().isOk());
+
+		getMyProfile(lion)
+				.andExpect(jsonPath("$.lionParts", contains("DESIGN")))
+				.andExpect(jsonPath("$.lionActivities[?(@.isDefault==true)].parts[0]").value(contains("DESIGN")));
 	}
 
 	@Test

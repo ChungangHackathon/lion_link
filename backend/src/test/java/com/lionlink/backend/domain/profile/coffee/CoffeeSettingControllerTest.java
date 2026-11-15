@@ -317,6 +317,108 @@ class CoffeeSettingControllerTest extends AuthIntegrationTest {
 		getSettings(lion).andExpect(jsonPath("$.periods", empty()));
 	}
 
+	// ---------- PROFILE-15 기간 수정 ----------
+
+	@Test
+	void 시작_전_기간의_날짜를_바꾼다() throws Exception {
+		Session lion = onboarded();
+		long id = periodId(postPeriod(lion, today.plusDays(3), today.plusDays(5), false));
+
+		putPeriod(lion, id, today.plusDays(10), today.plusDays(20))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.startDate").value(today.plusDays(10).toString()))
+				.andExpect(jsonPath("$.endDate").value(today.plusDays(20).toString()));
+
+		getSettings(lion)
+				.andExpect(jsonPath("$.periods", hasSize(1)))
+				.andExpect(jsonPath("$.periods[0].startDate").value(today.plusDays(10).toString()));
+	}
+
+	@Test
+	void 다른_기간과_겹치게_수정하면_409_PERIOD_OVERLAP() throws Exception {
+		Session lion = onboarded();
+		postPeriod(lion, today.plusDays(3), today.plusDays(5), false).andExpect(status().isCreated());
+		long second = periodId(postPeriod(lion, today.plusDays(10), today.plusDays(12), false));
+
+		putPeriod(lion, second, today.plusDays(5), today.plusDays(12))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("PERIOD_OVERLAP"));
+	}
+
+	@Test
+	void 자기_자신과는_겹침이_아니라서_범위를_넓혀도_된다() throws Exception {
+		Session lion = onboarded();
+		long id = periodId(postPeriod(lion, today.plusDays(3), today.plusDays(5), false));
+
+		putPeriod(lion, id, today.plusDays(2), today.plusDays(8)).andExpect(status().isOk());
+		putPeriod(lion, id, today.plusDays(3), today.plusDays(5)).andExpect(status().isOk());
+	}
+
+	@Test
+	void 남의_기간과_없는_기간은_수정할_수_없다_404() throws Exception {
+		Session lion = onboarded();
+		Session other = onboarded("other");
+		long id = periodId(postPeriod(lion, today.plusDays(3), today.plusDays(5), false));
+
+		putPeriod(other, id, today.plusDays(6), today.plusDays(7))
+				.andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+		putPeriod(lion, 999999, today.plusDays(6), today.plusDays(7)).andExpect(status().isNotFound());
+		getSettings(lion).andExpect(jsonPath("$.periods[0].startDate").value(today.plusDays(3).toString()));
+	}
+
+	@Test
+	void 진행_중인_기간은_종료일만_바꿀_수_있다() throws Exception {
+		Session lion = onboarded();
+		TestProfiles.coffeePeriod(entityManager, lion.userId(), today.minusDays(2), today.plusDays(3));
+		long id = onlyPeriodId(lion);
+
+		putPeriod(lion, id, today.minusDays(2), today.plusDays(10))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.startDate").value(today.minusDays(2).toString()))
+				.andExpect(jsonPath("$.endDate").value(today.plusDays(10).toString()));
+		putPeriod(lion, id, today.minusDays(2), today)
+				.andExpect(status().isOk());
+
+		putPeriod(lion, id, today.minusDays(1), today.plusDays(10))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		putPeriod(lion, id, today.minusDays(2), today.minusDays(1))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		putPeriod(lion, id, today.minusDays(2), today.plusDays(179))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void 이미_끝난_기간은_수정할_수_없다_404() throws Exception {
+		Session lion = onboarded();
+		TestProfiles.coffeePeriod(entityManager, lion.userId(), today.minusDays(10), today.minusDays(1));
+
+		putPeriod(lion, onlyPeriodId(lion), today.plusDays(1), today.plusDays(3))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void 기간_수정_검증은_추가와_같다() throws Exception {
+		Session lion = onboarded();
+		long id = periodId(postPeriod(lion, today.plusDays(3), today.plusDays(5), false));
+
+		putPeriod(lion, id, today.plusDays(10), today.plusDays(9))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("종료일이 시작일보다 빨라요."));
+		putPeriod(lion, id, today.plusDays(1), today.plusDays(182))
+				.andExpect(status().isBadRequest());
+		putPeriod(lion, id, today.minusDays(1), today.plusDays(3))
+				.andExpect(status().isBadRequest());
+		putPeriod(lion, id, today.plusYears(1).plusDays(1), today.plusYears(1).plusDays(3))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(put(PERIODS + "/" + id).header(HttpHeaders.AUTHORIZATION, bearer(lion))
+				.contentType(MediaType.APPLICATION_JSON).content(json("{'startDate':'" + today.plusDays(3) + "'}")))
+				.andExpect(status().isBadRequest());
+		getSettings(lion).andExpect(jsonPath("$.periods[0].endDate").value(today.plusDays(5).toString()));
+	}
+
 	@Test
 	void 기간_API도_반려_온보딩_전_토큰_없음은_막힌다() throws Exception {
 		Session rejected = onboarded();
@@ -591,6 +693,19 @@ class CoffeeSettingControllerTest extends AuthIntegrationTest {
 		return mockMvc.perform(post(PERIODS).header(HttpHeaders.AUTHORIZATION, bearer(session))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(json("{'startDate':'" + start + "','endDate':'" + end + "','mergeOverlap':" + merge + "}")));
+	}
+
+	private ResultActions putPeriod(Session session, long id, LocalDate start, LocalDate end) throws Exception {
+		return mockMvc.perform(put(PERIODS + "/" + id).header(HttpHeaders.AUTHORIZATION, bearer(session))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json("{'startDate':'" + start + "','endDate':'" + end + "'}")));
+	}
+
+	private long onlyPeriodId(Session session) {
+		entityManager.flush();
+		Object id = entityManager.createNativeQuery("select id from coffee_periods where user_id = :id")
+				.setParameter("id", session.userId()).getSingleResult();
+		return ((Number) id).longValue();
 	}
 
 	private ResultActions deletePeriod(Session session, long id) throws Exception {
