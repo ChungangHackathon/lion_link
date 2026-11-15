@@ -3,6 +3,7 @@ package com.lionlink.backend.domain.profile.coffee.service;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeePeriod;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeePeriodRepository;
 import com.lionlink.backend.domain.profile.coffee.dto.request.CoffeePeriodRequest;
+import com.lionlink.backend.domain.profile.coffee.dto.request.CoffeePeriodUpdateRequest;
 import com.lionlink.backend.domain.profile.coffee.dto.response.CoffeePeriodResponse;
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
 import com.lionlink.backend.domain.profile.section.service.SectionItemSupport;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * PROFILE-15 기간 추가·삭제. 기본 상태가 ON이면 쉬는 기간, OFF면 받는 기간을 뜻한다.
+ * PROFILE-15 기간 추가·수정·삭제. 기본 상태가 ON이면 쉬는 기간, OFF면 받는 기간을 뜻한다.
  * 홈 스위치(PROFILE-14)도 같은 규칙을 쓰므로 package-private 메서드를 CoffeeSettingService가 호출한다.
  */
 @Service
@@ -37,6 +38,42 @@ public class CoffeePeriodService {
 		support.lockProfile(userId);
 		CoffeePeriod period = addPeriod(userId, request.startDate(), request.endDate(),
 				Boolean.TRUE.equals(request.mergeOverlap()), today());
+		return CoffeePeriodResponse.from(period);
+	}
+
+	/**
+	 * 기간의 날짜를 바꾼다. 이미 끝난 기간은 없는 기간처럼 404.
+	 * 진행 중인 기간(시작일이 오늘 이전)은 시작일을 그대로 두고 종료일(오늘 이후)만 바꿀 수 있다.
+	 * 겹침은 자기 자신을 뺀 다른 기간과만 검사하고, 개수는 늘지 않으니 검사하지 않는다.
+	 */
+	@Transactional
+	public CoffeePeriodResponse update(Long userId, Long periodId, CoffeePeriodUpdateRequest request) {
+		support.lockProfile(userId);
+		LocalDate today = today();
+		CoffeePeriod period = coffeePeriodRepository.findByIdAndUserId(periodId, userId)
+				.filter(found -> !found.getEndDate().isBefore(today))
+				.orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+		LocalDate startDate = request.startDate();
+		LocalDate endDate = request.endDate();
+		boolean started = !period.getStartDate().isAfter(today);
+		if (started) {
+			if (!startDate.equals(period.getStartDate())) {
+				throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "이미 시작한 기간은 시작일을 바꿀 수 없어요.");
+			}
+			if (endDate.isBefore(today)) {
+				throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "종료일은 오늘부터 고를 수 있어요.");
+			}
+			validateLength(startDate, endDate);
+		} else {
+			validateRange(startDate, endDate, today);
+		}
+		boolean overlaps = activePeriods(userId, today).stream()
+				.filter(other -> !other.getId().equals(period.getId()))
+				.anyMatch(other -> !other.getStartDate().isAfter(endDate) && !other.getEndDate().isBefore(startDate));
+		if (overlaps) {
+			throw new BusinessException(ProfileErrorCode.PERIOD_OVERLAP);
+		}
+		period.changeRange(startDate, endDate);
 		return CoffeePeriodResponse.from(period);
 	}
 
@@ -102,6 +139,14 @@ public class CoffeePeriodService {
 		}
 		if (startDate.isAfter(today.plusYears(1))) {
 			throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "시작일은 오늘부터 1년 이내로 골라 주세요.");
+		}
+		validateLength(startDate, endDate);
+	}
+
+	/** 종료일이 시작일 이후인지, 시작일부터 최대 180일인지. */
+	private void validateLength(LocalDate startDate, LocalDate endDate) {
+		if (endDate.isBefore(startDate)) {
+			throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "종료일이 시작일보다 빨라요.");
 		}
 		if (ChronoUnit.DAYS.between(startDate, endDate) > MAX_DAYS) {
 			throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "기간은 최대 180일까지 등록할 수 있어요.");
