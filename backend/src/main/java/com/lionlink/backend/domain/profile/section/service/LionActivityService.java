@@ -5,10 +5,10 @@ import com.lionlink.backend.domain.profile.basic.dto.response.ProfileResponse.Li
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
 import com.lionlink.backend.domain.profile.section.dto.request.LionActivityRequest;
 import com.lionlink.backend.domain.profile.section.lionactivity.LionActivity;
+import com.lionlink.backend.domain.profile.section.lionactivity.DefaultLionActivitySyncer;
 import com.lionlink.backend.domain.profile.section.lionactivity.LionActivityRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.CommonErrorCode;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +23,7 @@ public class LionActivityService {
 
 	private final LionActivityRepository lionActivityRepository;
 	private final SectionItemSupport support;
+	private final DefaultLionActivitySyncer lionActivitySyncer;
 
 	@Transactional
 	public LionActivityItem create(Long userId, LionActivityRequest request) {
@@ -35,30 +36,29 @@ public class LionActivityService {
 				.userId(userId)
 				.generation(request.generation())
 				.role(request.role())
-				.part1(part(request.parts(), 0))
-				.part2(part(request.parts(), 1))
+				.part(request.parts().get(0))
 				.isDefault(false)
 				.build());
 		return LionActivityItem.from(activity);
 	}
 
-	/** 가입 기수 항목은 role·parts만 반영하고, 다른 기수를 보내면 400. */
+	/** 가입 기수 항목은 role·part만 반영하고(파트는 프로필 대표 파트에도 반영), 다른 기수를 보내면 400. */
 	@Transactional
 	public LionActivityItem update(Long userId, Long itemId, LionActivityRequest request) {
 		support.lockProfile(userId);
 		LionActivity activity = support.findOwned(lionActivityRepository, itemId, userId);
-		LionPart part1 = part(request.parts(), 0);
-		LionPart part2 = part(request.parts(), 1);
+		LionPart part = request.parts().get(0);
 		if (activity.isDefault()) {
 			if (!activity.getGeneration().equals(request.generation())) {
 				throw new BusinessException(CommonErrorCode.VALIDATION_ERROR, "가입 기수 항목은 기수를 바꿀 수 없어요.");
 			}
-			activity.updateRoleAndParts(request.role(), part1, part2);
+			activity.updateRoleAndPart(request.role(), part);
+			lionActivitySyncer.syncPartToProfile(userId, part);
 		} else {
 			if (lionActivityRepository.existsByUserIdAndGenerationAndIdNot(userId, request.generation(), itemId)) {
 				throw new BusinessException(ProfileErrorCode.DUPLICATE_ITEM);
 			}
-			activity.update(request.generation(), request.role(), part1, part2);
+			activity.update(request.generation(), request.role(), part);
 		}
 		return LionActivityItem.from(activity);
 	}
@@ -71,9 +71,5 @@ public class LionActivityService {
 			throw new BusinessException(ProfileErrorCode.DEFAULT_ITEM_NOT_DELETABLE);
 		}
 		lionActivityRepository.delete(activity);
-	}
-
-	private static LionPart part(List<LionPart> parts, int index) {
-		return parts.size() > index ? parts.get(index) : null;
 	}
 }

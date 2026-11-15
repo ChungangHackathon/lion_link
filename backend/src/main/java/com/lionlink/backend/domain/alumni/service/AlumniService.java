@@ -62,7 +62,7 @@ public class AlumniService {
 	public List<AlumniResponse> recommendSeniors(Long userId, int limit) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new BusinessException(AlumniErrorCode.USER_NOT_FOUND));
-		LionPart part = profileRepository.findById(userId).map(Profile::getLionPart1).orElse(null);
+		LionPart part = profileRepository.findById(userId).map(Profile::getLionPart).orElse(null);
 		List<AlumniSearchRepository.Row> rows = alumniSearchRepository.findSeniors(userId, user.getGeneration(), part, limit);
 		return rows.stream().map(toResponse(userId, rows)).toList();
 	}

@@ -94,8 +94,7 @@ public class ProfileOnboardingService {
 		List<ProfileLink> links = request.link() == null ? null : List.of(toLink(request.link().trim()));
 		return Profile.builder()
 				.userId(user.getId())
-				.lionPart1(parts.get(0))
-				.lionPart2(parts.size() > 1 ? parts.get(1) : null)
+				.lionPart(parts.get(0))
 				.status(request.status())
 				.interests(request.interests().stream().map(Interest::name).toList())
 				.headline(request.headline())
@@ -130,8 +129,7 @@ public class ProfileOnboardingService {
 				.userId(userId)
 				.generation(generation)
 				.role(role)
-				.part1(parts.get(0))
-				.part2(parts.size() > 1 ? parts.get(1) : null)
+				.part(parts.get(0))
 				.isDefault(isDefault)
 				.build();
 	}

@@ -10,8 +10,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,12 +29,7 @@ public class Profile extends BaseTimeEntity {
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(name = "lion_part_1", nullable = false, length = 20)
-	private LionPart lionPart1;
-
-	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.VARCHAR)
-	@Column(name = "lion_part_2", length = 20)
-	private LionPart lionPart2;
+	private LionPart lionPart;
 
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
@@ -97,12 +90,11 @@ public class Profile extends BaseTimeEntity {
 	private Visibility companyVisibility;
 
 	@Builder
-	private Profile(Long userId, LionPart lionPart1, LionPart lionPart2, ProfileStatus status,
+	private Profile(Long userId, LionPart lionPart, ProfileStatus status,
 			List<String> interests, List<String> skills, String photoUrl, String headline, String bio,
 			String major, String minor, String region, List<ProfileLink> links, String contactEmail, String phone) {
 		this.userId = userId;
-		this.lionPart1 = lionPart1;
-		this.lionPart2 = lionPart2;
+		this.lionPart = lionPart;
 		this.status = status;
 		this.interests = interests;
 		this.skills = skills;
@@ -122,22 +114,24 @@ public class Profile extends BaseTimeEntity {
 	}
 
 	public List<LionPart> getLionParts() {
-		return Stream.of(lionPart1, lionPart2)
-				.filter(Objects::nonNull)
-				.toList();
+		return List.of(lionPart);
 	}
 
 	/** PROFILE-04: 기본 정보를 받은 값으로 통째로 바꾼다. 경력·멋사 활동 같은 다른 테이블은 건드리지 않는다. */
 	public void updateBasic(String headline, String major, String minor, String region, ProfileStatus status,
-			List<LionPart> lionParts, List<String> interests) {
+			LionPart lionPart, List<String> interests) {
 		this.headline = headline;
 		this.major = major;
 		this.minor = minor;
 		this.region = region;
 		this.status = status;
-		this.lionPart1 = lionParts.get(0);
-		this.lionPart2 = lionParts.size() > 1 ? lionParts.get(1) : null;
+		this.lionPart = lionPart;
 		this.interests = interests;
+	}
+
+	/** PROFILE-11: 가입 기수 멋사 활동의 파트와 동기화할 때 대표 파트만 바꾼다. */
+	public void changeLionPart(LionPart lionPart) {
+		this.lionPart = lionPart;
 	}
 
 	/** PROFILE-05: 사진 주소를 바꾼다. 삭제하면 null(기본 이미지). */

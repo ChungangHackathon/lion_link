@@ -16,6 +16,7 @@ import com.lionlink.backend.domain.profile.basic.dto.response.VisibilityResponse
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
+import com.lionlink.backend.domain.profile.section.lionactivity.DefaultLionActivitySyncer;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.error.CommonErrorCode;
@@ -32,8 +33,9 @@ public class ProfileEditService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
+	private final DefaultLionActivitySyncer lionActivitySyncer;
 
-	/** 현재 상태가 바뀌어도 경력은 건드리지 않고, 자동 생성 멋사 활동의 파트도 따로 둔다. */
+	/** 현재 상태가 바뀌어도 경력은 건드리지 않고, 대표 파트는 가입 기수 멋사 활동의 파트와 함께 바뀐다(양방향 동기화). */
 	@Transactional
 	public BasicInfoResponse updateBasic(Long userId, BasicInfoUpdateRequest request) {
 		Profile profile = findMyProfile(userId);
@@ -43,8 +45,9 @@ public class ProfileEditService {
 				blankToNull(request.minor()),
 				blankToNull(request.region()),
 				request.status(),
-				request.lionParts(),
+				request.lionParts().get(0),
 				request.interests().stream().map(Interest::name).toList());
+		lionActivitySyncer.syncPartToDefaultActivity(userId, profile.getLionPart());
 		return BasicInfoResponse.from(profile);
 	}
 

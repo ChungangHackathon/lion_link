@@ -67,7 +67,7 @@ public class AlumniSearchRepository {
 				"approved", UserStatus.APPROVED, "userId", userId, "generation", generation));
 		putReceivingParams(params);
 		String jpql = SELECT + FROM + " where" + ACTIVE + " and u.id <> :userId and u.generation < :generation and " + RECEIVING
-				+ " order by case when p.lionPart1 = :part or p.lionPart2 = :part then 0 else 1 end, u.generation desc, u.id desc";
+				+ " order by case when p.lionPart = :part then 0 else 1 end, u.generation desc, u.id desc";
 		params.put("part", part);
 
 		return query(jpql, Tuple.class, params)
@@ -116,7 +116,7 @@ public class AlumniSearchRepository {
 			params.put("generations", condition.generations());
 		}
 		if (!CollectionUtils.isEmpty(condition.parts())) {
-			where.append(" and (p.lionPart1 in :parts or p.lionPart2 in :parts)");
+			where.append(" and p.lionPart in :parts");
 			params.put("parts", condition.parts());
 		}
 		if (!CollectionUtils.isEmpty(condition.statuses())) {
@@ -146,7 +146,7 @@ public class AlumniSearchRepository {
 				putReceivingParams(params);
 				String samePart = "";
 				if (!userParts.isEmpty()) {
-					samePart = " case when p.lionPart1 in :userParts or p.lionPart2 in :userParts then 0 else 1 end,";
+					samePart = " case when p.lionPart in :userParts then 0 else 1 end,";
 					params.put("userParts", userParts);
 				}
 				yield " order by case when " + RECEIVING + " then 0 else 1 end," + samePart + " u.id desc";
