@@ -14,6 +14,7 @@ public enum ChatErrorCode implements ErrorCode {
 	CANNOT_CHAT_SELF(HttpStatus.BAD_REQUEST, "나에게는 메시지를 보낼 수 없어요."),
 	REQUEST_COOLDOWN(HttpStatus.CONFLICT, "아직 다시 요청할 수 없어요."),
 	FORBIDDEN_ACTION(HttpStatus.FORBIDDEN, "이 채팅방에서 할 수 없는 동작이에요."),
+	ROOM_FULL(HttpStatus.CONFLICT, "초대할 수 있는 인원을 넘었어요."),
 	INVALID_ROOM_STATUS(HttpStatus.CONFLICT, "지금 상태에서는 할 수 없어요.");
 
 	private final HttpStatus status;
