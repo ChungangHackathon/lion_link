@@ -51,7 +51,7 @@
 
 ## 전체 API 목록 (팀 노션 기준)
 
-팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
+팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개였고, 채팅 메시지 수정·삭제 2개를 더해 89개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
 
 | 영역 | API 수 | 담당 (노션 기준) | 상세 명세 |
 | --- | --- | --- | --- |
@@ -62,7 +62,7 @@
 | 5. 동문 찾기 | 5 | 조상원 | 이 문서 아래 |
 | 6. 커뮤니티 | 17 | 조상원 | 이 문서 아래 |
 | 7. 홈 | 2 | 조상원 | 이 문서 아래 |
-| 8. 채팅 | 15 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
+| 8. 채팅 | 17 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
 | 9. 알림 | 6 | 차예은 | 이 문서 9장 |
 
 커피챗·채팅·알림은 노션 표에 행만 있어서 이 문서 8~10장이 기준이야.
@@ -147,6 +147,8 @@
 | 8. 채팅 | `GET` | `/chat-rooms/{roomId}` | 채팅방 정보와 참여자 | 차예은 |
 | 8. 채팅 | `GET` | `/chat-rooms/{roomId}/messages` | 이전 메시지·끊긴 동안 온 메시지 | 차예은 |
 | 8. 채팅 | `POST` | `/chat-rooms/{roomId}/messages` | 일반 메시지 보내기 | 차예은 |
+| 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/messages/{messageId}` | 보낸 메시지 수정 | 차예은 |
+| 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/messages/{messageId}` | 보낸 메시지 삭제 | 차예은 |
 | 8. 채팅 | `PUT` | `/chat-rooms/{roomId}/read` | 읽음 처리 | 차예은 |
 | 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/preferences` | 방 고정·알림 끄기 | 차예은 |
 | 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/members/me` | 방 나가기·종료된 요청 숨기기 | 차예은 |
@@ -1931,6 +1933,8 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | CHAT-13 | 상단 고정, 알림 끄기 | `PATCH /chat-rooms/{roomId}/preferences` |
 | CHAT-14 | 나가기, 끝난 요청 숨기기 | `DELETE /chat-rooms/{roomId}/members/me` |
 | CHAT-15 | 안 읽은 메시지 수 | `GET /chat-rooms/unread-count` |
+| CHAT-16 | 메시지 수정 | `PATCH /chat-rooms/{roomId}/messages/{messageId}` |
+| CHAT-17 | 메시지 삭제 | `DELETE /chat-rooms/{roomId}/messages/{messageId}` |
 
 모두 승인 회원만 쓸 수 있어. 방에 참여하지 않았거나 나간 방은 `404 ROOM_NOT_FOUND`야.
 
@@ -1973,6 +1977,8 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 - `type`은 `TEXT` 일반 메시지, `SYSTEM` 안내(커피챗 수락·일정 확정 등). `SYSTEM`은 `senderId`가 `null`이야
 - `unreadCount`는 보낸 사람을 뺀 참여자 중 아직 이 메시지를 안 읽은 사람 수야. 단체방에서 내 메시지 옆에 숫자로 보여줘. `SYSTEM`은 `0`
+- `deleted`가 `true`면 지운 메시지(CHAT-17)야. `content`는 `null`이고 자리에는 그대로 남아
+- `editedAt`은 고친 시각(CHAT-16)이야. 고치지 않았으면 `null`. FE는 이 값이 있으면 '수정됨'을 붙여
 - `clientMsgId`는 보낼 때 붙인 값(CHAT-11) 그대로야. 방 채널로 돌아온 내 메시지를 알아보고 화면에 미리 그려 둔 메시지와 짝지을 때 써. 보낼 때 안 넣었거나 `SYSTEM`이면 `null`
 
 ### CHAT-01 메시지 요청 보내기
@@ -2136,6 +2142,31 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 - `messageRequests`: 내가 받은 대기 중인 메시지 요청 수. 요청함(CHAT-02) 개수와 같아
 - 개인 채널에 `ROOM_UPDATED`나 `REQUEST_RECEIVED`가 오면 다시 불러
 
+### CHAT-16 메시지 수정
+
+`PATCH /chat-rooms/{roomId}/messages/{messageId}` · 내가 보낸 메시지만
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `content` | string | O | 1\~1000자 |
+
+`200`에 고친 메시지 객체를 돌려주고 방 채널에 `MESSAGE_UPDATED`를 보내. `editedAt`이 채워져. 시간 제한은 없어.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 글자 수 |
+| 404 | `ROOM_NOT_FOUND` | 없거나 내가 없는 방 |
+| 404 | `MESSAGE_NOT_FOUND` | 그 방에 없는 메시지, 내가 보내지 않은 메시지(안내 메시지 포함), 이미 지운 메시지 |
+| 409 | `INVALID_ROOM_STATUS` | 대화 중이 아니거나 닫힌 방. 수락 전 요청 메시지는 CHAT-06으로 고쳐 |
+
+### CHAT-17 메시지 삭제
+
+`DELETE /chat-rooms/{roomId}/messages/{messageId}` · 내가 보낸 메시지만
+
+내용만 지우고 자리에는 남겨. `200`에 지운 메시지 객체(`deleted: true`, `content: null`)를 돌려주고 방 채널에 `MESSAGE_UPDATED`를 보내. 메시지 목록(CHAT-10)과 방 목록 미리보기(CHAT-08)에도 지운 것으로 보여.
+
+에러는 CHAT-16과 같아. 수락 전 요청 메시지는 CHAT-07로 취소해.
+
 ### 탈퇴한 동문
 
 탈퇴(AUTH-08)하면 채팅은 이렇게 정리돼.
@@ -2157,6 +2188,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | 채널 | `type` | 내용 |
 | --- | --- | --- |
 | 방 | `MESSAGE` | `{ type, roomId, message(메시지 객체) }` |
+| 방 | `MESSAGE_UPDATED` | `{ type, roomId, message(메시지 객체) }`. 메시지를 고치거나 지웠을 때(CHAT-16, CHAT-17). 같은 `id`의 메시지를 갈아끼워 |
 | 방 | `READ` | `{ type, roomId, userId, lastReadMessageId }` |
 | 개인 | `ROOM_UPDATED` | `{ type, roomId, muted }`. 내 방에 새 메시지가 오거나 상태가 바뀜. 목록과 안 읽은 수(CHAT-15)를 다시 불러 |
 | 개인 | `REQUEST_RECEIVED` | `{ type, roomId }`. 새 메시지 요청. 대기 중인 요청은 받는 사람에게 `ROOM_UPDATED` 없이 이것만 가. 요청함과 CHAT-15를 다시 불러 |
