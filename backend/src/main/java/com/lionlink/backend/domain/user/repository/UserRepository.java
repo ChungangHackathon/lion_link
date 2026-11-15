@@ -33,6 +33,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	List<User> findAllByRoleAndDeletedAtIsNull(UserRole role);
 
+	List<User> findAllByEmailAndDeletedAtIsNull(String email);
+
 	/** ADMIN-01: 탈퇴하지 않은 회원을 상태별로. 정렬은 Pageable의 Sort로 넘긴다. */
 	@Query("select u from User u where u.status = :status and u.deletedAt is null")
 	Page<User> findSignups(UserStatus status, Pageable pageable);

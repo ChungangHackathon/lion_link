@@ -63,6 +63,8 @@ app:
     frontend-url: ${FRONTEND_URL:http://localhost:3000} # 로그인 후 돌아갈 프론트 주소 (CORS 허용 주소)
     cookie-secure: ${COOKIE_SECURE:false} # HTTPS 배포에서는 true
     cookie-same-site: ${COOKIE_SAME_SITE:Lax} # 프론트·백엔드 도메인이 다르면 None (cookie-secure: true 필요)
+  admin:
+    emails: ${ADMIN_EMAILS:} # 서버가 뜰 때 관리자로 올릴 이메일. 쉼표로 여러 개. 가입을 끝낸 계정이어야 한다
   email:
     enabled: ${MAIL_ENABLED:false} # false면 보내지 않고 로그만 남긴다 (로컬 기본값)
     from: '${MAIL_FROM:"LION:LINK" <no-reply@lionlink.local>}' # 표시 이름에 콜론이 있어 따옴표가 필요하다

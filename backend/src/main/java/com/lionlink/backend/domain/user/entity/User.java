@@ -123,4 +123,10 @@ public class User extends BaseTimeEntity {
 			this.guideDismissedAt = LocalDateTime.now();
 		}
 	}
+
+	/** app.admin.emails로 지정하는 관리자. 승인 절차를 거치지 않으므로 상태도 함께 바꾼다. */
+	public void grantAdmin() {
+		this.role = UserRole.ADMIN;
+		this.status = UserStatus.APPROVED;
+	}
 }
