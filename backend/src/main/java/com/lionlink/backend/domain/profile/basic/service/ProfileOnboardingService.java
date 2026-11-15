@@ -17,8 +17,7 @@ import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
-import com.lionlink.backend.domain.profile.section.career.Career;
-import com.lionlink.backend.domain.profile.section.career.CareerRepository;
+import com.lionlink.backend.domain.profile.section.career.CurrentCareerCreator;
 import com.lionlink.backend.domain.profile.section.education.Education;
 import com.lionlink.backend.domain.profile.section.education.EducationRepository;
 import com.lionlink.backend.domain.profile.section.lionactivity.LionActivity;
@@ -43,7 +42,7 @@ public class ProfileOnboardingService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final CareerRepository careerRepository;
+	private final CurrentCareerCreator currentCareerCreator;
 	private final EducationRepository educationRepository;
 	private final LionActivityRepository lionActivityRepository;
 	private final CoffeeSettingRepository coffeeSettingRepository;
@@ -67,12 +66,7 @@ public class ProfileOnboardingService {
 		user.completeProfile();
 
 		if (request.status() == ProfileStatus.EMPLOYED) {
-			careerRepository.save(Career.builder()
-					.userId(userId)
-					.company(request.company().trim())
-					.title(request.jobTitle().trim())
-					.isCurrent(true)
-					.build());
+			currentCareerCreator.create(userId, request.company(), request.jobTitle());
 		}
 		educationRepository.save(Education.builder().userId(userId).school(DEFAULT_SCHOOL).build());
 		lionActivityRepository.saveAll(buildLionActivities(user, request));
