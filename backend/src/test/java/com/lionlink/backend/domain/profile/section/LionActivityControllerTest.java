@@ -22,12 +22,12 @@ class LionActivityControllerTest extends ProfileSectionApiTest {
 	void 멋사_활동을_추가하면_201과_항목이_내려오고_프로필에_반영된다() throws Exception {
 		Session lion = onboarded(STUDENT);
 
-		postItem(lion, PATH, "{'generation':12,'role':'STAFF','parts':['DESIGN','BACKEND']}")
+		postItem(lion, PATH, "{'generation':12,'role':'STAFF','parts':['DESIGN']}")
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.id").isNumber())
 				.andExpect(jsonPath("$.generation").value(12))
 				.andExpect(jsonPath("$.role").value("STAFF"))
-				.andExpect(jsonPath("$.parts", contains("DESIGN", "BACKEND")))
+				.andExpect(jsonPath("$.parts", contains("DESIGN")))
 				.andExpect(jsonPath("$.isDefault").value(false));
 
 		myProfile(lion)
@@ -44,6 +44,7 @@ class LionActivityControllerTest extends ProfileSectionApiTest {
 				Arguments.of("역할 누락", "{'generation':12,'parts':['BACKEND']}", "role"),
 				Arguments.of("파트 없음", "{'generation':12,'role':'LION','parts':[]}", "parts"),
 				Arguments.of("파트 3개", "{'generation':12,'role':'LION','parts':['BACKEND','FRONTEND','DESIGN']}", "parts"),
+				Arguments.of("파트 2개", "{'generation':12,'role':'LION','parts':['BACKEND','FRONTEND']}", "parts"),
 				Arguments.of("파트 중복", "{'generation':12,'role':'LION','parts':['BACKEND','BACKEND']}", "parts"),
 				Arguments.of("없는 역할", "{'generation':12,'role':'LEADER','parts':['BACKEND']}", null));
 	}
@@ -99,12 +100,38 @@ class LionActivityControllerTest extends ProfileSectionApiTest {
 		List<Number> ids = fromProfile(lion, "$.lionActivities[?(@.isDefault==true)].id");
 		long defaultId = ids.get(0).longValue();
 
-		putItem(lion, PATH, defaultId, "{'generation':13,'role':'STAFF','parts':['DESIGN','BACKEND']}")
+		putItem(lion, PATH, defaultId, "{'generation':13,'role':'STAFF','parts':['DESIGN']}")
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.generation").value(13))
 				.andExpect(jsonPath("$.role").value("STAFF"))
-				.andExpect(jsonPath("$.parts", contains("DESIGN", "BACKEND")))
+				.andExpect(jsonPath("$.parts", contains("DESIGN")))
 				.andExpect(jsonPath("$.isDefault").value(true));
+	}
+
+	@Test
+	void 가입_기수_항목의_파트를_바꾸면_프로필_대표_파트도_바뀐다() throws Exception {
+		Session lion = onboarded(STUDENT);
+		List<Number> ids = fromProfile(lion, "$.lionActivities[?(@.isDefault==true)].id");
+		long defaultId = ids.get(0).longValue();
+
+		putItem(lion, PATH, defaultId, "{'generation':13,'role':'LION','parts':['PLANNING_DESIGN']}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.parts", contains("PLANNING_DESIGN")));
+
+		myProfile(lion).andExpect(jsonPath("$.lionParts", contains("PLANNING_DESIGN")));
+	}
+
+	@Test
+	void 다른_기수_항목의_파트를_바꾸면_프로필_대표_파트는_그대로다() throws Exception {
+		Session lion = onboarded(STUDENT);
+		long id = create(lion, PATH, "{'generation':12,'role':'LION','parts':['BACKEND']}");
+
+		putItem(lion, PATH, id, "{'generation':12,'role':'LION','parts':['DESIGN']}")
+				.andExpect(status().isOk());
+
+		myProfile(lion)
+				.andExpect(jsonPath("$.lionParts", contains("BACKEND")))
+				.andExpect(jsonPath("$.lionActivities[?(@.isDefault==true)].parts[0]").value("BACKEND"));
 	}
 
 	@Test

@@ -34,7 +34,7 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 	void 승인_대기_회원이_온보딩_직후_내_프로필을_조회한다() throws Exception {
 		Session lion = signup("lion");
 		onboard(lion, """
-				{'lionParts':['FRONTEND','BACKEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
+				{'lionParts':['FRONTEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
 				 'company':'핀테크A','jobTitle':'백엔드 개발자','link':'https://github.com/lion','headline':'핀테크 백엔드 개발자'}""")
 				.andExpect(status().isOk());
 
@@ -48,7 +48,6 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.bio").value(nullValue()))
 				.andExpect(jsonPath("$.status").value("EMPLOYED"))
 				.andExpect(jsonPath("$.lionParts[0]").value("FRONTEND"))
-				.andExpect(jsonPath("$.lionParts[1]").value("BACKEND"))
 				.andExpect(jsonPath("$.interests", hasSize(2)))
 				.andExpect(jsonPath("$.skills", hasSize(0)))
 				.andExpect(jsonPath("$.links[0].type").value("GITHUB"))
@@ -67,7 +66,7 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.educations[0].school").value("중앙대학교"))
 				.andExpect(jsonPath("$.lionActivities[0].generation").value(13))
 				.andExpect(jsonPath("$.lionActivities[0].role").value("LION"))
-				.andExpect(jsonPath("$.lionActivities[0].parts[1]").value("BACKEND"))
+				.andExpect(jsonPath("$.lionActivities[0].parts[0]").value("FRONTEND"))
 				.andExpect(jsonPath("$.lionActivities[0].isDefault").value(true))
 				.andExpect(jsonPath("$.lionProjects", hasSize(0)))
 				.andExpect(jsonPath("$.projects", hasSize(0)))

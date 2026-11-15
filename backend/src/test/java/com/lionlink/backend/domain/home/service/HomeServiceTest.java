@@ -209,7 +209,7 @@ class HomeServiceTest {
 
 	private Long senior(String name, int generation, LionPart part, boolean receiving) {
 		Long userId = user(name, generation);
-		TestProfiles.save(entityManager, TestProfiles.profile(userId).lionPart1(part));
+		TestProfiles.save(entityManager, TestProfiles.profile(userId).lionPart(part));
 		TestPosts.acceptGroupCoffeeChat(entityManager, userId);
 		if (!receiving) {
 			update("update coffee_settings set default_mode = 'OFF' where user_id = " + userId);

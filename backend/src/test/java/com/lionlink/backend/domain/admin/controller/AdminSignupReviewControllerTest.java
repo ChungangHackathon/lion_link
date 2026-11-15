@@ -457,7 +457,7 @@ class AdminSignupReviewControllerTest {
 				.userId(userId)
 				.generation(generation)
 				.role(LionRole.LION)
-				.part1(LionPart.BACKEND)
+				.part(LionPart.BACKEND)
 				.isDefault(isDefault)
 				.build();
 		entityManager.persist(activity);

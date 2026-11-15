@@ -35,7 +35,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 
 	private static final String STUDENT_BODY = "{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND']}";
 	private static final String EMPLOYED_BODY = """
-			{'lionParts':['FRONTEND','BACKEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
+			{'lionParts':['FRONTEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
 			 'company':'핀테크A','jobTitle':'백엔드 개발자','link':'https://github.com/lion','headline':'핀테크 백엔드 개발자'}""";
 
 	// ---------- PROFILE-04 기본 정보 ----------
@@ -122,7 +122,30 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 기본_정보를_바꿔도_멋사_활동_파트는_그대로다() throws Exception {
+	void 기본_정보에_파트를_0개나_2개_보내면_400() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, "{'status':'STUDENT','lionParts':[],'interests':['BACKEND']}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		putJson(lion, BASIC, "{'status':'STUDENT','lionParts':['BACKEND','FRONTEND'],'interests':['BACKEND']}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[0].message").value("멋사 파트를 1개 골라 주세요."));
+	}
+
+	@Test
+	void 기획_디자인_파트를_저장하고_조회한다() throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, "{'status':'STUDENT','lionParts':['PLANNING_DESIGN'],'interests':['BACKEND']}")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.lionParts", contains("PLANNING_DESIGN")));
+
+		getMyProfile(lion).andExpect(jsonPath("$.lionParts", contains("PLANNING_DESIGN")));
+	}
+
+	@Test
+	void 기본_정보의_대표_파트를_바꾸면_가입_기수_멋사_활동_파트도_바뀐다() throws Exception {
 		Session lion = onboarded(EMPLOYED_BODY);
 
 		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['DESIGN'],'interests':['BACKEND']}")
@@ -130,7 +153,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 
 		getMyProfile(lion)
 				.andExpect(jsonPath("$.lionActivities[0].isDefault").value(true))
-				.andExpect(jsonPath("$.lionActivities[0].parts", contains("FRONTEND", "BACKEND")));
+				.andExpect(jsonPath("$.lionActivities[0].parts", contains("DESIGN")));
 	}
 
 	static Stream<Arguments> 잘못된_기본_정보() {

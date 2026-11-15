@@ -261,7 +261,7 @@ class MeControllerTest extends AuthIntegrationTest {
 				.userId(userId)
 				.generation(generation)
 				.role(role)
-				.part1(LionPart.values()[0])
+				.part(LionPart.values()[0])
 				.isDefault(isDefault)
 				.build();
 		entityManager.persist(activity);

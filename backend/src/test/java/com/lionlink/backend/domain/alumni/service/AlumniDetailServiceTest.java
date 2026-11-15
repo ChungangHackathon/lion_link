@@ -76,7 +76,7 @@ class AlumniDetailServiceTest {
 		TestProfiles.currentCareer(entityManager, kim, "라이온컴퍼니", "백엔드 개발자");
 		persist(Education.builder().userId(kim).school("중앙대학교").major("소프트웨어").degree(Degree.BACHELOR)
 				.startYm(YearMonth.of(2019, 3)).build());
-		persist(LionActivity.builder().userId(kim).generation(13).role(LionRole.LION).part1(LionPart.BACKEND).isDefault(true).build());
+		persist(LionActivity.builder().userId(kim).generation(13).role(LionRole.LION).part(LionPart.BACKEND).isDefault(true).build());
 		persist(LionProject.builder().userId(kim).name("라이언링크").eventType(LionEventType.JUNGKATHON).generation(13).build());
 		persist(Project.builder().userId(kim).name("개인 프로젝트").startYm(YearMonth.of(2024, 1)).tags(List.of("Spring")).build());
 		persist(Certification.builder().userId(kim).name("정보처리기사").organization("한국산업인력공단").date(YearMonth.of(2023, 6)).build());
@@ -229,7 +229,6 @@ class AlumniDetailServiceTest {
 
 		Long kim = TestUsers.approved(entityManager, "김사자");
 		TestProfiles.save(entityManager, TestProfiles.profile(kim)
-				.lionPart2(LionPart.FRONTEND)
 				.interests(List.of("DATA_AI", "DESIGN")));
 		TestProfiles.currentCareer(entityManager, kim, "라이온컴퍼니", "백엔드 개발자");
 		persist(LionProject.builder().userId(kim).name("라이언링크").eventType(LionEventType.JUNGKATHON).generation(13).build());
@@ -270,11 +269,11 @@ class AlumniDetailServiceTest {
 	@Test
 	void 운영진_이력이_있으면_운영진으로_표시한다() {
 		Long staff = alumni("운영진사자");
-		persist(LionActivity.builder().userId(staff).generation(12).role(LionRole.STAFF).part1(LionPart.BACKEND).build());
+		persist(LionActivity.builder().userId(staff).generation(12).role(LionRole.STAFF).part(LionPart.BACKEND).build());
 		Long president = alumni("대표사자");
-		persist(LionActivity.builder().userId(president).generation(12).role(LionRole.PRESIDENT).part1(LionPart.BACKEND).build());
+		persist(LionActivity.builder().userId(president).generation(12).role(LionRole.PRESIDENT).part(LionPart.BACKEND).build());
 		Long lion = alumni("아기사자");
-		persist(LionActivity.builder().userId(lion).generation(13).role(LionRole.LION).part1(LionPart.BACKEND).isDefault(true).build());
+		persist(LionActivity.builder().userId(lion).generation(13).role(LionRole.LION).part(LionPart.BACKEND).isDefault(true).build());
 
 		assertThat(alumniDetailService.getDetail(me, staff).isStaff()).isTrue();
 		assertThat(alumniDetailService.getDetail(me, president).isStaff()).isTrue();

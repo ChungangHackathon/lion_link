@@ -91,18 +91,27 @@ class AlumniServiceTest {
 		generation(backend14, 14);
 		Long designFront = TestUsers.approved(entityManager, "디자인프론트");
 		TestProfiles.save(entityManager, TestProfiles.profile(designFront)
-				.lionPart1(LionPart.DESIGN)
-				.lionPart2(LionPart.FRONTEND)
+				.lionPart(LionPart.DESIGN)
 				.status(ProfileStatus.STUDENT)
 				.interests(List.of("DESIGN", "DATA_AI")));
 
 		assertThat(ids(search(filter(List.of(14), null, null, null)))).containsExactly(backend14);
-		assertThat(ids(search(filter(null, List.of(LionPart.FRONTEND), null, null)))).containsExactly(designFront);
+		assertThat(ids(search(filter(null, List.of(LionPart.DESIGN), null, null)))).containsExactly(designFront);
+		assertThat(ids(search(filter(null, List.of(LionPart.FRONTEND), null, null)))).isEmpty();
 		assertThat(ids(search(filter(List.of(13, 14), List.of(LionPart.BACKEND), null, null))))
 				.containsExactlyInAnyOrder(backend13, backend14);
 		assertThat(ids(search(filter(null, null, List.of(ProfileStatus.STUDENT), List.of("DATA_AI")))))
 				.containsExactly(designFront);
 		assertThat(ids(search(filter(null, null, null, List.of("DATA"))))).isEmpty();
+	}
+
+	@Test
+	void 기획_디자인_파트_필터로_검색한다() {
+		Long planningDesign = alumni("기획디자인", LionPart.PLANNING_DESIGN);
+		alumni("백엔드");
+
+		assertThat(ids(search(filter(null, List.of(LionPart.PLANNING_DESIGN), null, null)))).containsExactly(planningDesign);
+		assertThat(ids(search(filter(null, List.of(LionPart.PLANNING), null, null)))).isEmpty();
 	}
 
 	@Test
@@ -230,7 +239,7 @@ class AlumniServiceTest {
 
 	private Long alumni(String name, LionPart part) {
 		Long userId = TestUsers.approved(entityManager, name);
-		TestProfiles.save(entityManager, TestProfiles.profile(userId).lionPart1(part));
+		TestProfiles.save(entityManager, TestProfiles.profile(userId).lionPart(part));
 		return userId;
 	}
 
