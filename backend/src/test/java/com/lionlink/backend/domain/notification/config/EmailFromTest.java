@@ -16,10 +16,6 @@ class EmailFromTest {
 	@Autowired
 	private EmailProperties emailProperties;
 
-	/**
-	 * 보내는 사람 주소는 메일을 만들 때 헤더로 해석된다.
-	 * 표시 이름에 콜론이 있는데 따옴표가 없으면 여기서 터지고, 메일 서버에 닿지도 못한다.
-	 */
 	@Test
 	void 보내는_사람_주소로_메일을_만들_수_있다() throws Exception {
 		MimeMessage message = new JavaMailSenderImpl().createMimeMessage();
