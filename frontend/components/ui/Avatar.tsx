@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/cn";
 import type { LionPart } from "@/lib/types";
 import { Icon } from "./Icon";
@@ -26,11 +28,13 @@ const FONT: Record<AvatarSize, string> = {
 };
 
 /**
- * Initial on a part-coloured circle, or the generic user glyph when there is
+ * Profile photo when available; otherwise an initial on a part-coloured circle,
+ * or the generic user glyph when there is
  * no name (승인 대기) / the member left (탈퇴).
  */
 export function Avatar({
   name,
+  photoUrl,
   part = "ETC",
   size = 40,
   withdrawn,
@@ -38,6 +42,7 @@ export function Avatar({
   className,
 }: {
   name?: string;
+  photoUrl?: string | null;
   part?: LionPart;
   size?: AvatarSize;
   withdrawn?: boolean;
@@ -49,6 +54,10 @@ export function Avatar({
   return (
     <span className={cn("relative inline-grid shrink-0 place-items-center rounded-full select-none", FONT[size], withdrawn ? "bg-ink-400 text-white" : initial ? PART_AVATAR[part] : "bg-line-200 text-ink-500", className)} style={{ width: size, height: size }}>
       {initial && !withdrawn ? initial : <Icon name="user" size={Math.round(size * 0.5)} />}
+      {photoUrl && !withdrawn && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={photoUrl} src={photoUrl} alt="" className="absolute inset-0 size-full rounded-full object-cover" onError={(event) => { event.currentTarget.hidden = true; }} />
+      )}
       {online && <span aria-label="커피챗 가능" className="absolute bottom-0 right-0 rounded-full border-2 border-white bg-green" style={{ width: dot, height: dot }} />}
     </span>
   );
