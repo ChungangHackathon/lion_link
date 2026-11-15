@@ -20,7 +20,7 @@
 | 회원·인증 | `users` | 회원. 구글 계정(sub·이메일·이름), 가입 때 입력한 이름·기수, 역할(MEMBER/ADMIN), 승인 상태(PENDING/APPROVED/REJECTED). 탈퇴는 `deleted_at` 기록 + `google_sub` NULL |
 | 회원·인증 | `refresh_tokens` | 리프레시 토큰. 원문이 아닌 SHA-256 해시만 저장. `revoked_at`으로 폐기 |
 | 회원·인증 | `bookmarks` | 관심 동문. (회원, 대상 회원) 복합 PK |
-| 프로필 | `profiles` | 회원과 1:1. 멋사 파트(최대 2개), 현재 상태, 관심 분야·대표 기술(JSON), 소개, 연락처, 항목별 공개 범위 |
+| 프로필 | `profiles` | 회원과 1:1. 멋사 파트(1개), 현재 상태, 관심 분야·대표 기술(JSON), 소개, 연락처, 항목별 공개 범위 |
 | 프로필 | `careers` | 경력 |
 | 프로필 | `educations` | 학력 |
 | 프로필 | `lion_activities` | 멋사 활동 이력. 회원별 기수당 1개(UNIQUE). 가입 기수 항목은 `is_default` |
@@ -113,8 +113,7 @@ erDiagram
   users ||--o{ languages : "user_id"
   profiles {
     bigint user_id PK,FK
-    enum lion_part_1 "PLANNING, DESIGN, FRONTEND, BACKEND"
-    enum lion_part_2 "PLANNING, DESIGN, FRONTEND, BACKEND"
+    enum lion_part_1 "PLANNING, DESIGN, PLANNING_DESIGN, FRONTEND, BACKEND"
     enum status "STUDENT, LEAVE, GRADUATED, EMPLOYED, FOUNDER, GRAD_SCHOOL, ETC"
     json interests "JSON 배열"
     json skills "JSON 배열"
@@ -161,8 +160,7 @@ erDiagram
     bigint user_id FK
     int generation
     enum role "LION, STAFF, PRESIDENT, PART_LEAD, ETC"
-    enum part_1 "PLANNING, DESIGN, FRONTEND, BACKEND"
-    enum part_2 "PLANNING, DESIGN, FRONTEND, BACKEND"
+    enum part_1 "PLANNING, DESIGN, PLANNING_DESIGN, FRONTEND, BACKEND"
     boolean is_default
   }
   lion_projects {
