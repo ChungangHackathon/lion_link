@@ -24,6 +24,9 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
+		if (!e.getFieldErrors().isEmpty()) {
+			return toResponse(e.getErrorCode(), ErrorResponse.of(e.getErrorCode(), e.getFieldErrors()));
+		}
 		return toResponse(e.getErrorCode(), ErrorResponse.of(e.getErrorCode(), e.getMessage()));
 	}
 
