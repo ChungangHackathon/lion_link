@@ -1,6 +1,6 @@
 # LION LINK API 명세서
 
-> 전체 API 목록(88개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
+> 전체 API 목록(92개)은 아래 "전체 API 목록". 상세 명세는 계정·인증(AUTH)·프로필(PROFILE)·관리자(ADMIN) — 담당 이시형, 동문 찾기(ALUMNI)·커뮤니티(POST·COMMENT·MEETUP·RECRUIT)·홈(HOME)·파일(FILE)·커피챗(COFFEE)·알림(NOTI)·채팅(CHAT) — 담당 조상원.
 > 마지막 갱신: 2026-11-14 (오래된 메모 정리, 배포 설정은 `docs/deploy.md`). 기준: 기능명세서 v1.17, `docs/erd.md`
 
 ## 공통 규칙
@@ -51,7 +51,7 @@
 
 ## 전체 API 목록 (팀 노션 기준)
 
-팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개였고, 채팅 메시지 수정·삭제와 채팅방 초대 3개를 더해 90개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
+팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개였고, 채팅 메시지 수정·삭제와 채팅방 초대 3개를 더해 90개였다. 표를 세어 보니 91행이었고, 쉬는·받는 기간 수정(`PUT /me/coffee-periods/{id}`) 1개를 더해 표 기준 92개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
 
 | 영역 | API 수 | 담당 (노션 기준) | 상세 명세 |
 | --- | --- | --- | --- |
@@ -79,6 +79,7 @@
 | 1. 계정·인증 | `POST` | `/me/withdraw` | 회원 탈퇴 | 이시형 |
 | 1. 계정·인증 | `GET` | `/oauth2/authorization/google` | 구글 로그인 시작 (`/api/v1` 아님) | 이시형 |
 | 2. 프로필 | `POST` | `/me/coffee-periods` | 쉬는·받는 기간 추가 | 이시형 |
+| 2. 프로필 | `PUT` | `/me/coffee-periods/{id}` | 쉬는·받는 기간 수정 | 이시형 |
 | 2. 프로필 | `DELETE` | `/me/coffee-periods/{id}` | 쉬는·받는 기간 삭제 | 이시형 |
 | 2. 프로필 | `GET` | `/me/coffee-settings` | 커피챗 받기 설정 조회 | 이시형 |
 | 2. 프로필 | `PUT` | `/me/coffee-settings` | 커피챗 받기 설정 저장 | 이시형 |
@@ -390,7 +391,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | PROFILE-12 | 커피챗 받기 설정 조회 | `GET /me/coffee-settings` | 2.4 |
 | PROFILE-13 | 커피챗 받기 설정 저장 | `PUT /me/coffee-settings` | 2.4 |
 | PROFILE-14 | 홈 스위치(받기·쉼기) | `POST /me/coffee-settings/switch` | 2.4, 8.1 |
-| PROFILE-15 | 쉼는·받는 기간 추가·삭제 | `POST /me/coffee-periods`, `DELETE /me/coffee-periods/{id}` | 2.4.1 |
+| PROFILE-15 | 쉼는·받는 기간 추가·수정·삭제 | `POST /me/coffee-periods`, `PUT` `DELETE /me/coffee-periods/{id}` | 2.4.1 |
 
 호출 가능한 대상은 PROFILE-03만 승인 회원(`APPROVED`)이고, 나머지는 승인 대기도 쓸 수 있어(반려 회원은 모두 `403 NOT_APPROVED`).
 
@@ -501,12 +502,15 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `status` | string | O | `status` 1개 |
 | `lionParts` | string\[\] | O | `lionPart` **정확히 1개**(배열 모양은 유지). 0개·2개 이상이면 400 |
 | `interests` | string\[\] | O | `interest` 1\~3개, 중복 불가 |
+| `company` | string | 조건부 | 회사명 1\~30자. `status`가 `EMPLOYED`이고 '현재 재직 중' 경력이 하나도 없을 때만 필수 |
+| `jobTitle` | string | 조건부 | 직무 1\~30자. `company`와 같은 조건 |
 
-`200`이고 응답은 위 필드를 그대로 돌려줘. 현재 상태를 `EMPLOYED`에서 다른 값으로 바꿔도 경력은 그대로 두고, `EMPLOYED`로 바꿀 때도 회사·직무는 받지 않아(경력 PROFILE-11에서 채워).
+`200`이고 응답은 `company`·`jobTitle`을 뺀 위 필드를 그대로 돌려줘. `status`가 `EMPLOYED`인데 '현재 재직 중' 경력이 하나도 없으면 `company`·`jobTitle`로 현재 재직 경력 1개를 만들어(온보딩과 같아. 고용 형태·시작 년월은 비어 있고 경력 PROFILE-11에서 채워). 이때 둘 중 하나라도 비어 있으면 `400`이고 `fieldErrors`의 `field`가 `company`·`jobTitle`로 와. 이미 재직 중 경력이 있으면 `company`·`jobTitle`은 무시하고 기존 경력은 바꾸지 않아. `EMPLOYED`에서 다른 상태로 바꿔도 경력은 그대로야.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트(1개)·관심 분야 개수 오류, 없는 열거값 |
+| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트(1개)·관심 분야 개수 오류, 없는 열거값, 재직 경력을 만들어야 하는데 `company`·`jobTitle` 누락 |
+| 409 | `LIMIT_EXCEEDED` | 재직 경력을 만들어야 하는데 경력이 이미 10개(PROFILE-11과 같은 코드) |
 
 ### PROFILE-05 프로필 사진 변경·삭제
 
@@ -688,9 +692,9 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 409 | `PERIOD_LIMIT` | 기간이 이미 5개인데 `UNTIL_RESUME`이 아닌 기간으로 끄려 함 |
 | 409 | `PERIODS_WILL_BE_CLEARED` | 기본 상태가 바뀌는데 기간이 있고 `confirmClearPeriods`가 없음 |
 
-### PROFILE-15 기간 추가·삭제
+### PROFILE-15 기간 추가·수정·삭제
 
-`POST /me/coffee-periods` · `DELETE /me/coffee-periods/{id}` · 승인 대기·승인 회원
+`POST /me/coffee-periods` · `PUT /me/coffee-periods/{id}` · `DELETE /me/coffee-periods/{id}` · 승인 대기·승인 회원
 
 기본 상태가 `ON`이면 쉬는 기간을, `OFF`면 커피챗 받는 기간을 등록해. 날짜 단위로 동작하고 시작일 00:00부터 종료일 23:59까지야. 기간이 시작·종료되면 상태가 자동으로 바뀌니까 따로 호출할 필요가 없어.
 
@@ -700,12 +704,12 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `endDate` | date | O | 시작일 이후, 시작일부터 최대 180일 |
 | `mergeOverlap` | boolean | X | 기본 `false`. `true`면 겹치는 기간을 하나로 합쳐서 저장해(거절 팝업의 빠른 쉬기 4.5용) |
 
-`201`이고 응답은 `{ "id": 6, "startDate": "2026-11-20", "endDate": "2026-11-27" }`야. 합쳐서 저장했다면 합쳐진 기간이 돌아와. `DELETE`는 `204`야. 기간은 최대 5개이고, 쉬는 중에도 이미 받은 신청과 진행 중인 커피챗은 그대로 진행돼. 대기 중 신청의 14일 만료도 멈추지 않아.
+`201`이고 응답은 `{ "id": 6, "startDate": "2026-11-20", "endDate": "2026-11-27" }`야. 합쳐서 저장했다면 합쳐진 기간이 돌아와. `PUT`은 `startDate`·`endDate`만 받고(`mergeOverlap` 없음) 같은 형식으로 `200`을 돌려줘. 검증은 추가와 같고, 겹침은 자기 자신을 뺀 다른 기간과만 따져. 이미 시작한 기간(진행 중)은 `startDate`를 기존 값 그대로 보내야 하고 `endDate`만 바꿀 수 있어(오늘 이후). 이미 끝난 기간은 없는 기간처럼 `404`야. `DELETE`는 `204`야. 기간은 최대 5개이고, 쉬는 중에도 이미 받은 신청과 진행 중인 커피챗은 그대로 진행돼. 대기 중 신청의 14일 만료도 멈추지 않아.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 종료일이 시작일보다 빠름('종료일이 시작일보다 빨라요'), 시작일이 과거·1년 초과, 180일 초과 |
-| 404 | `NOT_FOUND` | 없는 기간이거나 남의 기간 |
+| 400 | `VALIDATION_ERROR` | 종료일이 시작일보다 빠름('종료일이 시작일보다 빨라요'), 시작일이 과거·1년 초과, 180일 초과, 진행 중인 기간의 시작일 변경(PUT) |
+| 404 | `NOT_FOUND` | 없는 기간이거나 남의 기간, 이미 끝난 기간(PUT) |
 | 409 | `PERIOD_OVERLAP` | 이미 등록한 기간과 겹침('이미 등록한 기간과 겹쳐요') |
 | 409 | `PERIOD_LIMIT` | 이미 5개 |
 
