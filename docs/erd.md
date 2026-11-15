@@ -405,6 +405,7 @@ erDiagram
     varchar place
     int capacity
     datetime canceled_at
+    datetime closed_at
   }
   meetup_members {
     bigint meetup_id PK,FK

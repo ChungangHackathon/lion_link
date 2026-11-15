@@ -51,7 +51,7 @@
 
 ## 전체 API 목록 (팀 노션 기준)
 
-팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개였고, 채팅 메시지 수정·삭제와 채팅방 초대 3개를 더해 90개였다. 표를 세어 보니 91행이었고, 쉬는·받는 기간 수정(`PUT /me/coffee-periods/{id}`) 1개를 더해 표 기준 92개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
+팀 노션 API 명세서의 86행을 영역별로 모았다(2026-11-12 기준). `GET /users/{userId}`가 두 영역에 중복돼 있어 동문 찾기에만 두었고, 그래서 85개였다. 커뮤니티를 구현하면서 번개 참여자 목록·번개 취소 2개를 빼고 카테고리별 글 수·좋아요·좋아요 취소 3개, 커피챗 모집 참여 1개(4.11)를 더해 87개였고, 채팅 메시지 수정·삭제와 채팅방 초대 3개를 더해 90개였다. 표를 세어 보니 91행이었고, 쉬는·받는 기간 수정(`PUT /me/coffee-periods/{id}`) 1개를 더해 표 기준 92개였다. 번개 마감·해제와 1:1 방 찾기 3개를 더해 95개다. 상세 명세는 계정·인증·프로필·관리자·동문 찾기·커뮤니티·홈이 이 문서에 있고, 커피챗·채팅·알림은 담당자의 노션 페이지가 원본이다.
 
 | 영역 | API 수 | 담당 (노션 기준) | 상세 명세 |
 | --- | --- | --- | --- |
@@ -60,9 +60,9 @@
 | 3. 관리자 | 6 | 이시형 | 이 문서 아래 |
 | 4. 커피챗 | 10 | 차예은 (조상원이 함께 맡음) | 이 문서 8장 |
 | 5. 동문 찾기 | 5 | 조상원 | 이 문서 아래 |
-| 6. 커뮤니티 | 17 | 조상원 | 이 문서 아래 |
+| 6. 커뮤니티 | 19 | 조상원 | 이 문서 아래 |
 | 7. 홈 | 2 | 조상원 | 이 문서 아래 |
-| 8. 채팅 | 18 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
+| 8. 채팅 | 19 | 차예은 (조상원이 함께 맡음) | 이 문서 10장 |
 | 9. 알림 | 6 | 차예은 | 이 문서 9장 |
 
 커피챗·채팅·알림은 노션 표에 행만 있어서 이 문서 8~10장이 기준이야.
@@ -133,6 +133,8 @@
 | 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 | 조상원 |
 | 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/members/me` | 번개모임 참여 취소 | 조상원 |
 | 6. 커뮤니티 | `POST` | `/posts/{postId}/meetup/invites` | 번개 초대 알림 발송 | 조상원 |
+| 6. 커뮤니티 | `PUT` | `/posts/{postId}/meetup/close` | 번개 모집 마감 | 조상원 |
+| 6. 커뮤니티 | `DELETE` | `/posts/{postId}/meetup/close` | 번개 모집 마감 해제 | 조상원 |
 | 6. 커뮤니티 | `PUT` | `/posts/{postId}/recruit/members/me` | 커피챗 모집 참여 (참여 취소 `DELETE`는 결정 후 추가) | 조상원 |
 | 6. 커뮤니티 | `POST` | `/files` | 이미지·첨부파일 업로드 주소 발급 | 조상원 |
 | 7. 홈 | `GET` | `/home` | 홈 화면 통합 정보 조회 | 조상원 |
@@ -153,6 +155,7 @@
 | 8. 채팅 | `PUT` | `/chat-rooms/{roomId}/read` | 읽음 처리 | 차예은 |
 | 8. 채팅 | `PATCH` | `/chat-rooms/{roomId}/preferences` | 방 고정·알림 끄기 | 차예은 |
 | 8. 채팅 | `DELETE` | `/chat-rooms/{roomId}/members/me` | 방 나가기·종료된 요청 숨기기 | 차예은 |
+| 8. 채팅 | `GET` | `/chat-rooms/direct` | 그 동문과 쓰고 있는 1:1 방 찾기 | 차예은 |
 | 8. 채팅 | `POST` | `/chat-rooms/{roomId}/invites` | 단체방에 동문 초대 | 차예은 |
 | 8. 채팅 | `GET` | `/chat-rooms/unread-count` | 안 읽은 메시지 수 (상단 메뉴 배지) | 차예은 |
 | 9. 알림 | `GET` | `/notifications` | 최근 알림 20개 | 차예은 |
@@ -929,6 +932,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `statuses` | string\[\] | 현재 상태(`status` 열거값) |
 | `interests` | string\[\] | 관심 분야(`interest` 열거값 코드, 예: `PLANNING_PM,DATA_AI`). 값이 정확히 같아야 걸려 |
 | `available` | boolean | `true`면 오늘 기준 커피챗을 받는(`AVAILABLE`) 사자만 |
+| `bookmarked` | boolean | `true`면 내가 관심 동문으로 저장한 사람만(ALUMNI-04). 다른 조건과 같이 쓸 수 있어 |
 | `sort` | string | `RECOMMEND` 추천순(받는 중 먼저, 그다음 나와 같은 파트), `GENERATION` 기수 오름차순, `LATEST` 최근 가입순. 기본 `RECOMMEND`. 순서가 같으면 최근 가입순 |
 | `page`, `size` | number | 기본 0, 20. `size`는 1\~100 |
 
@@ -948,7 +952,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 필드 | 설명 |
 | --- | --- |
-| `company` | 현재 경력의 회사. 회사 공개 범위로 가려지면 `null` |
+| `company` | 현재 경력의 회사. **재직 중(`EMPLOYED`)이거나 창업(`FOUNDER`)일 때만 보여줘.** 그 밖의 상태(재학·휴학·졸업·대학원·기타)는 현재 경력이 있어도 `null`이야. 회사 공개 범위로 가려져도 `null` |
 | `bio` | 카드에 2줄로 보여주는 소개 |
 | `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 규칙으로 오늘 기준으로 정해. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중. 커피챗 설정이 없으면 `NOT_ACCEPTING` |
 | `coffeeChat.nextAvailableDate` | 다시 받는 날. 카드의 '11/20부터 받아요'에 써. `RESTING`이면 쉬는 기간이 끝난 다음 날(바로 이어지는 쉬는 기간이 있으면 마지막 기간 기준), `NOT_ACCEPTING`이면 곧 시작하는 받는 기간의 시작일, 그 밖에는 `null` |
@@ -1051,6 +1055,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | COMMENT-03 | 댓글 삭제 | `DELETE /posts/{postId}/comments/{commentId}` | 6-9 |
 | MEETUP-01 | 번개 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/meetup/members/me` | 6-12, 6-13 |
 | MEETUP-02 | 번개 초대 | `POST /posts/{postId}/meetup/invites` | 6-14 |
+| MEETUP-03 | 번개 모집 마감 | `PUT /posts/{postId}/meetup/close` | 신규 |
+| MEETUP-04 | 번개 모집 마감 해제 | `DELETE /posts/{postId}/meetup/close` | 신규 |
 | RECRUIT-01 | 커피챗 모집 참여 · 참여 취소 | `PUT` `DELETE /posts/{postId}/recruit/members/me` | 신규 (4.11). 참여 취소는 결정 후 추가 |
 | POST-08 | 인기 키워드 | `GET /posts/popular-keywords` | 6-2 |
 | FILE-01 | 업로드 주소 발급 | `POST /files` | 6-10 |
@@ -1272,12 +1278,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /posts/{postId}/comments?page=0&size=20` · 승인 회원
 
-오래된 순이야. 삭제된 댓글도 남고 `deleted: true`, 본문은 '삭제된 댓글이에요.', `author`는 `null`이야.
+오래된 순이야. 답글은 부모 댓글 바로 뒤에 붙어서 내려가니, FE는 `parentId`가 있는 항목을 한 단계 들여쓰면 돼.
+
+삭제된 댓글도 남고 `deleted: true`, 본문은 '삭제된 댓글이에요.', `author`는 `null`이야. 부모를 지워도 답글은 그대로 남아.
 
 ```json
 {
   "items": [{
-    "id": 801, "postId": 101, "content": "좋은 정보 감사합니다!", "isAnonymous": false,
+    "id": 801, "postId": 101, "parentId": null, "content": "좋은 정보 감사합니다!", "isAnonymous": false,
     "author": { "id": 25, "name": "이사자", "generation": 14, "lionParts": ["BACKEND"], "photoUrl": null, "headline": null, "isDeleted": false },
     "deleted": false, "isMine": false, "createdAt": "2026-11-10T15:00:00+09:00"
   }],
@@ -1293,7 +1301,18 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `POST /posts/{postId}/comments` · 승인 회원
 
-`{ "content": "..." }` 1\~500자. 익명은 고르지 않고 서버가 정해. 익명 글의 작성자가 쓴 댓글만 익명이야. `201`에 COMMENT-01의 항목 하나를 돌려줘. 대댓글은 프론트 화면이 없어서 아직 받지 않아.
+`{ "content": "...", "parentId": 801 }`
+
+| 요청 필드 | 타입 | 필수 | 규칙 |
+| --- | --- | --- | --- |
+| `content` | string | O | 1\~500자 |
+| `parentId` | number | X | 답글을 달 댓글. 비우면 일반 댓글 |
+
+익명은 고르지 않고 서버가 정해. 익명 글의 작성자가 쓴 댓글만 익명이야. `201`에 COMMENT-01의 항목 하나를 돌려줘.
+
+답글은 한 단계까지야. 답글에 또 답글을 달면 `404 PARENT_COMMENT_NOT_FOUND`로 막아. 지운 댓글과 다른 글의 댓글도 같은 코드로 막아.
+
+답글을 달면 부모 댓글 작성자에게 `REPLY_CREATED` 알림을 저장해. 내 댓글에 내가 달거나, 부모 댓글 작성자가 글쓴이면 글 작성자 알림(`COMMENT_CREATED`)만 가고 따로 보내지 않아.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
@@ -1351,6 +1370,30 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
 
 FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아니라 `sentCount`를 써 줘.
+
+### MEETUP-03 번개 모집 마감
+
+`PUT /posts/{postId}/meetup/close` · 번개 작성자만
+
+정원이 남아도 작성자가 직접 모집을 닫아. 마감하면 `status`가 `FULL`이 되고 더 참여할 수 없어(MEETUP-01은 `409 MEETUP_FULL`). 채팅방에 초대하는 것도 막혀(CHAT-18은 `409 ROOM_FULL`).
+
+**모임 자체는 그대로야.** 채팅방은 열려 있고 메시지도 보낼 수 있어. 번개 취소(POST-06)와 다르니 헷갈리지 마.
+
+이미 참여한 사람은 영향이 없어. 참여 취소(MEETUP-01 `DELETE`)도 그대로 할 수 있어.
+
+`200`에 MEETUP-01과 같은 형식을 돌려줘.
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 403 | `NOT_OWNER` | 번개 작성자가 아님 |
+| 404 | `POST_NOT_FOUND`, `MEETUP_NOT_FOUND` | 없거나 삭제된 글 |
+| 409 | `MEETUP_CLOSED` | 시작되거나 취소된 번개 |
+
+### MEETUP-04 번개 모집 마감 해제
+
+`DELETE /posts/{postId}/meetup/close` · 번개 작성자만
+
+다시 참여를 받아. 정원이 남아 있으면 `status`가 `OPEN`으로 돌아가. 응답과 에러는 MEETUP-03과 같아.
 
 ### RECRUIT-01 커피챗 모집 참여 · 참여 취소
 
@@ -1431,6 +1474,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `MEETUP_INVITED` | 초대받은 회원 | `님이 번개에 초대했어요. {제목}` (보낸 사람: 작성자) |
 | `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
 | `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `님이 내 글에 댓글을 남겼어요. {제목}` (보낸 사람: 댓글 작성자) |
+| `REPLY_CREATED` | 부모 댓글 작성자 (본인 답글 제외) | `님이 내 댓글에 답글을 남겼어요. {제목}` (보낸 사람: 답글 작성자) |
 | `RECRUIT_JOINED` | 커피챗 모집 작성자 | `님이 내 모집글에 참여했어요. {제목}` (보낸 사람: 참여자) |
 | `RECRUIT_CANCELED` | 작성자를 뺀 모집 참여자 | `참여한 커피챗 모집이 취소됐어요. {제목}` |
 | `RECRUIT_CLOSED` | 모집 작성자와 참여자 | `님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. {제목}` (보낸 사람: 신청받을 사자) |
@@ -1567,7 +1611,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 - 거절되거나 만료된 지 7일이 안 됐으면 막아(`COOLDOWN`). 대표 신청자 기준이야
 - `fromRecruitId`가 있으면 모집글 작성자만 신청할 수 있고, 받는 사자는 모집글의 사자, 함께 신청자는 모집 참여자(작성자 제외)로 정해져(`receiverId`·`memberIds`는 무시). 참여자가 작성자 외 1명 이상이어야 하고, 신청하면 모집은 `APPLIED`가 돼
 - 신청 후 14일이 지나면 만료돼(`expiresAt`)
-- 받는 사자에게 `COFFEE_CHAT_REQUESTED` 알림을 저장해
+- 받는 사자에게 `COFFEE_CHAT_REQUESTED` 알림을 저장해. 함께 신청자에게는 `COFFEE_CHAT_JOINED` 알림을 저장해 (메일은 받는 사자에게만 가)
 
 `201`에 `{ "id": 31, "status": "PENDING", "createdAt": "...", "expiresAt": "..." }`를 돌려줘.
 
@@ -1727,6 +1771,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `type` | 받는 사람 | 보낸 사람(`actor`) | `message` |
 | --- | --- | --- | --- |
 | `COFFEE_CHAT_REQUESTED` | 받는 사자 | 신청자 | `님이 커피챗을 신청했어요.` (여러 명이면 `님 외 {N}명이 커피챗을 신청했어요.`) |
+| `COFFEE_CHAT_JOINED` | 함께 신청자 | 대표 신청자 | `님이 커피챗에 함께 신청했어요.` |
 | `COFFEE_CHAT_ACCEPTED` | 신청자 전원 | 받는 사자 | `님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.` |
 | `COFFEE_CHAT_REJECTED` | 신청자 전원 | 받는 사자 | `님이 이번 커피챗은 어렵다고 했어요.` |
 | `COFFEE_CHAT_SCHEDULED` | 나를 뺀 참여자 | 일정을 정한 회원 | `님이 커피챗 일정을 정했어요. {M월 d일 HH:mm}` (변경이면 `바꿨어요`) |
@@ -1878,7 +1923,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | --- | --- | --- | --- |
 | `SIGNUP_REQUESTED` | `ACCOUNT` | 가입 신청(AUTH-02), 다시 신청(AUTH-07) | 없음 |
 | `SIGNUP_APPROVED` | `ACCOUNT` | 가입 승인(ADMIN-03, 05) | 없음 |
-| `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글 쓴 회원 |
+| `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED`, `REPLY_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글·답글 쓴 회원 |
 | `RECRUIT_CLOSED` | `COMMUNITY` | 커뮤니티 | 여러 명 커피챗을 끈 사자 (사자가 탈퇴했으면 없음) |
 | `MEETUP_CANCELED`, `RECRUIT_CANCELED` | `COMMUNITY` | 커뮤니티 | 없음 |
 | `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 신청자, 받는 사자, 일정을 정한 회원, 취소한 회원 (탈퇴로 취소되면 없음) |
@@ -1892,9 +1937,9 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 | 메일 종류 | 언제 | 받는 사람 | 제목 | 버튼 |
 | --- | --- | --- | --- | --- |
-| `COFFEE_CHAT_REQUEST` | 커피챗 신청(COFFEE-01) | 받는 사자 | `[LION:LINK] {이름}({기수}기)님이 커피챗을 신청했어요` (여러 명이면 `님 외 N명이`) | `{FE}/coffee/{coffeeChatId}` |
-| `MESSAGE_REQUEST` | 메시지 요청(CHAT-01) | 요청받은 회원 | `[LION:LINK] 새 메시지 요청이 왔어요` | `{FE}/chat/requests` |
-| `SIGNUP_APPROVED` | 가입 승인(ADMIN-03, 05) | 승인된 회원 | `[LION:LINK] 가입이 승인됐어요` | `{FE}/home` |
+| `COFFEE_CHAT_REQUEST` | 커피챗 신청(COFFEE-01) | 받는 사자 | `[멋사동네] {이름}({기수}기)님이 커피챗을 신청했어요` (여러 명이면 `님 외 N명이`) | `{FE}/coffee/{coffeeChatId}` |
+| `MESSAGE_REQUEST` | 메시지 요청(CHAT-01) | 요청받은 회원 | `[멋사동네] 새 메시지 요청이 왔어요` | `{FE}/chat/requests` |
+| `SIGNUP_APPROVED` | 가입 승인(ADMIN-03, 05) | 승인된 회원 | `[멋사동네] 가입이 승인됐어요` | `{FE}/home` |
 
 - **쌓기**: 요청과 같은 트랜잭션에서 `email_logs`에 `PENDING`으로 저장해. 요청이 롤백되면 메일도 남지 않고, 메일 서버가 느려도 API 응답은 기다리지 않아.
 - **보내기**: 스케줄러가 10초마다 보낼 시각(`scheduled_at`)이 된 메일을 꺼내 보내고 `SENT`로 바꿔.
@@ -1941,6 +1986,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | CHAT-16 | 메시지 수정 | `PATCH /chat-rooms/{roomId}/messages/{messageId}` |
 | CHAT-17 | 메시지 삭제 | `DELETE /chat-rooms/{roomId}/messages/{messageId}` |
 | CHAT-18 | 채팅방 초대 | `POST /chat-rooms/{roomId}/invites` |
+| CHAT-19 | 1:1 방 찾기 | `GET /chat-rooms/direct` |
 
 모두 승인 회원만 쓸 수 있어. 방에 참여하지 않았거나 나간 방은 `404 ROOM_NOT_FOUND`야.
 
@@ -2214,6 +2260,25 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 | 404 | `ROOM_NOT_FOUND` | 없거나 내가 없는 방 |
 | 409 | `INVALID_ROOM_STATUS` | 대화 중이 아닌 방(취소된 번개 등) |
 | 409 | `ROOM_FULL` | 정원 초과. 한 번에 보낸 인원을 모두 더해서 봐 |
+
+### CHAT-19 1:1 방 찾기
+
+`GET /chat-rooms/direct?userId={userId}`
+
+그 동문과 이미 쓰고 있는 1:1 방을 찾아. 동문 프로필에서 [메시지 보내기]를 눌렀을 때, 이미 대화한 상대면 첫 메시지를 받지 않고 바로 그 방으로 보내려고 쓰는 거야.
+
+`200`에 `{ "roomId": 7, "status": "ACTIVE", "requestedByMe": true }`를 줘.
+
+- `ACTIVE`(대화 중)와 `REQUESTED`(내가 보낸 요청이 대기 중)만 찾아줘
+- 거절·취소된 방과 내가 목록에서 숨긴 방(CHAT-14)은 없는 것으로 봐
+- 없으면 `404`니까 FE는 첫 메시지 화면으로 보내고 메시지 요청(CHAT-01)을 부르면 돼
+
+| 상태 | code | 언제 |
+| --- | --- | --- |
+| 400 | `CANNOT_CHAT_SELF` | 나 자신 |
+| 404 | `ROOM_NOT_FOUND` | 쓰고 있는 1:1 방이 없음 |
+
+CHAT-01도 이미 쓰고 있는 방이 있으면 그 방을 돌려주고 첫 메시지를 남기지 않아(`firstMessageSent: false`). 다만 `content`가 필수라서, 첫 메시지를 받지 않으려면 이 API를 먼저 부르면 돼.
 
 ### 탈퇴한 동문
 

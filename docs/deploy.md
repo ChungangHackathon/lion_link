@@ -27,7 +27,7 @@
 | `S3_PUBLIC_URL` | X | 파일 주소 앞부분. CloudFront를 쓸 때만. 비우면 `https://{버킷}.s3.{지역}.amazonaws.com` |
 | `MAIL_ENABLED` | X | `true`일 때만 메일을 실제로 보내 (기본 `false`, 로그만 남김) |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | 메일을 켜면 O | SMTP (Gmail, AWS SES 등). 포트 기본 587 |
-| `MAIL_FROM` | 메일을 켜면 O | 보내는 사람. 예: `"LION:LINK" <no-reply@도메인>`. 표시 이름에 콜론이 있어 따옴표로 감싸야 한다. 빼면 메일을 만들 때 실패한다 |
+| `MAIL_FROM` | 메일을 켜면 O | 보내는 사람. 예: `멋사동네 <no-reply@도메인>`. 표시 이름은 서버가 UTF-8로 인코딩해서 보낸다 |
 | `SWAGGER_ENABLED` | X | 운영에서 Swagger를 켤 때만 `true` |
 
 **관리자 지정 (`ADMIN_EMAILS`)**
@@ -109,10 +109,12 @@ location /ws {
 | V1 | 전체 테이블 (2026-11-14 기준) |
 | V2 | 첫 배포(2026-11-13) DB에 없던 컬럼·테이블 추가 (`chat_rooms.meetup_id`, `closed_at`, `post_search_keywords`). 이미 있으면 건너뜀 |
 | V3 | enum 컬럼의 CHECK 제약 삭제. enum 값은 서버가 검증해서, 값을 추가해도 DB를 바꿀 필요가 없어 |
+| V4 | 멋사 파트를 1개로 정리. `PLANNING`+`DESIGN` 조합은 `PLANNING_DESIGN`으로 합치고 `lion_part_2`를 지운다 |
+| V5 | `meetups.closed_at` 추가. 작성자가 정원 전에 모집을 마감할 때 쓴다(MEETUP-03) |
 
 **지금 운영 DB에 처음 올릴 때**: 따로 할 일은 없어. 이미 테이블이 있으니 V1을 적용한 것으로 표시(baseline)하고 V2, V3만 실행해. 데이터는 그대로 남아. 혹시 모르니 올리기 전에 DB 스냅샷을 떠 둬.
 
-**테이블을 바꿀 때**: `V4__설명.sql`처럼 다음 번호로 파일을 추가해. 이미 적용된 파일은 고치지 마.
+**테이블을 바꿀 때**: `V6__설명.sql`처럼 다음 번호로 파일을 추가해. 이미 적용된 파일은 고치지 마.
 
 **로컬 DB**: 기존 로컬 DB도 그대로 돼. 서버가 스키마 검증에서 멈추면 `docker compose down -v`로 DB를 지우고 다시 띄워.
 
