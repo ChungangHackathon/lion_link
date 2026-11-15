@@ -195,7 +195,7 @@ class CommentServiceTest {
 	}
 
 	private CommentCreateRequest request(String content) {
-		return new CommentCreateRequest(content);
+		return new CommentCreateRequest(content, null);
 	}
 
 	private void assertError(ThrowingCallable callable, ErrorCode errorCode) {

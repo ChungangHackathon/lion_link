@@ -5,6 +5,7 @@ import com.lionlink.backend.domain.community.comment.dto.response.CommentRespons
 import com.lionlink.backend.domain.community.comment.entity.Comment;
 import com.lionlink.backend.domain.community.comment.repository.CommentRepository;
 import com.lionlink.backend.domain.community.event.CommentCreatedEvent;
+import com.lionlink.backend.domain.community.event.ReplyCreatedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
@@ -36,7 +37,7 @@ public class CommentService {
 	@Transactional(readOnly = true)
 	public SliceResponse<CommentResponse> getComments(Long userId, Long postId, Pageable pageable) {
 		findPost(postId);
-		Slice<Comment> comments = commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(postId, pageable);
+		Slice<Comment> comments = commentRepository.findThread(postId, pageable);
 		Map<Long, UserSummary> authors = userSummaryReader.getSummaries(comments.stream()
 				.filter(comment -> !comment.isDeleted() && !comment.isAnonymous())
 				.map(Comment::getAuthorId)
@@ -47,16 +48,21 @@ public class CommentService {
 
 	public CommentResponse create(Long userId, Long postId, CommentCreateRequest request) {
 		Post post = findPost(postId);
+		Comment parent = request.parentId() == null ? null : findParent(postId, request.parentId());
 		Comment comment = commentRepository.save(Comment.builder()
 				.post(post)
 				.authorId(userId)
+				.parent(parent)
 				.content(request.content().trim())
 				.isAnonymous(post.isAnonymous() && post.isWrittenBy(userId))
 				.build());
 		UserSummary author = userSummaryReader.getSummary(userId).orElse(UserSummary.withdrawn(userId));
+		Long commenterId = comment.isAnonymous() ? null : userId;
 		if (!post.isWrittenBy(userId)) {
-			Long commenterId = comment.isAnonymous() ? null : userId;
 			eventPublisher.publishEvent(new CommentCreatedEvent(postId, post.getTitle(), post.getAuthorId(), commenterId));
+		}
+		if (parent != null && !parent.isWrittenBy(userId) && !parent.isWrittenBy(post.getAuthorId())) {
+			eventPublisher.publishEvent(new ReplyCreatedEvent(postId, post.getTitle(), parent.getAuthorId(), commenterId));
 		}
 		return CommentResponse.of(comment, postId, author, userId);
 	}
@@ -69,6 +75,15 @@ public class CommentService {
 			throw new BusinessException(CommunityErrorCode.NOT_OWNER, "본인이 작성한 댓글만 삭제할 수 있어요.");
 		}
 		comment.delete();
+	}
+
+	private Comment findParent(Long postId, Long parentId) {
+		Comment parent = commentRepository.findByIdAndPostIdAndDeletedAtIsNull(parentId, postId)
+				.orElseThrow(() -> new BusinessException(CommunityErrorCode.PARENT_COMMENT_NOT_FOUND));
+		if (parent.getParent() != null) {
+			throw new BusinessException(CommunityErrorCode.PARENT_COMMENT_NOT_FOUND, "답글에는 답글을 달 수 없어요.");
+		}
+		return parent;
 	}
 
 	private Post findPost(Long postId) {

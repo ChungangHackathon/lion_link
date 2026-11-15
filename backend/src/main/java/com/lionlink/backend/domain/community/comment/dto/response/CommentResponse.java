@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public record CommentResponse(
 		Long id,
 		Long postId,
+		Long parentId,
 		String content,
 		boolean isAnonymous,
 		PostAuthorResponse author,
@@ -23,6 +24,7 @@ public record CommentResponse(
 		return new CommentResponse(
 				comment.getId(),
 				postId,
+				comment.getParent() == null ? null : comment.getParent().getId(),
 				comment.isDeleted() ? DELETED_CONTENT : comment.getContent(),
 				comment.isAnonymous(),
 				hidden ? null : PostAuthorResponse.from(author),

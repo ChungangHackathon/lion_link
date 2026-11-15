@@ -87,8 +87,8 @@ class CommentControllerTest {
 
 	@Test
 	void 댓글_목록을_조회한다() throws Exception {
-		Long deleted = commentService.create(me, postId, new CommentCreateRequest("지울 댓글")).id();
-		commentService.create(me, postId, new CommentCreateRequest("남길 댓글"));
+		Long deleted = commentService.create(me, postId, new CommentCreateRequest("지울 댓글", null)).id();
+		commentService.create(me, postId, new CommentCreateRequest("남길 댓글", null));
 		commentService.delete(me, postId, deleted);
 
 		mockMvc.perform(get("/api/v1/posts/{postId}/comments", postId).header(USER_HEADER, me))
@@ -113,7 +113,7 @@ class CommentControllerTest {
 
 	@Test
 	void 댓글을_삭제하면_204() throws Exception {
-		Long commentId = commentService.create(me, postId, new CommentCreateRequest("댓글")).id();
+		Long commentId = commentService.create(me, postId, new CommentCreateRequest("댓글", null)).id();
 
 		mockMvc.perform(delete("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId).header(USER_HEADER, me))
 				.andExpect(status().isNoContent())
@@ -122,7 +122,7 @@ class CommentControllerTest {
 
 	@Test
 	void 다른_사람의_댓글을_삭제하면_403() throws Exception {
-		Long commentId = commentService.create(me, postId, new CommentCreateRequest("댓글")).id();
+		Long commentId = commentService.create(me, postId, new CommentCreateRequest("댓글", null)).id();
 		Long other = TestUsers.approved(entityManager, "김사자");
 
 		mockMvc.perform(delete("/api/v1/posts/{postId}/comments/{commentId}", postId, commentId).header(USER_HEADER, other))

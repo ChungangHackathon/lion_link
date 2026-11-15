@@ -22,7 +22,12 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
 	long countByPostIdAndDeletedAtIsNull(Long postId);
 
-	Slice<Comment> findByPostIdOrderByCreatedAtAscIdAsc(Long postId, Pageable pageable);
+	@Query("""
+			select c from Comment c left join c.parent pc
+			where c.post.id = :postId
+			order by coalesce(pc.id, c.id) asc, c.id asc
+			""")
+	Slice<Comment> findThread(Long postId, Pageable pageable);
 
 	Optional<Comment> findByIdAndPostIdAndDeletedAtIsNull(Long id, Long postId);
 }
