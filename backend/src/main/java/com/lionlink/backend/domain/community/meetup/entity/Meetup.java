@@ -40,6 +40,8 @@ public class Meetup {
 
 	private LocalDateTime canceledAt;
 
+	private LocalDateTime closedAt;
+
 	@Builder
 	private Meetup(Post post, LocalDateTime meetAt, String place, Integer capacity) {
 		this.post = post;
@@ -62,6 +64,20 @@ public class Meetup {
 
 	public boolean isCanceled() {
 		return canceledAt != null;
+	}
+
+	public void close(LocalDateTime now) {
+		if (closedAt == null) {
+			this.closedAt = now;
+		}
+	}
+
+	public void reopen() {
+		this.closedAt = null;
+	}
+
+	public boolean isClosed() {
+		return closedAt != null;
 	}
 
 	public boolean isEnded(LocalDateTime now) {

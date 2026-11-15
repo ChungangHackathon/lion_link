@@ -15,6 +15,6 @@ public enum MeetupStatus {
 		if (meetup.isEnded(now)) {
 			return ENDED;
 		}
-		return participantCount >= meetup.getCapacity() ? FULL : OPEN;
+		return meetup.isClosed() || participantCount >= meetup.getCapacity() ? FULL : OPEN;
 	}
 }

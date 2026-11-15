@@ -62,11 +62,34 @@ public class MeetupService {
 		if (meetup.isCanceled() || meetup.isEnded(LocalDateTime.now())) {
 			throw new BusinessException(CommunityErrorCode.MEETUP_CLOSED);
 		}
+		if (meetup.isClosed()) {
+			throw new BusinessException(CommunityErrorCode.MEETUP_FULL, "모집이 마감됐어요.");
+		}
 		if (meetupMemberRepository.countByMeetupPostId(postId) >= meetup.getCapacity()) {
 			throw new BusinessException(CommunityErrorCode.MEETUP_FULL);
 		}
 		meetupMemberRepository.save(MeetupMember.builder().meetup(meetup).userId(userId).build());
 		meetupChatRoomService.join(postId, userId, LocalDateTime.now());
+		return participation(post, meetup, userId);
+	}
+
+	public MeetupParticipationResponse close(Long userId, Long postId) {
+		LocalDateTime now = LocalDateTime.now();
+		Post post = findMeetupPost(postId);
+		Meetup meetup = findMeetup(postId);
+		requireHost(post, userId);
+		requireOngoing(meetup, now);
+		meetup.close(now);
+		return participation(post, meetup, userId);
+	}
+
+	public MeetupParticipationResponse reopen(Long userId, Long postId) {
+		LocalDateTime now = LocalDateTime.now();
+		Post post = findMeetupPost(postId);
+		Meetup meetup = findMeetup(postId);
+		requireHost(post, userId);
+		requireOngoing(meetup, now);
+		meetup.reopen();
 		return participation(post, meetup, userId);
 	}
 
@@ -133,6 +156,18 @@ public class MeetupService {
 			meetupChatRoomService.close(post.getId(), MeetupChatRoomService.CANCELED, now);
 		}
 		meetupMemberRepository.deleteAll(meetupMemberRepository.findJoinedInProgress(userId, now));
+	}
+
+	private void requireHost(Post post, Long userId) {
+		if (!post.isWrittenBy(userId)) {
+			throw new BusinessException(CommunityErrorCode.NOT_OWNER, "번개모임 작성자만 할 수 있어요.");
+		}
+	}
+
+	private void requireOngoing(Meetup meetup, LocalDateTime now) {
+		if (meetup.isCanceled() || meetup.isEnded(now)) {
+			throw new BusinessException(CommunityErrorCode.MEETUP_CLOSED, "종료되거나 취소된 모임이에요.");
+		}
 	}
 
 	private MeetupParticipationResponse participation(Post post, Meetup meetup, Long userId) {
