@@ -48,7 +48,6 @@ class AlumniControllerTest {
 	void 동문을_검색한다() throws Exception {
 		Long kim = TestUsers.approved(entityManager, "김사자");
 		TestProfiles.save(entityManager, TestProfiles.profile(kim)
-				.lionPart2(LionPart.FRONTEND)
 				.skills(List.of("Spring", "MySQL"))
 				.bio("서버 개발 이야기를 좋아해요"));
 		TestProfiles.currentCareer(entityManager, kim, "예시회사", "백엔드 개발자");

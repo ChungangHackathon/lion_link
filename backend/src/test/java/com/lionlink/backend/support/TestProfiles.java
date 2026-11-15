@@ -25,7 +25,7 @@ public final class TestProfiles {
 	public static Profile.ProfileBuilder profile(Long userId) {
 		return Profile.builder()
 				.userId(userId)
-				.lionPart1(LionPart.BACKEND)
+				.lionPart(LionPart.BACKEND)
 				.status(ProfileStatus.EMPLOYED)
 				.interests(List.of("BACKEND"))
 				.skills(List.of("Spring"));

@@ -40,7 +40,7 @@ import org.springframework.http.MediaType;
 class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 
 	private static final String EMPLOYED_BODY = """
-			{'lionParts':['FRONTEND','BACKEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
+			{'lionParts':['FRONTEND'],'status':'EMPLOYED','interests':['BACKEND','DATA_AI'],
 			 'company':'핀테크A','jobTitle':'백엔드 개발자','link':'https://github.com/lion','headline':'핀테크 백엔드 개발자'}""";
 	private static final String STUDENT_BODY = "{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND']}";
 
@@ -72,7 +72,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		entityManager.clear();
 
 		Profile profile = profileRepository.findById(lion.userId()).orElseThrow();
-		assertEquals(List.of(LionPart.FRONTEND, LionPart.BACKEND), profile.getLionParts());
+		assertEquals(List.of(LionPart.FRONTEND), profile.getLionParts());
 		assertEquals(ProfileStatus.EMPLOYED, profile.getStatus());
 		assertEquals(List.of("BACKEND", "DATA_AI"), profile.getInterests());
 		assertEquals("핀테크 백엔드 개발자", profile.getHeadline());
@@ -100,8 +100,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		assertEquals(1, activities.size());
 		assertEquals(13, activities.get(0).getGeneration());
 		assertEquals(LionRole.LION, activities.get(0).getRole());
-		assertEquals(LionPart.FRONTEND, activities.get(0).getPart1());
-		assertEquals(LionPart.BACKEND, activities.get(0).getPart2());
+		assertEquals(LionPart.FRONTEND, activities.get(0).getPart());
 		assertTrue(activities.get(0).isDefault());
 
 		CoffeeSetting coffee = coffeeSettingRepository.findById(lion.userId()).orElseThrow();
@@ -125,8 +124,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		assertEquals(1, educationRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId()).size());
 		assertNull(profileRepository.findById(lion.userId()).orElseThrow().getLinks());
 		LionActivity activity = lionActivityRepository.findByUserIdAndIsDefaultTrue(lion.userId()).orElseThrow();
-		assertEquals(LionPart.BACKEND, activity.getPart1());
-		assertNull(activity.getPart2());
+		assertEquals(LionPart.BACKEND, activity.getPart());
 	}
 
 	@Test
@@ -135,7 +133,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 
 		onboard(lion, """
 				{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND'],
-				 'staffActivities':[{'generation':13,'parts':['PLANNING']},{'generation':12,'parts':['DESIGN','FRONTEND']}]}""")
+				 'staffActivities':[{'generation':13,'parts':['PLANNING']},{'generation':12,'parts':['DESIGN']}]}""")
 				.andExpect(status().isOk());
 		entityManager.flush();
 		entityManager.clear();
@@ -146,14 +144,13 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		LionActivity joined = activities.get(0);
 		assertEquals(13, joined.getGeneration());
 		assertEquals(LionRole.STAFF, joined.getRole());
-		assertEquals(LionPart.BACKEND, joined.getPart1());
+		assertEquals(LionPart.BACKEND, joined.getPart());
 		assertTrue(joined.isDefault());
 
 		LionActivity extra = activities.get(1);
 		assertEquals(12, extra.getGeneration());
 		assertEquals(LionRole.STAFF, extra.getRole());
-		assertEquals(LionPart.DESIGN, extra.getPart1());
-		assertEquals(LionPart.FRONTEND, extra.getPart2());
+		assertEquals(LionPart.DESIGN, extra.getPart());
 		assertFalse(extra.isDefault());
 	}
 
@@ -213,6 +210,32 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		onboard(lion, "{'lionParts':['PLANNING','DESIGN','BACKEND'],'status':'STUDENT','interests':['BACKEND']}")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void 멋사_파트가_0개나_2개면_400() throws Exception {
+		Session lion = signup("lion");
+
+		onboard(lion, "{'lionParts':[],'status':'STUDENT','interests':['BACKEND']}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		onboard(lion, "{'lionParts':['PLANNING','DESIGN'],'status':'STUDENT','interests':['BACKEND']}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.fieldErrors[0].message").value("멋사 파트를 1개 골라 주세요."));
+	}
+
+	@Test
+	void 기획_디자인_파트로_온보딩하면_프로필과_가입_기수_활동에_저장된다() throws Exception {
+		Session lion = signup("lion");
+
+		onboard(lion, "{'lionParts':['PLANNING_DESIGN'],'status':'STUDENT','interests':['BACKEND']}")
+				.andExpect(status().isOk());
+		entityManager.flush();
+		entityManager.clear();
+
+		assertEquals(List.of(LionPart.PLANNING_DESIGN), profileRepository.findById(lion.userId()).orElseThrow().getLionParts());
+		assertEquals(LionPart.PLANNING_DESIGN,
+				lionActivityRepository.findByUserIdAndIsDefaultTrue(lion.userId()).orElseThrow().getPart());
 	}
 
 	@Test
