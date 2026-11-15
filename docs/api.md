@@ -77,7 +77,7 @@
 | 1. 계정·인증 | `POST` | `/me/reapply` | 다시 신청 | 이시형 |
 | 1. 계정·인증 | `PATCH` | `/me/signup-info` | 가입 정보 수정 | 이시형 |
 | 1. 계정·인증 | `POST` | `/me/withdraw` | 회원 탈퇴 | 이시형 |
-| 1. 계정·인증 | `GET` | `/oauth2/authorization/google` | 구글 로그인 시작 (`/api/v1` 아님) | 이시형 |
+| 1. 계정·인증 | `GET` | `/oauth2/authorization/google` | 구글 로그인 시작 (`/api/v1` 아님, 운영은 FE 주소로 호출) | 이시형 |
 | 2. 프로필 | `POST` | `/me/coffee-periods` | 쉬는·받는 기간 추가 | 이시형 |
 | 2. 프로필 | `PUT` | `/me/coffee-periods/{id}` | 쉬는·받는 기간 수정 | 이시형 |
 | 2. 프로필 | `DELETE` | `/me/coffee-periods/{id}` | 쉬는·받는 기간 삭제 | 이시형 |
@@ -198,7 +198,7 @@
 
 `GET /oauth2/authorization/google` · 인증 불필요 · `/api/v1` 아님
 
-Authorization Code 방식이야. FE는 API를 부르지 않고 브라우저를 이 주소로 이동시켜. 서버(Spring Security)가 구글 로그인 화면으로 보내고, 구글이 콜백 `GET /login/oauth2/code/google`로 돌려준 code를 클라이언트 ID·시크릿으로 교환해 구글 계정(고유 ID·이메일·이름)을 확인해. 그다음 결과에 따라 FE로 리다이렉트해. 토큰은 URL에 싣지 않고 HttpOnly 쿠키로만 줘. 가입 신청(AUTH-02)을 누르기 전에는 계정을 만들지 않아.
+Authorization Code 방식이야. FE는 API를 부르지 않고 브라우저를 **FE 주소 기준**(`{FE}/oauth2/authorization/google`)으로 이동시켜. 운영에서는 FE(Vercel)가 `/api`·`/oauth2`·`/login/oauth2`를 백엔드로 프록시(rewrites)해서, 브라우저는 백엔드 도메인을 직접 부르지 않아(Safari가 서드파티 쿠키를 막아서). 서버(Spring Security)가 구글 로그인 화면으로 보내고, 구글이 콜백 `GET /login/oauth2/code/google`로 돌려준 code를 클라이언트 ID·시크릿으로 교환해 구글 계정(고유 ID·이메일·이름)을 확인해. 그다음 결과에 따라 FE로 리다이렉트해. 토큰은 URL에 싣지 않고 HttpOnly 쿠키로만 줘. 가입 신청(AUTH-02)을 누르기 전에는 계정을 만들지 않아.
 
 | 결과 | 이동 위치 | 쿠키 | FE가 이어서 할 일 |
 | --- | --- | --- | --- |
@@ -211,7 +211,7 @@ Authorization Code 방식이야. FE는 API를 부르지 않고 브라우저를 �
 | `GOOGLE_AUTH_FAILED` | 로그인 취소, 이메일 인증이 안 된 구글 계정, 그 밖의 인증 실패 |
 | `GOOGLE_UNAVAILABLE` | 구글과 토큰·사용자 정보를 주고받다 실패 |
 
-로그인할 때마다 구글 계정 선택 화면이 떠(`prompt=select_account`). 쿠키 경로는 `/api/v1/auth`라서 FE는 이 경로를 부를 때 `credentials: 'include'`를 꼭 붙여야 해. Google Console의 승인된 리디렉션 URI에는 `{서버 주소}/login/oauth2/code/google`을 등록하고, 서버에는 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`·`FRONTEND_URL`을 환경변수로 넣어. FE와 서버 도메인이 다르면 쿠키에 `SameSite=None; Secure`가 필요해.
+로그인할 때마다 구글 계정 선택 화면이 떠(`prompt=select_account`). 쿠키 경로는 `/api/v1/auth`라서 FE는 이 경로를 부를 때 `credentials: 'include'`를 꼭 붙여야 해. Google Console의 승인된 리디렉션 URI에는 `{FE 주소}/login/oauth2/code/google`(운영 `https://lion-link.vercel.app/...`, 로컬 `http://localhost:8080/...`)을 등록하고, 서버에는 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`·`FRONTEND_URL`·`OAUTH_REDIRECT_BASE_URL`(운영은 FE 주소)을 환경변수로 넣어. 프록시를 쓰면 쿠키가 FE 도메인의 퍼스트파티 쿠키라 `SameSite=Lax; Secure`로 충분해. FE가 프록시 없이 다른 도메인의 백엔드를 직접 부르는 구조일 때만 `SameSite=None; Secure`가 필요해.
 
 ### AUTH-09 가입 화면 구글 정보
 
