@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CareerService {
 
-	static final int MAX_ITEMS = 10;
+	public static final int MAX_ITEMS = 10;
 
 	private final CareerRepository careerRepository;
 	private final SectionItemSupport support;
