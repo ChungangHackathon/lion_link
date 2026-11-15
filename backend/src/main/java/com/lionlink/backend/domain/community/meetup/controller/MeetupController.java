@@ -60,6 +60,37 @@ public class MeetupController {
 		return meetupService.leave(userId, postId);
 	}
 
+	@Operation(summary = "번개 모집 마감",
+			description = "정원이 남아도 작성자가 직접 마감한다. 마감하면 더 참여할 수 없고 상태가 FULL이 된다. 모임과 채팅방은 그대로 열려 있다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "403", description = "작성자가 아님 (NOT_OWNER)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "게시글 또는 번개 없음 (POST_NOT_FOUND, MEETUP_NOT_FOUND)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "종료되거나 취소된 번개 (MEETUP_CLOSED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@PutMapping("/close")
+	public MeetupParticipationResponse close(
+			@CurrentUser Long userId,
+			@Parameter(description = "번개 게시글 ID") @PathVariable Long postId
+	) {
+		return meetupService.close(userId, postId);
+	}
+
+	@Operation(summary = "번개 모집 마감 해제", description = "다시 참여를 받는다. 에러는 마감과 같다.")
+	@ApiResponse(responseCode = "200")
+	@ApiResponse(responseCode = "403", description = "작성자가 아님 (NOT_OWNER)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "종료되거나 취소된 번개 (MEETUP_CLOSED)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@DeleteMapping("/close")
+	public MeetupParticipationResponse reopen(
+			@CurrentUser Long userId,
+			@Parameter(description = "번개 게시글 ID") @PathVariable Long postId
+	) {
+		return meetupService.reopen(userId, postId);
+	}
+
 	@Operation(summary = "번개 초대",
 			description = "이미 참여했거나 초대한 회원, 승인되지 않은 회원은 건너뛰고 skippedUserIds로 알려준다.")
 	@ApiResponse(responseCode = "200")
