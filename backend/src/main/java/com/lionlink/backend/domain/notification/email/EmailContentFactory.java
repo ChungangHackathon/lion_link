@@ -29,7 +29,7 @@ import org.springframework.web.util.HtmlUtils;
 @Transactional(readOnly = true)
 public class EmailContentFactory {
 
-	private static final String PREFIX = "[LION:LINK] ";
+	private static final String PREFIX = "[멋사동네] ";
 	private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("M/d");
 	private static final Map<String, String> TOPICS = Map.of(
 			"JOB_PREP", "취업 준비",
@@ -98,7 +98,7 @@ public class EmailContentFactory {
 		return userRepository.findById(userId).map(user -> {
 			String body = paragraph("<b>" + escape(user.getName()) + "</b>님, 가입이 승인됐어요.")
 					+ note("이제 동문 찾기, 커피챗, 채팅, 커뮤니티를 모두 이용할 수 있어요.")
-					+ button("LION:LINK 시작하기", link("/home"));
+					+ button("멋사동네 시작하기", link("/home"));
 			return new EmailContent(PREFIX + "가입이 승인됐어요", layout(body, "가입 승인 메일", unsubscribeUrl));
 		});
 	}
@@ -106,7 +106,7 @@ public class EmailContentFactory {
 	private String layout(String body, String kind, String unsubscribeUrl) {
 		return """
 				<div style="font-family:sans-serif;color:#111;max-width:560px;margin:0 auto;padding:24px">
-				<p style="font-size:20px;font-weight:700;color:#ff7710;margin:0 0 16px">LION:LINK</p>
+				<p style="font-size:20px;font-weight:700;color:#ff7710;margin:0 0 16px">멋사동네</p>
 				%s
 				<p style="margin-top:32px;font-size:12px;color:#999">
 				더 이상 받지 않으려면 <a href="%s" style="color:#999">%s 그만 받기</a>를 눌러주세요. 마이페이지 &gt; 알림 설정에서 다시 켤 수 있어요.

@@ -91,14 +91,14 @@ class EmailNotificationServiceTest {
 		assertThat(queued.getToEmail()).isEqualTo(email(senior));
 		assertThat(queued.getType()).isEqualTo(EmailType.COFFEE_CHAT_REQUEST);
 		assertThat(queued.getTargetIds()).containsExactly(coffeeChatId);
-		assertThat(queued.getSubject()).isEqualTo("[LION:LINK] 나사자(13기)님이 커피챗을 신청했어요");
+		assertThat(queued.getSubject()).isEqualTo("[멋사동네] 나사자(13기)님이 커피챗을 신청했어요");
 		assertThat(queued.getStatus()).isEqualTo(EmailStatus.PENDING);
 		verify(emailSender, never()).send(anyString(), anyString(), anyString());
 
 		assertThat(emailNotificationService.sendDue(later())).isEqualTo(1);
 
 		ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
-		verify(emailSender).send(eq(email(senior)), eq("[LION:LINK] 나사자(13기)님이 커피챗을 신청했어요"), html.capture());
+		verify(emailSender).send(eq(email(senior)), eq("[멋사동네] 나사자(13기)님이 커피챗을 신청했어요"), html.capture());
 		String token = notificationSettingService.getOrCreate(senior).getUnsubscribeToken();
 		assertThat(html.getValue())
 				.contains("커리어/이직")
@@ -185,7 +185,7 @@ class EmailNotificationServiceTest {
 		emailNotificationService.sendDue(later());
 
 		ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
-		verify(emailSender).send(eq(email(pending)), eq("[LION:LINK] 가입이 승인됐어요"), html.capture());
+		verify(emailSender).send(eq(email(pending)), eq("[멋사동네] 가입이 승인됐어요"), html.capture());
 		assertThat(html.getValue()).contains("새사자").contains("type=SIGNUP_APPROVED");
 		assertThat(onlyLog().getType()).isEqualTo(EmailType.SIGNUP_APPROVED);
 	}
@@ -213,7 +213,7 @@ class EmailNotificationServiceTest {
 
 		emailNotificationService.sendDue(later());
 
-		verify(emailSender).send(eq(email(senior)), eq("[LION:LINK] 새 메시지 요청이 왔어요"), anyString());
+		verify(emailSender).send(eq(email(senior)), eq("[멋사동네] 새 메시지 요청이 왔어요"), anyString());
 		assertThat(onlyLog().getStatus()).isEqualTo(EmailStatus.SENT);
 	}
 

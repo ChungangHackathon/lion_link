@@ -28,7 +28,7 @@ public class SwaggerConfig {
 				.name(DevHeaderCurrentUserProvider.HEADER)
 				.description("개발용 로그인 회원 ID");
 		return new OpenAPI()
-				.info(new Info().title("LION:LINK API").version("v1"))
+				.info(new Info().title("멋사동네 API").version("v1"))
 				.components(new Components().addSecuritySchemes(DEV_USER_SCHEME, devUser))
 				.addSecurityItem(new SecurityRequirement().addList(DEV_USER_SCHEME));
 	}
