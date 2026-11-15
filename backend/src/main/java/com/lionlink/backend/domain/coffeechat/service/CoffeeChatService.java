@@ -138,6 +138,8 @@ public class CoffeeChatService {
 				? "님이 커피챗을 신청했어요."
 				: "님 외 " + memberIds.size() + "명이 커피챗을 신청했어요.";
 		notify(List.of(receiverId), CoffeeChatNotificationType.COFFEE_CHAT_REQUESTED, chat.getId(), userId, message);
+		notify(memberIds, CoffeeChatNotificationType.COFFEE_CHAT_JOINED, chat.getId(), userId,
+				"님이 커피챗에 함께 신청했어요.");
 		return CoffeeChatCreateResponse.from(chat);
 	}
 
