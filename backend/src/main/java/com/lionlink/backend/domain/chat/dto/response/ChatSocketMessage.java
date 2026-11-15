@@ -16,6 +16,10 @@ public record ChatSocketMessage(
 		return new ChatSocketMessage("MESSAGE", roomId, message, null, null, null);
 	}
 
+	public static ChatSocketMessage messageUpdated(Long roomId, ChatMessageResponse message) {
+		return new ChatSocketMessage("MESSAGE_UPDATED", roomId, message, null, null, null);
+	}
+
 	public static ChatSocketMessage read(Long roomId, Long userId, Long lastReadMessageId) {
 		return new ChatSocketMessage("READ", roomId, null, userId, lastReadMessageId, null);
 	}

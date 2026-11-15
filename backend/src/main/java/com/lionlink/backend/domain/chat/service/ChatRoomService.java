@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.chat.service;
 
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageSendRequest;
+import com.lionlink.backend.domain.chat.dto.request.ChatMessageUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatPreferenceUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatReadRequest;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageListResponse;
@@ -175,6 +176,20 @@ public class ChatRoomService {
 		return chatMessageWriter.writeText(room, userId, request.content().trim(), clientMsgId, now);
 	}
 
+	public ChatMessageResponse updateMessage(Long userId, Long roomId, Long messageId, ChatMessageUpdateRequest request) {
+		ChatRoomMember member = findActiveMember(userId, roomId);
+		ChatMessage message = findOwnMessage(userId, member, messageId);
+		message.edit(request.content().trim(), LocalDateTime.now());
+		return chatMessageWriter.publishUpdated(member.getRoom(), message);
+	}
+
+	public ChatMessageResponse deleteMessage(Long userId, Long roomId, Long messageId) {
+		ChatRoomMember member = findActiveMember(userId, roomId);
+		ChatMessage message = findOwnMessage(userId, member, messageId);
+		message.delete(LocalDateTime.now());
+		return chatMessageWriter.publishUpdated(member.getRoom(), message);
+	}
+
 	public ChatReadResponse read(Long userId, Long roomId, ChatReadRequest request) {
 		ChatRoomMember member = findActiveMember(userId, roomId);
 		Long lastId = chatMessageRepository.findLastMessageId(roomId);
@@ -274,6 +289,17 @@ public class ChatRoomService {
 		return chatRoomMemberRepository.findByRoomIdAndUserId(roomId, userId)
 				.filter(ChatRoomMember::isActive)
 				.orElseThrow(() -> new BusinessException(ChatErrorCode.ROOM_NOT_FOUND));
+	}
+
+	private ChatMessage findOwnMessage(Long userId, ChatRoomMember member, Long messageId) {
+		if (!member.getRoom().isOpen()) {
+			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS);
+		}
+		return chatMessageRepository.findById(messageId)
+				.filter(message -> message.getRoom().getId().equals(member.getRoom().getId()))
+				.filter(message -> message.getId() > member.visibleFrom())
+				.filter(message -> message.isSentBy(userId) && !message.isDeleted())
+				.orElseThrow(() -> new BusinessException(ChatErrorCode.MESSAGE_NOT_FOUND));
 	}
 
 	private List<ChatUserResponse> others(Long userId, List<ChatRoomMember> members, Map<Long, UserSummary> summaries) {

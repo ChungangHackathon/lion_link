@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.chat.controller;
 
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageSendRequest;
+import com.lionlink.backend.domain.chat.dto.request.ChatMessageUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatPreferenceUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatReadRequest;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageListResponse;
@@ -93,6 +94,28 @@ public class ChatRoomController {
 	public ResponseEntity<ChatMessageResponse> send(@CurrentUser Long userId, @PathVariable Long roomId,
 			@Valid @RequestBody ChatMessageSendRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(chatRoomService.send(userId, roomId, request));
+	}
+
+	@Operation(summary = "메시지 수정", description = "내가 보낸 메시지만. 수정하면 editedAt이 채워진다.")
+	@ApiResponse(responseCode = "404", description = "없거나 참여하지 않은 방 (ROOM_NOT_FOUND), 없거나 내가 보내지 않았거나 이미 지운 메시지 (MESSAGE_NOT_FOUND)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "대화 중이 아닌 방 (INVALID_ROOM_STATUS)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@PatchMapping("/{roomId}/messages/{messageId}")
+	public ChatMessageResponse updateMessage(@CurrentUser Long userId, @PathVariable Long roomId,
+			@PathVariable Long messageId, @Valid @RequestBody ChatMessageUpdateRequest request) {
+		return chatRoomService.updateMessage(userId, roomId, messageId, request);
+	}
+
+	@Operation(summary = "메시지 삭제", description = "내가 보낸 메시지만. 내용만 지우고 자리에 남아서 deleted가 true, content가 null이 된다.")
+	@ApiResponse(responseCode = "404", description = "없거나 참여하지 않은 방 (ROOM_NOT_FOUND), 없거나 내가 보내지 않았거나 이미 지운 메시지 (MESSAGE_NOT_FOUND)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "대화 중이 아닌 방 (INVALID_ROOM_STATUS)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@DeleteMapping("/{roomId}/messages/{messageId}")
+	public ChatMessageResponse deleteMessage(@CurrentUser Long userId, @PathVariable Long roomId,
+			@PathVariable Long messageId) {
+		return chatRoomService.deleteMessage(userId, roomId, messageId);
 	}
 
 	@Operation(summary = "읽음 처리", description = "lastMessageId를 비우면 방의 최신 메시지까지 읽음으로 기록한다.")
