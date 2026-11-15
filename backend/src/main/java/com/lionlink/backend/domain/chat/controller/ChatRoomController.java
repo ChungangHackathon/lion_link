@@ -9,6 +9,7 @@ import com.lionlink.backend.domain.chat.dto.response.ChatMessageListResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatDirectRoomResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomInviteResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
@@ -64,6 +65,19 @@ public class ChatRoomController {
 	@GetMapping("/unread-count")
 	public ChatUnreadCountResponse getUnreadCount(@CurrentUser Long userId) {
 		return chatRoomService.getUnreadCount(userId);
+	}
+
+	@Operation(summary = "1:1 방 찾기",
+			description = "그 동문과 이미 쓰고 있는 1:1 방을 찾는다. 첫 메시지 없이 바로 방으로 들어갈 때 쓴다. "
+					+ "없으면 404이니 메시지 요청(CHAT-01)으로 보내면 된다.")
+	@ApiResponse(responseCode = "400", description = "나 자신 (CANNOT_CHAT_SELF)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "쓰고 있는 1:1 방이 없음 (ROOM_NOT_FOUND)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@GetMapping("/direct")
+	public ChatDirectRoomResponse getDirectRoom(@CurrentUser Long userId,
+			@RequestParam("userId") Long targetUserId) {
+		return chatRoomService.getDirectRoom(userId, targetUserId);
 	}
 
 	@Operation(summary = "채팅방 정보")

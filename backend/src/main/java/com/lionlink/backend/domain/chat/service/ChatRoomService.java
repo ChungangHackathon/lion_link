@@ -10,6 +10,7 @@ import com.lionlink.backend.domain.chat.dto.response.ChatMessageResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomInviteResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatDirectRoomResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatUnreadCountResponse;
@@ -136,6 +137,19 @@ public class ChatRoomService {
 	@Transactional(readOnly = true)
 	public ChatUnreadCountResponse getUnreadCount(Long userId) {
 		return new ChatUnreadCountResponse(chatQueryRepository.countUnreadMessages(userId), chatQueryRepository.countReceivedRequests(userId));
+	}
+
+	@Transactional(readOnly = true)
+	public ChatDirectRoomResponse getDirectRoom(Long userId, Long otherUserId) {
+		if (otherUserId.equals(userId)) {
+			throw new BusinessException(ChatErrorCode.CANNOT_CHAT_SELF);
+		}
+		ChatRoom room = chatRoomRepository.findDirectRoom(ChatRoomType.DIRECT, userId, otherUserId)
+				.filter(found -> found.getStatus() == ChatRoomStatus.ACTIVE || found.getStatus() == ChatRoomStatus.REQUESTED)
+				.filter(found -> chatRoomMemberRepository.findByRoomIdAndUserId(found.getId(), userId)
+						.filter(ChatRoomMember::isActive).isPresent())
+				.orElseThrow(() -> new BusinessException(ChatErrorCode.ROOM_NOT_FOUND));
+		return new ChatDirectRoomResponse(room.getId(), room.getStatus(), room.isRequestedBy(userId));
 	}
 
 	@Transactional(readOnly = true)
@@ -380,7 +394,14 @@ public class ChatRoomService {
 			}
 			return;
 		}
-		Integer capacity = meetupRepository.findById(room.getMeetupId()).map(Meetup::getCapacity).orElse(null);
+		Meetup meetup = meetupRepository.findById(room.getMeetupId()).orElse(null);
+		if (meetup == null) {
+			return;
+		}
+		if (meetup.isClosed()) {
+			throw new BusinessException(ChatErrorCode.ROOM_FULL, "모집이 마감된 번개예요.");
+		}
+		Integer capacity = meetup.getCapacity();
 		if (capacity != null && meetupMemberRepository.countByMeetupPostId(room.getMeetupId()) + invitees > capacity) {
 			throw new BusinessException(ChatErrorCode.ROOM_FULL, "번개 정원 " + capacity + "명을 넘어요.");
 		}
