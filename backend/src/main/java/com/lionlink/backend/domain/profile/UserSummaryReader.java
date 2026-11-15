@@ -5,11 +5,9 @@ import jakarta.persistence.Tuple;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +19,7 @@ public class UserSummaryReader {
 
 	private static final String QUERY = """
 			select u.id as id, u.name as name, u.generation as generation, u.deletedAt as deletedAt,
-			       p.lionPart1 as lionPart1, p.lionPart2 as lionPart2, p.photoUrl as photoUrl, p.headline as headline
+			       p.lionPart as lionPart, p.photoUrl as photoUrl, p.headline as headline
 			from User u
 			left join Profile p on p.userId = u.id
 			where u.id in :userIds
@@ -50,9 +48,8 @@ public class UserSummaryReader {
 		if (row.get("deletedAt") != null) {
 			return UserSummary.withdrawn(id);
 		}
-		List<LionPart> lionParts = Stream.of(row.get("lionPart1", LionPart.class), row.get("lionPart2", LionPart.class))
-				.filter(Objects::nonNull)
-				.toList();
+		LionPart lionPart = row.get("lionPart", LionPart.class);
+		List<LionPart> lionParts = lionPart == null ? List.of() : List.of(lionPart);
 		return new UserSummary(
 				id,
 				row.get("name", String.class),

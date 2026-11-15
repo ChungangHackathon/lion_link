@@ -25,7 +25,6 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 public record AlumniDetailResponse(
 		Long userId,
@@ -234,7 +233,7 @@ public record AlumniDetailResponse(
 					activity.getId(),
 					activity.getGeneration(),
 					activity.getRole(),
-					Stream.of(activity.getPart1(), activity.getPart2()).filter(Objects::nonNull).toList(),
+					activity.getParts(),
 					activity.isDefault()
 			);
 		}

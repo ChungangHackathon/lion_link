@@ -35,38 +35,40 @@ public class LionActivity extends ProfileSectionItem {
 	@Enumerated(EnumType.STRING)
 	@JdbcTypeCode(SqlTypes.VARCHAR)
 	@Column(name = "part_1", nullable = false, length = 20)
-	private LionPart part1;
-
-	@Enumerated(EnumType.STRING)
-	@JdbcTypeCode(SqlTypes.VARCHAR)
-	@Column(name = "part_2", length = 20)
-	private LionPart part2;
+	private LionPart part;
 
 	private boolean isDefault;
 
 	@Builder
-	private LionActivity(Long userId, Integer generation, LionRole role, LionPart part1, LionPart part2, boolean isDefault) {
+	private LionActivity(Long userId, Integer generation, LionRole role, LionPart part, boolean isDefault) {
 		super(userId);
 		this.generation = generation;
 		this.role = role;
-		this.part1 = part1;
-		this.part2 = part2;
+		this.part = part;
 		this.isDefault = isDefault;
 	}
 
 	/** PUT: 일반 항목은 기수·역할·파트를 모두 바꾼다. */
-	public void update(Integer generation, LionRole role, LionPart part1, LionPart part2) {
+	public void update(Integer generation, LionRole role, LionPart part) {
 		this.generation = generation;
 		this.role = role;
-		this.part1 = part1;
-		this.part2 = part2;
+		this.part = part;
 	}
 
 	/** PUT: 가입 기수 항목(isDefault)은 역할·파트만 바꾼다. 기수는 가입 정보와 동기화되므로 못 바꾼다. */
-	public void updateRoleAndParts(LionRole role, LionPart part1, LionPart part2) {
+	public void updateRoleAndPart(LionRole role, LionPart part) {
 		this.role = role;
-		this.part1 = part1;
-		this.part2 = part2;
+		this.part = part;
+	}
+
+	/** 대표 파트(프로필)와 동기화할 때 파트만 바꾼다. */
+	public void changePart(LionPart part) {
+		this.part = part;
+	}
+
+	/** 응답은 배열 모양(parts)을 유지한다. */
+	public java.util.List<LionPart> getParts() {
+		return java.util.List.of(part);
 	}
 
 	/** 가입 기수가 바뀌면(AUTH-06·07, ADMIN-06) 자동 생성 항목의 기수도 같이 바꾼다. 회원이 직접 기수를 바꾸는 데 쓰지 않는다. */

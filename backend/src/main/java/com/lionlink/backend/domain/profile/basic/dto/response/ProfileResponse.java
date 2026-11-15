@@ -14,8 +14,6 @@ import com.lionlink.backend.domain.profile.section.project.Project;
 import com.lionlink.backend.domain.user.entity.User;
 import java.time.YearMonth;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 /** PROFILE-02 내 프로필. 공개 범위를 적용하지 않은 전체 내용과 현재 공개 범위 설정을 담는다. */
 public record ProfileResponse(
@@ -133,10 +131,7 @@ public record ProfileResponse(
 	public record LionActivityItem(Long id, Integer generation, String role, List<String> parts, boolean isDefault) {
 
 		public static LionActivityItem from(LionActivity activity) {
-			List<String> parts = Stream.of(activity.getPart1(), activity.getPart2())
-					.filter(Objects::nonNull)
-					.map(Enum::name)
-					.toList();
+			List<String> parts = activity.getParts().stream().map(Enum::name).toList();
 			return new LionActivityItem(activity.getId(), activity.getGeneration(), activity.getRole().name(),
 					parts, activity.isDefault());
 		}
