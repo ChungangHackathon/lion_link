@@ -40,8 +40,14 @@ const OFF: Realtime = { connected: false, subscribeRoom: noop, onPersonal: noop,
 const RealtimeContext = createContext<Realtime>(OFF);
 export const useChatRealtime = () => useContext(RealtimeContext);
 
-/** NEXT_PUBLIC_API_URL(http://…) → ws://…/ws */
-const WS_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/^http/i, "ws") + "/ws";
+/**
+ * NEXT_PUBLIC_WS_URL(wss://…/ws)이 있으면 그대로 쓴다. 운영은 프론트가 API를 프록시하는데
+ * 프록시는 WebSocket을 넘기지 못하므로 백엔드 주소를 따로 준다.
+ * 없으면 로컬처럼 NEXT_PUBLIC_API_URL(http://…) → ws://…/ws 로 만든다.
+ */
+const WS_URL =
+  (process.env.NEXT_PUBLIC_WS_URL ?? "").trim() ||
+  (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/+$/, "").replace(/^http/i, "ws") + "/ws";
 const USER_QUEUE = "/user/queue/chat";
 const roomTopic = (roomId: Id) => `/topic/chat-rooms/${roomId}`;
 

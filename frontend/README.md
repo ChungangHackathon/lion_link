@@ -16,6 +16,7 @@ cp .env.example .env.local   # NEXT_PUBLIC_API_URL=http://localhost:8080
 
 - `NEXT_PUBLIC_API_URL`이 있으면 **API 모드**예요. 로그인·가입 신청·승인 대기·반려 화면이 실제 API(`docs/api.md` 1. 계정·인증)로 동작해요.
 - 비워 두면 **프로토타입 모드**예요. 모든 데이터가 `lib/mock/*`의 더미이고, `/login` 하단의 ‘프로토타입’ 버튼으로 **회원 / 승인 대기 / 관리자 / 가입 신청** 상태를 바꿔 모든 흐름을 볼 수 있어요.
+- 운영(Vercel)은 `NEXT_PUBLIC_API_URL`을 프론트 자기 주소로 두고, `next.config.ts`의 rewrites가 `/api`·`/oauth2`·`/login/oauth2`를 `BACKEND_ORIGIN`(서버 전용)으로 넘겨요. 채팅 WebSocket은 프록시가 못 넘겨서 `NEXT_PUBLIC_WS_URL`로 직접 연결해요. 자세한 값은 `.env.example`과 `docs/deploy.md`.
 - 로컬 백엔드의 `FRONTEND_URL`은 기본값 `http://localhost:3000`이라 따로 설정할 게 없어요. 구글 로그인을 하려면 백엔드에 `GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`이 있어야 해요.
 
 API 호출은 `lib/api/client.ts`의 `api()`를 써요. 토큰 헤더, 401일 때 재발급 1회, 에러(`ApiError`의 `code`·`message`)를 공통으로 처리해요.
