@@ -14,7 +14,7 @@ export const chatRooms: ChatRoom[] = [
     messages: [
       { id: "m1", senderId: "system", text: "커피챗이 수락되어 채팅방이 열렸어요. 일정을 정해보세요.", at: at(60 * 24 * 2) },
       { id: "m2", senderId: "u-1", text: "안녕하세요 중앙님! 신청서 잘 봤어요. 이직 준비 얘기 편하게 해요.", at: at(60 * 24) },
-      { id: "m3", senderId: ME_ID, text: "감사합니다! 목요일 저녁 괜찮으실까요?", at: at(60 * 5) },
+      { id: "m3", senderId: ME_ID, text: "감사합니다! 목요일 저녁 괜찮으실까요?", at: at(60 * 5), readBy: ["u-1"] },
       { id: "m4", senderId: "u-1", text: "네 좋아요. 8시에 온라인으로 뵐게요.", at: at(30) },
       { id: "m5", senderId: "u-1", text: "링크는 당일에 보낼게요 🙂", at: at(29) },
     ],
@@ -55,7 +55,7 @@ export const chatRooms: ChatRoom[] = [
     unread: 0,
     messages: [
       { id: "m1", senderId: "system", text: "커피챗이 완료됐어요. 감사 인사를 남겨보세요.", at: at(60 * 24 * 20) },
-      { id: "m2", senderId: ME_ID, text: "오늘 정말 감사했습니다! LCP 얘기 큰 도움 됐어요.", at: at(60 * 24 * 19) },
+      { id: "m2", senderId: ME_ID, text: "오늘 정말 감사했습니다! LCP 얘기 큰 도움 됐어요.", at: at(60 * 24 * 19), readBy: ["u-3"] },
     ],
   },
   {

@@ -82,7 +82,7 @@ function messageOf(m: MockMessage, room: ChatRoom): ChatMessage {
     clientMsgId: null,
     createdAt: m.at,
     editedAt: null,
-    unreadCount: !system && m.senderId === ME_ID && room.type === "GROUP" ? Math.max(0, room.memberIds.length - 1 - (m.readBy?.length ?? 0)) : 0,
+    unreadCount: !system && m.senderId === ME_ID ? Math.max(0, room.memberIds.length - 1 - (m.readBy?.length ?? 0)) : 0,
   };
 }
 
@@ -212,7 +212,7 @@ export function useChatService(): ChatService {
         if (!r) return notFound();
         if (r.status !== "ACTIVE") return Promise.reject(new ApiError(409, "INVALID_ROOM_STATUS", "지금은 메시지를 보낼 수 없어요"));
         store.sendMessage(r.id, content);
-        return delay({ id: `local-${Date.now()}`, type: "TEXT" as const, senderId: ME_ID, content, deleted: false, clientMsgId: clientMsgId ?? null, createdAt: new Date().toISOString(), editedAt: null, unreadCount: r.type === "GROUP" ? r.memberIds.length - 1 : 0 });
+        return delay({ id: `local-${Date.now()}`, type: "TEXT" as const, senderId: ME_ID, content, deleted: false, clientMsgId: clientMsgId ?? null, createdAt: new Date().toISOString(), editedAt: null, unreadCount: r.memberIds.length - 1 });
       },
       read: (roomId) => {
         // 이미 읽은 방이면 store를 건드리지 않는다 (불필요한 다시 그리기 방지)
