@@ -398,7 +398,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 이름 | 값 |
 | --- | --- |
-| `lionPart` 멋사 파트 | `PLANNING` `DESIGN` `FRONTEND` `BACKEND` (기타 없음) |
+| `lionPart` 멋사 파트 | `PLANNING` `DESIGN` `PLANNING_DESIGN`(기획·디자인) `FRONTEND` `BACKEND` (기타 없음). 한 사람은 **1개만** 고른다 |
 | `status` 현재 상태 | `STUDENT` 재학, `LEAVE` 휴학, `GRADUATED` 졸업, `EMPLOYED` 재직, `FOUNDER` 창업, `GRAD_SCHOOL` 대학원, `ETC` 기타 |
 | `interest` 관심 분야 | `PLANNING_PM` `DESIGN` `FRONTEND` `BACKEND` `APP` `DATA_AI` `INFRA_DEVOPS` `MARKETING` `STARTUP` `ETC` |
 | `linkType` 외부 링크 종류 | `LINKEDIN` `GITHUB` `PORTFOLIO` `BLOG` `REMEMBER` `NOTION` `ETC` |
@@ -413,7 +413,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 요청 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| `lionParts` | string\[\] | O | `lionPart` 1\~2개, 중복 불가 |
+| `lionParts` | string\[\] | O | `lionPart` **정확히 1개**(배열 모양은 유지). 0개·2개 이상이면 400 |
 | `status` | string | O | `status` 1개 |
 | `interests` | string\[\] | O | `interest` 1\~3개 |
 | `company` | string | `EMPLOYED`일 때 O | 1\~30자 |
@@ -433,7 +433,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 필수값 누락, 파트 3개 이상, 중복 기수, URL 형식 오류 |
+| 400 | `VALIDATION_ERROR` | 필수값 누락, 파트가 1개가 아님, 중복 기수, URL 형식 오류 |
 | 409 | `ALREADY_COMPLETED` | 이미 기본 정보를 입력했음 |
 
 ### PROFILE-02 내 프로필 조회
@@ -447,7 +447,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
   "userId": 12, "name": "김사자", "generation": 13,
   "photoUrl": null, "headline": "핀테크 백엔드 개발자",
   "bio": "...", "major": "컴퓨터공학", "minor": null, "region": "서울 강남",
-  "status": "EMPLOYED", "lionParts": ["FRONTEND", "BACKEND"], "interests": ["BACKEND", "DATA_AI"],
+  "status": "EMPLOYED", "lionParts": ["FRONTEND"], "interests": ["BACKEND", "DATA_AI"],
   "skills": ["Spring", "MySQL"],
   "links": [{ "type": "GITHUB", "url": "https://github.com/lion" }],
   "contact": { "email": "lion@gmail.com", "phone": null },
@@ -499,14 +499,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `minor` | string | X | 복수·부전공 0\~30자 |
 | `region` | string | X | 활동 지역 0\~20자 예) 서울 강남 |
 | `status` | string | O | `status` 1개 |
-| `lionParts` | string\[\] | O | `lionPart` 1\~2개, 중복 불가 |
+| `lionParts` | string\[\] | O | `lionPart` **정확히 1개**(배열 모양은 유지). 0개·2개 이상이면 400 |
 | `interests` | string\[\] | O | `interest` 1\~3개, 중복 불가 |
 
 `200`이고 응답은 위 필드를 그대로 돌려줘. 현재 상태를 `EMPLOYED`에서 다른 값으로 바꿔도 경력은 그대로 두고, `EMPLOYED`로 바꿀 때도 회사·직무는 받지 않아(경력 PROFILE-11에서 채워).
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트·관심 분야 개수 오류, 없는 열거값 |
+| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트(1개)·관심 분야 개수 오류, 없는 열거값 |
 
 ### PROFILE-05 프로필 사진 변경·삭제
 
@@ -571,7 +571,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- | --- | --- |
 | 경력 | `careers` | 10 | `company` O 1\~30자, `jobTitle` O 1\~30자, `employmentType` O (`FULL_TIME` `CONTRACT` `INTERN` `FREELANCE` `FOUNDER` `ETC`), `startYm` O, `endYm` 또는 `isCurrent: true` 중 하나 O, `description` 0\~300자 |
 | 학력 | `educations` | 5 | `school` O 1\~30자, `major` 0\~30자, `degree` (`BACHELOR` `MASTER` `DOCTOR` `EXCHANGE_ETC`), `startYm`, `endYm` 또는 `isCurrent: true`, `description` 0\~200자 |
-| 멋사 활동 | `lion-activities` | 6 | `generation` O 1\~14, `role` O (`LION` 아기사자, `STAFF` 운영진, `PRESIDENT` 대표·부대표, `PART_LEAD` 파트장, `ETC`), `parts` O `lionPart` 1\~2개 |
+| 멋사 활동 | `lion-activities` | 6 | `generation` O 1\~14, `role` O (`LION` 아기사자, `STAFF` 운영진, `PRESIDENT` 대표·부대표, `PART_LEAD` 파트장, `ETC`), `parts` O `lionPart` **정확히 1개**(배열 모양 유지) |
 | 멋사 프로젝트·해커톤 | `lion-projects` | 5 | `name` O 1\~30자, `eventType` O (`REGULAR` 정기 프로젝트, `JUNGKATHON` 중커톤, `UNION_HACKATHON` 연합 해커톤, `ETC`), `generation` O 1\~14, `myRole` 0\~30자, `description` 0\~200자, `link` URL |
 | 프로젝트 | `projects` | 10 | `name` O 1\~30자, `startYm`, `endYm` 또는 `isCurrent: true`, `role` 0\~30자, `description` 0\~300자, `link` URL, `tags` string\[\] 0\~5개 |
 | 자격증 | `certifications` | 10 | `name` O 1\~30자, `issuer` 0\~30자, `acquiredYm` |
@@ -885,7 +885,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 1 | 열거값의 영문 이름(`lionPart`, `status`, `interest`, `topics`, 각 `scope` 등) | 이 문서의 이름을 그대로 쓴다. DB 컬럼에 들어가는 값이라 SQL의 주석과도 맞춘다 | 커피챗·채팅·커뮤니티 API 담당, FE |
 | 2 | 반려 후 재신청(AUTH-07) 때 이전 반려 사유 | 지우지 않고 남겨둔다. 관리자 목록이 재신청 사람에게 이전 사유를 보여주려면 필요하다. 승인할 때(ADMIN-03)만 비운다 | BE |
 | 3 | 관리자가 기수를 고칠 때(ADMIN-06)·회원이 승인 전에 고칠 때(AUTH-06) 자동 생성된 멋사 활동 항목의 기수 | 같이 바꾼다. 바뀔 기수에 이미 다른 멋사 활동(운영진 등)이 있으면 자동 생성 항목을 그 항목과 합치지 않고 `409 DUPLICATE_ITEM`으로 막는다 | BE, 기획 |
-| 4 | 기본 정보에서 멋사 파트를 수정하면(PROFILE-04) 자동 생성 멋사 활동 항목의 파트 | 바꾸지 않는다. 두 값은 각자 따로 수정하고 세 화면(2.2 소개 카드, 멋사 활동 섹션)에 각각 보인다. 같이 바꾸고 싶으면 알려줘 | 기획, BE |
+| 4 | 프로필 대표 멋사 파트(PROFILE-04)와 자동 생성 멋사 활동 항목(`isDefault`)의 파트 | **양방향 동기화**(QA 44). 프로필 대표 파트를 바꾸면 가입 기수 항목(`isDefault`)의 파트가 같이 바뀌고, 그 항목의 파트를 바꾸면 대표 파트도 바뀐다. 다른 기수 항목은 대표 파트에 영향이 없다 | 기획, BE |
 | 5 | 프로필 사진 저장소(S3 등), 원본 보관·리사이즈, 사진을 바꾸거나 지웠을 때 이전 파일 삭제 | 저장소는 팀이 정한 것을 쓰고, 이전 파일은 바로 지운다. `photoUrl`은 공개 주소로 내려준다(만료 없음) | BE |
 | 6 | 연락처 이메일(PROFILE-09)을 다른 주소로 바꿀 때 본인 확인 | 확인 메일 없이 형식만 검사한다(알림 메일은 가입 이메일로만 나가서 위험하지 않다) | BE |
 | 7 | 승인 메일(ADMIN-03)이 알림 설정의 영향을 받는지 | **변경(2026-11-13)**: 받는다. 알림 설정 화면(N-01)에 맞춰 가입 승인 메일 받기를 설정에 넣었다(NOTI-04) | 완료 |
@@ -921,7 +921,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- | --- |
 | `q` | string | 0\~50자. 이름, 한 줄 소개, 대표 기술, 현재 경력의 직무·회사(회사 공개인 사람만)에서 대소문자 없이 찾아 |
 | `generations` | number\[\] | 기수. 여러 개는 쉼표로 (`13,14`) |
-| `parts` | string\[\] | `lionPart`. 파트 1·2 둘 다 봐 |
+| `parts` | string\[\] | `lionPart`. 프로필 대표 파트가 일치하는 사람 |
 | `statuses` | string\[\] | 현재 상태(`status` 열거값) |
 | `interests` | string\[\] | 관심 분야(`interest` 열거값 코드, 예: `PLANNING_PM,DATA_AI`). 값이 정확히 같아야 걸려 |
 | `available` | boolean | `true`면 오늘 기준 커피챗을 받는(`AVAILABLE`) 사자만 |
@@ -966,7 +966,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 {
   "userId": 12, "name": "김사자", "generation": 13, "photoUrl": null, "headline": "풀스택 개발자",
   "bio": "...", "major": null, "minor": null, "region": "서울", "status": "EMPLOYED",
-  "lionParts": ["BACKEND", "FRONTEND"], "interests": ["DATA_AI"], "skills": ["Spring"],
+  "lionParts": ["BACKEND"], "interests": ["DATA_AI"], "skills": ["Spring"],
   "links": [{ "type": "GITHUB", "url": "https://github.com/kim" }],
   "contact": { "email": "kim@test.com" },
   "careers": [{ "id": 31, "company": "라이온컴퍼니", "companyHidden": false, "jobTitle": "백엔드 개발자", "employmentType": "FULL_TIME", "startYm": "2024-03", "endYm": null, "isCurrent": true, "description": null }],
