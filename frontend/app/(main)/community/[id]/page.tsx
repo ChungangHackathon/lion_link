@@ -165,7 +165,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
               <h1 className="t-title text-ink-900">{post.title}</h1>
               <div className="flex items-center gap-3">
-                {kind !== "post" && <Avatar name={author && !author.isDeleted ? author.name ?? undefined : undefined} part={firstPart(author)} size={40} withdrawn={!!author?.isDeleted} />}
+                {kind !== "post" && <Avatar name={author && !author.isDeleted ? author.name ?? undefined : undefined} part={firstPart(author)} photoUrl={kind === "meetup" ? author?.photoUrl : undefined} size={40} withdrawn={!!author?.isDeleted} />}
                 <p className="text-[13px] text-ink-500">
                   {kind !== "post" ? <span className="block text-[14px] font-semibold text-ink-900">{authorLabel(author)}</span> : null}
                   {new Date(post.createdAt).getMonth() + 1}월 {new Date(post.createdAt).getDate()}일
@@ -483,12 +483,12 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
   );
 }
 
-function MemberList({ members }: { members: PostMember[] }) {
+function MemberList({ members, showPhotos = false }: { members: PostMember[]; showPhotos?: boolean }) {
   return (
     <ul className="flex flex-col gap-2">
       {members.map((m, i) => (
         <li key={m.id ?? `deleted-${i}`} className="flex items-center gap-2 text-[14px]">
-          <Avatar name={m.isDeleted ? undefined : m.name ?? undefined} part={firstPart(m)} size={32} withdrawn={m.isDeleted} />
+          <Avatar name={m.isDeleted ? undefined : m.name ?? undefined} part={firstPart(m)} photoUrl={showPhotos ? m.photoUrl : undefined} size={32} withdrawn={m.isDeleted} />
           <span className="font-semibold text-ink-900">{m.isDeleted ? "알 수 없음" : m.name}</span>
           {!m.isDeleted && <span className="text-[12px] text-ink-500">{m.generation}기</span>}
           {m.isHost && <span className="rounded-[4px] border border-line-300 px-1.5 text-[11px] text-ink-500">작성자</span>}
@@ -586,7 +586,7 @@ function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCa
         <Icon name="pin" size={14} /> {m.place}
       </p>
       <p className="text-[13px] text-ink-500">참여자</p>
-      <MemberList members={m.members} />
+      <MemberList members={m.members} showPhotos />
       {mine ? (
         <>
           <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
