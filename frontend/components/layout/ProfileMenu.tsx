@@ -32,9 +32,12 @@ export function ProfileMenu({ onNavigate }: { onNavigate?: () => void }) {
       <Item href="/me" icon={<Icon name="user" size={18} className="text-ink-700" />}>
         마이페이지
       </Item>
-      <Item href="/me/coffee-settings" icon={<Icon name="coffee" size={18} className="text-ink-700" />}>
-        커피챗 설정
-      </Item>
+      {/* 커피챗 설정은 승인 후에만 쓸 수 있다. 승인 대기 중에는 마이페이지만 연다 */}
+      {!isPending && (
+        <Item href="/me/coffee-settings" icon={<Icon name="coffee" size={18} className="text-ink-700" />}>
+          커피챗 설정
+        </Item>
+      )}
       {isAdmin && (
         <Item href="/admin" icon={<Icon name="lock" size={18} className="text-ink-700" />}>
           관리자 페이지
