@@ -7,6 +7,7 @@ import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomMember;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.chat.event.ChatMessageSentEvent;
+import com.lionlink.backend.domain.chat.event.ChatMessageUpdatedEvent;
 import com.lionlink.backend.domain.chat.repository.ChatMessageRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomMemberRepository;
 import java.time.LocalDateTime;
@@ -54,6 +55,13 @@ public class ChatMessageWriter {
 				.filter(member -> !message.isSentBy(member.getUserId()))
 				.filter(member -> member.getLastReadMessageId() == null || member.getLastReadMessageId() < message.getId())
 				.count();
+	}
+
+	public ChatMessageResponse publishUpdated(ChatRoom room, ChatMessage message) {
+		List<ChatRoomMember> members = chatRoomMemberRepository.findByRoomId(room.getId());
+		ChatMessageResponse response = ChatMessageResponse.of(message, unreadCount(message, members));
+		eventPublisher.publishEvent(new ChatMessageUpdatedEvent(room.getId(), response, recipients(members)));
+		return response;
 	}
 
 	private ChatMessageResponse publish(ChatRoom room, ChatMessage message, LocalDateTime now) {

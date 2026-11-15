@@ -24,6 +24,14 @@ public class ChatRealtimeListener {
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+	public void onMessageUpdated(ChatMessageUpdatedEvent event) {
+		messagingTemplate.convertAndSend(ROOM_TOPIC + event.roomId(),
+				ChatSocketMessage.messageUpdated(event.roomId(), event.message()));
+		event.recipients().forEach((userId, muted) -> messagingTemplate.convertAndSendToUser(
+				String.valueOf(userId), USER_QUEUE, ChatSocketMessage.roomUpdated(event.roomId(), muted)));
+	}
+
+	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
 	public void onRoomUpdated(ChatRoomUpdatedEvent event) {
 		event.recipients().forEach((userId, muted) -> messagingTemplate.convertAndSendToUser(
 				String.valueOf(userId), USER_QUEUE, ChatSocketMessage.roomUpdated(event.roomId(), muted)));
