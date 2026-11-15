@@ -362,7 +362,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                             "보내는 중"
                           ) : (
                             <>
-                              {mine && room.type === "GROUP" && m.unreadCount > 0 && <span className="text-orange">{m.unreadCount}</span>}
+                              {mine && m.unreadCount > 0 && <span className="text-orange">{m.unreadCount}</span>}
                               {formatTime(m.createdAt)}
                               {m.editedAt && " · 수정됨"}
                             </>
