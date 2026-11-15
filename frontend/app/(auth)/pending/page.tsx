@@ -9,6 +9,9 @@ import { ProgressBar, ProtoButton } from "@/components/ui/Misc";
 import { useSession } from "@/lib/session";
 import { API_ENABLED } from "@/lib/api/client";
 import { landingPath } from "@/lib/api/auth";
+import { completionOf } from "@/lib/api/myProfile";
+import { useApi } from "@/lib/api/useApi";
+import { useMyProfileService } from "@/lib/api/useMyProfileService";
 
 /** ★ A-13 승인 대기 / 기본 · ◇ A-15 승인 완료 순간 → H-04 */
 export default function PendingPage() {
@@ -16,8 +19,15 @@ export default function PendingPage() {
   const { update, ready, session, me, refreshMe } = useSession();
   const [demoApproved, setApproved] = useState(false);
   const approved = demoApproved || (API_ENABLED && me?.status === "APPROVED");
-  const completion = 43;
   const editable = API_ENABLED ? !!me?.signupInfoEditable : true;
+
+  // 진행률은 프로필에서 계산한다. 프로필 API는 승인 전에도 열려 있다
+  const profileService = useMyProfileService();
+  const profile = useApi(() => profileService.get(), [profileService], ready && (!API_ENABLED || session.loggedIn));
+  const completion = profile.data ? completionOf(profile.data) : 0;
+  const bioWritten = !!profile.data?.bio;
+  // 자기소개를 채웠을 때의 진행률. 가중치를 여기에 또 적지 않도록 같은 함수로 구한다
+  const withBio = profile.data ? completionOf({ ...profile.data, bio: "x" }) : 0;
 
   // 로그인 전이거나 승인 대기가 아니면 맞는 화면으로
   useEffect(() => {
@@ -66,9 +76,9 @@ export default function PendingPage() {
           <p className="text-[15px] leading-6 text-ink-500">{approved ? "보통 1~2일 걸려요." : "보통 1~2일 걸려요. 그동안 프로필을 채워두면 승인되자마자 사자들이 찾아올 수 있어요."}</p>
           <ProgressBar value={completion} className="w-[360px]" />
           <div className="flex w-full items-center justify-between rounded-[8px] bg-bg-100 px-3.5 py-2.5">
-            <p className="text-[13px] font-medium text-ink-900">자기소개를 쓰면 57%가 돼요</p>
-            <Button size="S" variant="secondary" onClick={approved ? enter : undefined} href={approved ? undefined : "/onboarding"}>
-              쓰러 가기
+            <p className="text-[13px] font-medium text-ink-900">{bioWritten ? "프로필을 더 채우면 사자들이 먼저 찾아와요" : `자기소개를 쓰면 ${withBio}%가 돼요`}</p>
+            <Button size="S" variant="secondary" onClick={approved ? enter : undefined} href={approved ? undefined : "/me"}>
+              {bioWritten ? "채우러 가기" : "쓰러 가기"}
             </Button>
           </div>
           {!approved && editable && (
