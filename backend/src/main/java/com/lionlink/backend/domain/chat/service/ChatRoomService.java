@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.chat.service;
 
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageSendRequest;
+import com.lionlink.backend.domain.chat.dto.request.ChatRoomInviteRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatPreferenceUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatReadRequest;
@@ -8,6 +9,7 @@ import com.lionlink.backend.domain.chat.dto.response.ChatMessageListResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatRoomInviteResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatUnreadCountResponse;
@@ -17,6 +19,7 @@ import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomMember;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.chat.entity.ChatRoomType;
+import com.lionlink.backend.domain.chat.event.ChatNotificationEvent;
 import com.lionlink.backend.domain.chat.event.ChatReadEvent;
 import com.lionlink.backend.domain.chat.event.ChatRoomUpdatedEvent;
 import com.lionlink.backend.domain.chat.exception.ChatErrorCode;
@@ -25,13 +28,19 @@ import com.lionlink.backend.domain.chat.repository.ChatQueryRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomMemberRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
+import com.lionlink.backend.domain.community.meetup.entity.Meetup;
+import com.lionlink.backend.domain.community.meetup.entity.MeetupMember;
+import com.lionlink.backend.domain.community.meetup.entity.MeetupMemberId;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupStatus;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupRepository;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
+import com.lionlink.backend.domain.community.recruit.entity.CoffeeChatRecruit;
+import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
+import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.event.UserWithdrawnEvent;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
@@ -61,6 +70,12 @@ import org.springframework.util.StringUtils;
 @Transactional
 public class ChatRoomService {
 
+	public static final String CHAT_INVITED = "CHAT_INVITED";
+
+	private static final int COFFEE_CHAT_APPLICANT_LIMIT = 5;
+
+	private static final int RECEIVER = 1;
+
 	private final ChatRoomRepository chatRoomRepository;
 	private final ChatRoomMemberRepository chatRoomMemberRepository;
 	private final ChatMessageRepository chatMessageRepository;
@@ -70,6 +85,7 @@ public class ChatRoomService {
 	private final MeetupRepository meetupRepository;
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final PostRepository postRepository;
+	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
 	private final UserRepository userRepository;
 	private final UserSummaryReader userSummaryReader;
 	private final ApplicationEventPublisher eventPublisher;
@@ -190,6 +206,43 @@ public class ChatRoomService {
 		return chatMessageWriter.publishUpdated(member.getRoom(), message);
 	}
 
+	public ChatRoomInviteResponse invite(Long userId, Long roomId, ChatRoomInviteRequest request) {
+		LocalDateTime now = LocalDateTime.now();
+		ChatRoom room = findActiveMember(userId, roomId).getRoom();
+		if (room.isDirect()) {
+			throw new BusinessException(ChatErrorCode.FORBIDDEN_ACTION, "1:1 채팅방에는 초대할 수 없어요.");
+		}
+		if (!room.isOpen()) {
+			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS);
+		}
+		requireInviter(userId, room);
+
+		Set<Long> joined = chatRoomMemberRepository.findByRoomId(roomId).stream()
+				.filter(ChatRoomMember::isActive)
+				.map(ChatRoomMember::getUserId)
+				.collect(Collectors.toSet());
+		List<Long> requested = request.userIds().stream().distinct().toList();
+		Set<Long> invitable = userRepository.findIdsByStatus(requested, UserStatus.APPROVED);
+		List<Long> inviteeIds = requested.stream()
+				.filter(id -> invitable.contains(id) && !joined.contains(id))
+				.toList();
+		requireCapacity(room, joined.size(), inviteeIds.size());
+
+		for (Long inviteeId : inviteeIds) {
+			addMember(room, inviteeId);
+			if (room.isMeetupRoom()) {
+				joinMeetup(room.getMeetupId(), inviteeId);
+			}
+			eventPublisher.publishEvent(new ChatNotificationEvent(inviteeId, CHAT_INVITED, roomId, userId,
+					"님이 채팅방에 초대했어요."));
+		}
+		if (!inviteeIds.isEmpty()) {
+			chatMessageWriter.writeSystem(room, names(inviteeIds) + "님이 들어왔어요.", now);
+		}
+		return new ChatRoomInviteResponse(inviteeIds.size(),
+				requested.stream().filter(id -> !inviteeIds.contains(id)).toList());
+	}
+
 	public ChatReadResponse read(Long userId, Long roomId, ChatReadRequest request) {
 		ChatRoomMember member = findActiveMember(userId, roomId);
 		Long lastId = chatMessageRepository.findLastMessageId(roomId);
@@ -300,6 +353,65 @@ public class ChatRoomService {
 				.filter(message -> message.getId() > member.visibleFrom())
 				.filter(message -> message.isSentBy(userId) && !message.isDeleted())
 				.orElseThrow(() -> new BusinessException(ChatErrorCode.MESSAGE_NOT_FOUND));
+	}
+
+	private void requireInviter(Long userId, ChatRoom room) {
+		if (room.isMeetupRoom()) {
+			if (postRepository.findById(room.getMeetupId()).filter(post -> post.isWrittenBy(userId)).isEmpty()) {
+				throw new BusinessException(ChatErrorCode.FORBIDDEN_ACTION, "번개를 만든 사람만 초대할 수 있어요.");
+			}
+			return;
+		}
+		Long coffeeChatId = room.getCoffeeChatId();
+		if (coffeeChatId == null || coffeeChatRepository.findById(coffeeChatId)
+				.filter(chat -> userId.equals(chat.getRequesterId())).isEmpty()) {
+			throw new BusinessException(ChatErrorCode.FORBIDDEN_ACTION, "커피챗을 신청한 사람만 초대할 수 있어요.");
+		}
+	}
+
+	private void requireCapacity(ChatRoom room, int joined, int invitees) {
+		if (invitees == 0) {
+			return;
+		}
+		if (!room.isMeetupRoom()) {
+			int capacity = coffeeChatRoomCapacity(room);
+			if (joined + invitees > capacity) {
+				throw new BusinessException(ChatErrorCode.ROOM_FULL, "커피챗 채팅방은 " + capacity + "명까지예요.");
+			}
+			return;
+		}
+		Integer capacity = meetupRepository.findById(room.getMeetupId()).map(Meetup::getCapacity).orElse(null);
+		if (capacity != null && meetupMemberRepository.countByMeetupPostId(room.getMeetupId()) + invitees > capacity) {
+			throw new BusinessException(ChatErrorCode.ROOM_FULL, "번개 정원 " + capacity + "명을 넘어요.");
+		}
+	}
+
+	private int coffeeChatRoomCapacity(ChatRoom room) {
+		return coffeeChatRecruitRepository.findByCoffeeChatId(room.getCoffeeChatId())
+				.map(CoffeeChatRecruit::getCapacity)
+				.orElse(COFFEE_CHAT_APPLICANT_LIMIT) + RECEIVER;
+	}
+
+	private void addMember(ChatRoom room, Long inviteeId) {
+		chatRoomMemberRepository.findByRoomIdAndUserId(room.getId(), inviteeId)
+				.ifPresentOrElse(ChatRoomMember::rejoin,
+						() -> chatRoomMemberRepository.save(ChatRoomMember.builder().room(room).userId(inviteeId).build()));
+	}
+
+	private void joinMeetup(Long postId, Long inviteeId) {
+		if (meetupMemberRepository.existsById(new MeetupMemberId(postId, inviteeId))) {
+			return;
+		}
+		meetupRepository.findById(postId).ifPresent(meetup ->
+				meetupMemberRepository.save(MeetupMember.builder().meetup(meetup).userId(inviteeId).build()));
+	}
+
+	private String names(List<Long> userIds) {
+		Map<Long, UserSummary> summaries = userSummaryReader.getSummaries(new HashSet<>(userIds));
+		return userIds.stream()
+				.map(id -> Optional.ofNullable(summaries.get(id)).filter(summary -> !summary.deleted())
+						.map(UserSummary::name).orElse("동문"))
+				.collect(Collectors.joining(", "));
 	}
 
 	private List<ChatUserResponse> others(Long userId, List<ChatRoomMember> members, Map<Long, UserSummary> summaries) {

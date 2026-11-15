@@ -3,12 +3,14 @@ package com.lionlink.backend.domain.chat.controller;
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageSendRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatMessageUpdateRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatPreferenceUpdateRequest;
+import com.lionlink.backend.domain.chat.dto.request.ChatRoomInviteRequest;
 import com.lionlink.backend.domain.chat.dto.request.ChatReadRequest;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageListResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatMessageResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatPreferenceResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatReadResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomDetailResponse;
+import com.lionlink.backend.domain.chat.dto.response.ChatRoomInviteResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatRoomSummaryResponse;
 import com.lionlink.backend.domain.chat.dto.response.ChatUnreadCountResponse;
 import com.lionlink.backend.domain.chat.service.ChatRoomService;
@@ -130,6 +132,24 @@ public class ChatRoomController {
 	public ChatPreferenceResponse updatePreferences(@CurrentUser Long userId, @PathVariable Long roomId,
 			@RequestBody ChatPreferenceUpdateRequest request) {
 		return chatRoomService.updatePreferences(userId, roomId, request);
+	}
+
+	@Operation(summary = "채팅방 초대",
+			description = "단체방만. 번개방은 번개를 만든 사람, 커피챗 단체방은 커피챗을 신청한 사람만 초대할 수 있다. "
+					+ "수락 없이 바로 들어오고, 번개방은 번개 참여자로도 등록된다. "
+					+ "이미 참여 중이거나 탈퇴했거나 승인되지 않은 회원은 건너뛰고 skippedUserIds로 알려준다.")
+	@ApiResponse(responseCode = "400", description = "대상이 비었거나 20명 초과 (VALIDATION_ERROR)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "403", description = "1:1 방이거나 초대 권한이 없음 (FORBIDDEN_ACTION)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "404", description = "없거나 참여하지 않은 방 (ROOM_NOT_FOUND)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@ApiResponse(responseCode = "409", description = "대화 중이 아닌 방 (INVALID_ROOM_STATUS), 정원 초과 (ROOM_FULL)",
+			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+	@PostMapping("/{roomId}/invites")
+	public ChatRoomInviteResponse invite(@CurrentUser Long userId, @PathVariable Long roomId,
+			@Valid @RequestBody ChatRoomInviteRequest request) {
+		return chatRoomService.invite(userId, roomId, request);
 	}
 
 	@Operation(summary = "나가기, 끝난 요청 숨기기", description = "1:1 방은 내 목록에서 숨기고, 단체방은 나간다.")
