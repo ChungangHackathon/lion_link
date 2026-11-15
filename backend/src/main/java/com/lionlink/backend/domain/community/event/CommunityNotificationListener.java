@@ -23,6 +23,7 @@ public class CommunityNotificationListener {
 	static final String RECRUIT_CANCELED = "RECRUIT_CANCELED";
 	static final String RECRUIT_CLOSED = "RECRUIT_CLOSED";
 	static final String COMMENT_CREATED = "COMMENT_CREATED";
+	static final String REPLY_CREATED = "REPLY_CREATED";
 
 	private final NotificationRepository notificationRepository;
 
@@ -64,6 +65,13 @@ public class CommunityNotificationListener {
 		String prefix = event.commenterId() == null ? "익명" : "";
 		String message = prefix + "님이 내 글에 댓글을 남겼어요. " + event.title();
 		save(List.of(event.postAuthorId()), COMMENT_CREATED, event.postId(), event.commenterId(), message);
+	}
+
+	@EventListener
+	public void onReplyCreated(ReplyCreatedEvent event) {
+		String prefix = event.commenterId() == null ? "익명" : "";
+		String message = prefix + "님이 내 댓글에 답글을 남겼어요. " + event.title();
+		save(List.of(event.parentAuthorId()), REPLY_CREATED, event.postId(), event.commenterId(), message);
 	}
 
 	private void save(List<Long> userIds, String type, Long postId, Long actorId, String message) {

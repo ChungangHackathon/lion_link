@@ -56,11 +56,12 @@ public class CommentController {
 		return commentService.getComments(userId, postId, PageRequest.of(page, size));
 	}
 
-	@Operation(summary = "댓글 작성", description = "익명 글의 작성자가 쓴 댓글은 자동으로 익명이 된다.")
+	@Operation(summary = "댓글 작성",
+			description = "익명 글의 작성자가 쓴 댓글은 자동으로 익명이 된다. parentId를 주면 그 댓글의 답글이 된다.")
 	@ApiResponse(responseCode = "201")
 	@ApiResponse(responseCode = "400", description = "댓글 길이 오류 (VALIDATION_ERROR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-	@ApiResponse(responseCode = "404", description = "게시글 없음 (POST_NOT_FOUND)",
+	@ApiResponse(responseCode = "404", description = "게시글 없음 (POST_NOT_FOUND), 답글을 달 댓글이 없거나 이미 답글임 (PARENT_COMMENT_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@PostMapping
 	public ResponseEntity<CommentResponse> create(
