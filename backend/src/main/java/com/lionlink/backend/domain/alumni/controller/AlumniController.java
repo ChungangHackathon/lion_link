@@ -56,6 +56,7 @@ public class AlumniController {
 			@Parameter(description = "현재 상태") @RequestParam(required = false) List<ProfileStatus> statuses,
 			@Parameter(description = "관심 분야 (예: BACKEND,DATA_AI)") @RequestParam(required = false) List<String> interests,
 			@Parameter(description = "true면 오늘 커피챗을 받는 동문만") @RequestParam(defaultValue = "false") boolean available,
+			@Parameter(description = "true면 내가 관심 동문으로 저장한 사람만") @RequestParam(defaultValue = "false") boolean bookmarked,
 			@Parameter(description = "정렬 (RECOMMEND: 받는 중·같은 파트 먼저, GENERATION: 기수 오름차순, LATEST: 최근 가입순)")
 			@RequestParam(defaultValue = "RECOMMEND") AlumniSort sort,
 			@Parameter(description = "페이지 번호 (0부터)")
@@ -66,7 +67,8 @@ public class AlumniController {
 			@Min(value = 1, message = "페이지 크기는 1~100이어야 합니다.")
 			@Max(value = 100, message = "페이지 크기는 1~100이어야 합니다.") int size
 	) {
-		AlumniSearchCondition condition = new AlumniSearchCondition(q, generations, parts, statuses, interests, available, sort);
+		AlumniSearchCondition condition = new AlumniSearchCondition(q, generations, parts, statuses, interests, available,
+				bookmarked, sort);
 		return alumniService.search(userId, condition, PageRequest.of(page, size));
 	}
 

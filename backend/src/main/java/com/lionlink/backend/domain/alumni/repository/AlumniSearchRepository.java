@@ -13,6 +13,7 @@ import jakarta.persistence.TypedQuery;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -62,12 +63,13 @@ public class AlumniSearchRepository {
 				() -> query("select count(u)" + FROM + where, Long.class, params).getSingleResult());
 	}
 
-	public List<Row> findSeniors(Long userId, Integer generation, LionPart part, int limit) {
+	public List<Row> findSeniors(Long userId, Integer generation, LionPart part, List<String> interests, int limit) {
 		Map<String, Object> params = new HashMap<>(Map.of(
 				"approved", UserStatus.APPROVED, "userId", userId, "generation", generation));
 		putReceivingParams(params);
 		String jpql = SELECT + FROM + " where" + ACTIVE + " and u.id <> :userId and u.generation < :generation and " + RECEIVING
-				+ " order by case when p.lionPart = :part then 0 else 1 end, u.generation desc, u.id desc";
+				+ " order by case when p.lionPart = :part then 0 else 1 end,"
+				+ sharedInterests(interests, params) + " u.generation desc, u.id desc";
 		params.put("part", part);
 
 		return query(jpql, Tuple.class, params)
@@ -75,6 +77,33 @@ public class AlumniSearchRepository {
 				.getResultStream()
 				.map(Row::from)
 				.toList();
+	}
+
+	public List<Row> findRandom(Long userId, Collection<Long> excludedIds, int limit) {
+		Map<String, Object> params = new HashMap<>(Map.of("approved", UserStatus.APPROVED, "userId", userId));
+		StringBuilder where = new StringBuilder(" where" + ACTIVE + " and u.id <> :userId");
+		if (!CollectionUtils.isEmpty(excludedIds)) {
+			where.append(" and u.id not in :excludedIds");
+			params.put("excludedIds", excludedIds);
+		}
+
+		return query(SELECT + FROM + where + " order by function('rand')", Tuple.class, params)
+				.setMaxResults(limit)
+				.getResultStream()
+				.map(Row::from)
+				.toList();
+	}
+
+	private String sharedInterests(List<String> interests, Map<String, Object> params) {
+		if (CollectionUtils.isEmpty(interests)) {
+			return "";
+		}
+		List<String> conditions = new ArrayList<>();
+		for (int i = 0; i < interests.size(); i++) {
+			conditions.add("cast(p.interests as String) like :sharedInterest" + i + " escape '!'");
+			params.put("sharedInterest" + i, "%\"" + escapeLike(interests.get(i)) + "\"%");
+		}
+		return " case when (" + String.join(" or ", conditions) + ") then 0 else 1 end,";
 	}
 
 	public Page<BookmarkedRow> findBookmarked(Long userId, Pageable pageable) {
@@ -134,6 +163,9 @@ public class AlumniSearchRepository {
 		if (condition.available()) {
 			where.append(" and ").append(RECEIVING);
 			putReceivingParams(params);
+		}
+		if (condition.bookmarked()) {
+			where.append(" and exists (select 1 from Bookmark b where b.userId = :userId and b.targetUserId = u.id)");
 		}
 		return where.toString();
 	}

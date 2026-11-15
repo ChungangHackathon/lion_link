@@ -7,5 +7,9 @@ public enum ProfileStatus {
 	EMPLOYED,
 	FOUNDER,
 	GRAD_SCHOOL,
-	ETC
+	ETC;
+
+	public boolean isWorking() {
+		return this == EMPLOYED || this == FOUNDER;
+	}
 }

@@ -11,6 +11,7 @@ public record AlumniSearchCondition(
 		List<ProfileStatus> statuses,
 		List<String> interests,
 		boolean available,
+		boolean bookmarked,
 		AlumniSort sort
 ) {
 
