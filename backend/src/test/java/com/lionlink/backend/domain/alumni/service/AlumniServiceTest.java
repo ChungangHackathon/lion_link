@@ -263,16 +263,16 @@ class AlumniServiceTest {
 	}
 
 	private static AlumniSearchCondition condition(boolean available, AlumniSort sort) {
-		return new AlumniSearchCondition(null, null, null, null, null, available, sort);
+		return new AlumniSearchCondition(null, null, null, null, null, available, false, sort);
 	}
 
 	private AlumniSearchCondition filter(List<Integer> generations, List<LionPart> parts, List<ProfileStatus> statuses,
 			List<String> interests) {
-		return new AlumniSearchCondition(null, generations, parts, statuses, interests, false, AlumniSort.LATEST);
+		return new AlumniSearchCondition(null, generations, parts, statuses, interests, false, false, AlumniSort.LATEST);
 	}
 
 	private AlumniSearchCondition query(String q) {
-		return new AlumniSearchCondition(q, null, null, null, null, false, AlumniSort.LATEST);
+		return new AlumniSearchCondition(q, null, null, null, null, false, false, AlumniSort.LATEST);
 	}
 
 	private List<Long> ids(PageResponse<AlumniResponse> result) {

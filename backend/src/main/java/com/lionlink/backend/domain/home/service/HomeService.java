@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class HomeService {
 
-	private static final int RECOMMENDED_SENIORS = 2;
+	private static final int RECOMMENDED_SENIORS = 4;
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;

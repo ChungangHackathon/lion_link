@@ -166,7 +166,7 @@ class HomeServiceTest {
 	}
 
 	@Test
-	void 선배_추천은_오늘_커피챗을_받는_선배를_같은_파트부터_두_명_보여준다() {
+	void 선배_추천은_커피챗을_받는_선배를_같은_파트부터_보여주고_모자라면_랜덤으로_채운다() {
 		Long designSenior = senior("디자인선배", 12, LionPart.DESIGN, true);
 		Long backendSenior = senior("백엔드선배", 11, LionPart.BACKEND, true);
 		Long closestSenior = senior("가까운선배", 13, LionPart.FRONTEND, true);
@@ -177,10 +177,10 @@ class HomeServiceTest {
 		Long noSetting = user("설정없는선배", 12);
 		TestProfiles.save(entityManager, TestProfiles.profile(noSetting));
 
-		List<AlumniResponse> seniors = homeService.getHome(me).recommendedSeniors();
+		List<Long> ids = homeService.getHome(me).recommendedSeniors().stream().map(AlumniResponse::id).toList();
 
-		assertThat(seniors).extracting(AlumniResponse::id).containsExactly(backendSenior, closestSenior);
-		assertThat(seniors).extracting(AlumniResponse::id).doesNotContain(designSenior);
+		assertThat(ids).startsWith(backendSenior, closestSenior, designSenior);
+		assertThat(ids).hasSize(4).doesNotContain(me);
 	}
 
 	@Test

@@ -18,6 +18,7 @@ import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.response.PageResponse;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,8 +63,17 @@ public class AlumniService {
 	public List<AlumniResponse> recommendSeniors(Long userId, int limit) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new BusinessException(AlumniErrorCode.USER_NOT_FOUND));
-		LionPart part = profileRepository.findById(userId).map(Profile::getLionPart).orElse(null);
-		List<AlumniSearchRepository.Row> rows = alumniSearchRepository.findSeniors(userId, user.getGeneration(), part, limit);
+		Profile profile = profileRepository.findById(userId).orElse(null);
+		LionPart part = profile == null ? null : profile.getLionPart();
+		List<String> interests = profile == null ? List.of() : profile.getInterests();
+
+		List<AlumniSearchRepository.Row> rows = new ArrayList<>(
+				alumniSearchRepository.findSeniors(userId, user.getGeneration(), part, interests, limit));
+		if (rows.size() < limit) {
+			List<Long> excludedIds = new ArrayList<>(rows.stream().map(AlumniSearchRepository.Row::id).toList());
+			excludedIds.add(userId);
+			rows.addAll(alumniSearchRepository.findRandom(userId, excludedIds, limit - rows.size()));
+		}
 		return rows.stream().map(toResponse(userId, rows)).toList();
 	}
 
@@ -79,7 +89,8 @@ public class AlumniService {
 		Map<Long, CoffeeAvailability> availabilities = coffeeAvailabilityReader.getAvailabilities(userIds);
 
 		return row -> {
-			boolean companyVisible = row.profile().getCompanyVisibility()
+			boolean companyVisible = row.profile().getStatus().isWorking()
+					&& row.profile().getCompanyVisibility()
 					.isVisibleTo(row.id().equals(userId), connectedIds.contains(row.id()));
 			return AlumniResponse.of(row, companyVisible ? companies.get(row.id()) : null, bookmarkedIds.contains(row.id()),
 					availabilities.get(row.id()));
