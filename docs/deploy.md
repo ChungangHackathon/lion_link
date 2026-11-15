@@ -21,6 +21,7 @@
 | `FRONTEND_URL` | O | 프론트 주소 (`https://...`, 끝에 `/` 없이). CORS, 로그인 뒤 이동, 메일 링크, WebSocket 허용 주소에 같이 쓰여 |
 | `COOKIE_SECURE` | O | `true` (HTTPS) |
 | `COOKIE_SAME_SITE` | O | 프론트와 백엔드 도메인이 다르면 `None`, 같으면 `Lax` |
+| `ADMIN_EMAILS` | X | 서버가 뜰 때 관리자로 올릴 이메일. 쉼표로 여러 개. 아래 \[관리자 지정\] 참고 |
 | `S3_BUCKET`, `S3_REGION` | O | 업로드 버킷. 지역 기본값 `ap-northeast-2` |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | △ | 서버에 IAM 역할을 붙였으면 비워 둬 |
 | `S3_PUBLIC_URL` | X | 파일 주소 앞부분. CloudFront를 쓸 때만. 비우면 `https://{버킷}.s3.{지역}.amazonaws.com` |
@@ -28,6 +29,19 @@
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | 메일을 켜면 O | SMTP (Gmail, AWS SES 등). 포트 기본 587 |
 | `MAIL_FROM` | 메일을 켜면 O | 보내는 사람. 예: `"LION:LINK" <no-reply@도메인>`. 표시 이름에 콜론이 있어 따옴표로 감싸야 한다. 빼면 메일을 만들 때 실패한다 |
 | `SWAGGER_ENABLED` | X | 운영에서 Swagger를 켤 때만 `true` |
+
+**관리자 지정 (`ADMIN_EMAILS`)**
+
+첫 관리자는 화면으로 만들 수 없어. 가입 승인은 관리자만 할 수 있는데 그 관리자가 아직 없거든. 그래서 서버가 뜰 때 환경변수에 적힌 이메일을 관리자로 올려.
+
+1. 관리자가 될 사람이 구글 로그인으로 가입 신청과 기본 프로필 입력까지 끝내
+2. `ADMIN_EMAILS=a@example.com,b@example.com`을 넣고 서버를 다시 띄워
+3. 그 계정이 `role=ADMIN`, `status=APPROVED`가 돼. 가입 승인은 건너뛰어
+
+- 가입하지 않은 이메일은 로그에 경고만 남기고 넘어가. 가입한 뒤 다시 띄우면 지정돼
+- 이미 관리자면 아무것도 하지 않아. 몇 번을 다시 띄워도 안전해
+- 탈퇴한 계정은 올리지 않아
+- 관리자를 내리는 건 아직 DB에서 직접 해야 해. 환경변수에서 빼도 자동으로 내려가지 않아
 
 ## 3. 구글 로그인
 
