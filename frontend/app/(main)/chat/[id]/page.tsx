@@ -159,7 +159,8 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   }, [messages]);
 
   // 남이 보낸 메시지가 마지막이면 읽음 처리 (CHAT-12). 내가 보낸 메시지는 서버가 이미 읽은 것으로 친다
-  const unreadMine = confirmed.some((m) => isMine(m) && m.unreadCount > 0);
+  // 안 읽은 사람 수는 내 메시지·남의 메시지 모두에 보인다 (단체방에서 남의 메시지도 누가 덜 읽었는지)
+  const unreadMine = confirmed.some((m) => m.unreadCount > 0);
   const lastFromOther = confirmed.length > 0 && !isMine(confirmed[confirmed.length - 1]);
   useEffect(() => {
     if (lastId == null || lastRead.current === lastId) return;
@@ -170,6 +171,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       .then(() => {
         refreshList();
         countsChanged();
+        refreshCountsRef.current(); // 내가 읽은 만큼 남의 메시지 숫자도 줄어든다
       })
       .catch(() => undefined);
   }, [lastId, lastFromOther, roomId, service, refreshList, countsChanged]);
@@ -205,7 +207,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
           setMessages((ms) => mergeNew(ms, [e.message]));
           // 수락 대기 중이던 방에 안내 메시지가 오면 방 상태가 바뀐 것이다
           if (live.current.status !== "ACTIVE" && e.message.type === "SYSTEM") reloadRoom();
-        } else if (e.type === "READ" && String(e.userId) !== live.current.myId) refreshCountsRef.current();
+        } else if (e.type === "READ") refreshCountsRef.current();
       }),
     [subscribeRoom, roomId, reloadRoom],
   );
@@ -484,7 +486,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                                   </button>
                                 </span>
                               )}
-                              {mine && m.unreadCount > 0 && <span className="text-orange">{m.unreadCount}</span>}
+                              {m.unreadCount > 0 && <span className="text-orange">{m.unreadCount}</span>}
                               {formatTime(m.createdAt)}
                               {m.editedAt && " · 수정됨"}
                             </>
