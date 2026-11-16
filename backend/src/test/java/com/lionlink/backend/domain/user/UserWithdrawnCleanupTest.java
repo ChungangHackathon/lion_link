@@ -165,8 +165,8 @@ class UserWithdrawnCleanupTest {
 		assertThat(entityManager.find(CoffeeChatRecruit.class, asSenior).getStatus()).isEqualTo(RecruitStatus.ENDED);
 		assertThat(notifications("RECRUIT_CLOSED")).extracting(Notification::getUserId, Notification::getActorId, Notification::getMessage)
 				.containsExactlyInAnyOrder(
-						tuple(me, null, "신청받을 사자가 탈퇴해서 모집이 마감됐어요. 김사자에게 신청"),
-						tuple(lee, null, "신청받을 사자가 탈퇴해서 모집이 마감됐어요. 김사자에게 신청"));
+						tuple(me, null, "커피챗 받는 사자가 탈퇴해서 모집이 마감됐어요. 김사자에게 신청"),
+						tuple(lee, null, "커피챗 받는 사자가 탈퇴해서 모집이 마감됐어요. 김사자에게 신청"));
 		assertThat(entityManager.find(CoffeeChatRecruit.class, joined).getStatus()).isEqualTo(RecruitStatus.OPEN);
 		assertThat(recruitMemberRepository.countByRecruitPostId(joined)).isEqualTo(1);
 	}

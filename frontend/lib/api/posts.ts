@@ -141,7 +141,7 @@ export interface PostWriteRequest {
   /** MEETUP이면 필수. meetAt은 KST ISO-8601 */
   meetup?: { meetAt: string; place: string; capacity: number; companionIds?: Id[] };
   /** RECRUIT이면 필수 */
-  recruit?: { seniorId: Id; capacity: number; deadline: string };
+  recruit?: { seniorId: Id; capacity: number; deadline: string; companionIds?: Id[] };
   /** FILE-01로 올린 파일. 이미지 5장, 첨부파일 3개까지. 보낸 순서대로 저장된다 */
   files?: PostFileInput[];
 }

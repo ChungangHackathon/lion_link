@@ -16,6 +16,7 @@ import com.lionlink.backend.domain.community.post.dto.request.PostUpdateRequest;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
+import com.lionlink.backend.domain.community.recruit.entity.RecruitMember;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
 import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.community.recruit.service.RecruitService;
@@ -168,6 +169,47 @@ class PostServiceTest {
 		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
 		Long postId = postService.create(me, TestPosts.recruit("모집", senior, 4)).id();
 		assertThat(recruitMemberRepository.countByRecruitPostId(postId)).isEqualTo(1);
+	}
+
+	@Test
+	void 커피챗_모집에_초대한_동문은_바로_참여자가_되고_알림을_받는다() {
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		Long lee = TestUsers.approved(entityManager, "이사자");
+
+		Long postId = postService.create(me, TestPosts.recruit("모집", senior, 4, List.of(kim, lee))).id();
+		entityManager.flush();
+
+		assertThat(recruitMemberRepository.findByRecruitPostIdOrderByJoinedAtAscUserIdAsc(postId))
+				.extracting(RecruitMember::getUserId)
+				.containsExactlyInAnyOrder(me, kim, lee);
+		assertThat(notifications("RECRUIT_INVITED"))
+				.extracting(Notification::getUserId)
+				.containsExactlyInAnyOrder(kim, lee);
+		assertThat(notifications("RECRUIT_INVITED")).allSatisfy(notification -> {
+			assertThat(notification.getActorId()).isEqualTo(me);
+			assertThat(notification.getMessage()).isEqualTo("님이 커피챗 모집에 초대했어요. 모집");
+		});
+	}
+
+	@Test
+	void 커피챗_모집_초대는_본인과_받는_사자와_모집_인원을_넘길_수_없다() {
+		Long senior = TestUsers.approved(entityManager, "선배사자");
+		TestPosts.acceptGroupCoffeeChat(entityManager, senior);
+		Long kim = TestUsers.approved(entityManager, "김사자");
+		Long lee = TestUsers.approved(entityManager, "이사자");
+
+		assertError(() -> postService.create(me, TestPosts.recruit("모집", senior, 4, List.of(me))),
+				CommunityErrorCode.INVALID_COMPANIONS);
+		assertError(() -> postService.create(me, TestPosts.recruit("모집", senior, 4, List.of(senior))),
+				CommunityErrorCode.INVALID_COMPANIONS);
+		assertError(() -> postService.create(me, TestPosts.recruit("모집", senior, 4, List.of(kim, kim))),
+				CommunityErrorCode.INVALID_COMPANIONS);
+		assertError(() -> postService.create(me, TestPosts.recruit("모집", senior, 2, List.of(kim, lee))),
+				CommunityErrorCode.INVALID_COMPANIONS);
+		assertError(() -> postService.create(me, TestPosts.recruit("모집", senior, 4, List.of(999_999L))),
+				AlumniErrorCode.USER_NOT_FOUND);
 	}
 
 	@Test
@@ -384,6 +426,12 @@ class PostServiceTest {
 		assertThat(notifications).extracting(Notification::getUserId).containsExactlyInAnyOrder(kim, lee);
 		assertThat(notifications).extracting(Notification::getTargetId).containsOnly(postId);
 		assertThat(notifications.get(0).getMessage()).isEqualTo("참여한 커피챗 모집이 취소됐어요. 같이 신청해요");
+	}
+
+	private List<Notification> notifications(String type) {
+		return notificationRepository.findAll().stream()
+				.filter(notification -> notification.getType().equals(type))
+				.toList();
 	}
 
 	private PostUpdateRequest meetupUpdate(LocalDateTime meetAt, Integer capacity) {

@@ -66,7 +66,7 @@ public record PostCreateRequest(
 	}
 
 	public record RecruitRequest(
-			@NotNull(message = "신청할 사자를 선택해 주세요.")
+			@NotNull(message = "커피챗 받는 사자를 선택해 주세요.")
 			Long seniorId,
 
 			@NotNull(message = "모집 인원을 입력해 주세요.")
@@ -76,7 +76,9 @@ public record PostCreateRequest(
 
 			@NotNull(message = "모집 마감일을 입력해 주세요.")
 			@FutureOrPresent(message = "마감일은 오늘 이후여야 합니다.")
-			LocalDate deadline
+			LocalDate deadline,
+
+			List<Long> companionIds
 	) {
 	}
 }

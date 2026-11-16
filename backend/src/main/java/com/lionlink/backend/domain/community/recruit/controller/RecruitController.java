@@ -26,7 +26,7 @@ public class RecruitController {
 
 	@Operation(summary = "커피챗 모집 참여", description = "이미 참여 중이면 그대로 성공한다. 참여하면 모집 작성자에게 알림이 간다.")
 	@ApiResponse(responseCode = "200")
-	@ApiResponse(responseCode = "403", description = "신청받을 사자 본인 (SENIOR_CANNOT_JOIN)",
+	@ApiResponse(responseCode = "403", description = "커피챗 받는 사자 본인 (SENIOR_CANNOT_JOIN)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "404", description = "게시글 또는 커피챗 모집 없음 (POST_NOT_FOUND, RECRUIT_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
