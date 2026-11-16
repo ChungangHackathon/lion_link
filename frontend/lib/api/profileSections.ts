@@ -229,7 +229,7 @@ function eulReul(word: string): string {
   return word + (code >= 0 && code <= 11171 && code % 28 !== 0 ? "을" : "를");
 }
 
-const tagsOf = (v: string) => [...new Set(v.split(",").map((t) => t.trim()).filter(Boolean))];
+export const tagsOf = (v: string) => [...new Set(v.split(",").map((t) => t.trim()).filter(Boolean))];
 
 /** 칸마다 에러 문구. 비어 있으면 저장할 수 있다 */
 export function validate(section: SectionKey, v: FormValues, now = thisMonth()): Record<string, string> {
