@@ -18,6 +18,7 @@ export interface CoffeeSettingsService {
   get: () => Promise<CoffeeSettings>;
   save: (body: CoffeeSettingsInput) => Promise<CoffeeSettings>;
   addPeriod: (body: { startDate: string; endDate: string }) => Promise<CoffeePeriod>;
+  updatePeriod: (id: CoffeePeriod["id"], body: { startDate: string; endDate: string }) => Promise<CoffeePeriod>;
   removePeriod: (id: CoffeePeriod["id"]) => Promise<void>;
   /** PROFILE-14 홈 스위치 (받기·쉬기) */
   switchReceive: (body: SwitchRequest) => Promise<CoffeeSettings>;
@@ -27,6 +28,7 @@ const apiService: CoffeeSettingsService = {
   get: api.getCoffeeSettings,
   save: api.saveCoffeeSettings,
   addPeriod: api.addPeriod,
+  updatePeriod: api.updatePeriod,
   removePeriod: api.removePeriod,
   switchReceive: switchCoffee,
 };
@@ -115,6 +117,10 @@ export function useCoffeeSettingsService(): CoffeeSettingsService {
         if (current.periods.length >= api.PERIOD_LIMIT) return Promise.reject(new ApiError(409, "PERIOD_LIMIT", "기간은 5개까지 등록할 수 있어요."));
         const id = Math.random().toString(36).slice(2);
         write({ periods: [...store.settings.periods, { id, from: startDate, to: endDate, kind: current.periodKind }] });
+        return delay({ id, startDate, endDate });
+      },
+      updatePeriod: (id, { startDate, endDate }) => {
+        write({ periods: store.settings.periods.map((p) => (p.id === String(id) ? { ...p, from: startDate, to: endDate } : p)) });
         return delay({ id, startDate, endDate });
       },
       removePeriod: (id) => {
