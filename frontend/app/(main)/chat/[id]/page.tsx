@@ -148,15 +148,24 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   // 내가 보낸 요청이면 요청 정보(첫 메시지 · 거절 사유)를 불러온다 (CHAT-03)
   const request = useApi((signal) => service.getRequest(roomId, signal), [service, roomId], room.requestedByMe && room.status !== "ACTIVE");
 
-  // 새 메시지가 아래에 붙으면 맨 아래로, 위에 이전 메시지를 붙였으면 보던 위치를 지킨다
+  // 위에 이전 메시지를 붙였으면 보던 위치를 지키고, 새 메시지가 아래에 붙었을 때만 맨 아래로 내린다.
+  // 읽음 숫자·수정 같은 갱신에도 매번 맨 아래로 끌어내리면, 위로 올려 읽는 중에 스크롤이 멈춘 것처럼 튄다.
+  // 위로 올려 보고 있을 때 남이 보낸 메시지가 오면 그대로 둔다 (내가 보낸 건 항상 내린다)
+  const atBottom = useRef(true);
+  const lastSeen = useRef<string | null>(null);
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
+    const last = messages[messages.length - 1];
+    const lastKey = last ? String(last.clientId ?? last.id) : null;
+    const appended = lastKey !== lastSeen.current;
+    const initial = lastSeen.current === null;
+    lastSeen.current = lastKey;
     if (keepScroll.current != null) {
       el.scrollTop = el.scrollHeight - keepScroll.current;
       keepScroll.current = null;
-    } else el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    } else if (initial || (appended && (atBottom.current || (last?.type === "TEXT" && String(last.senderId) === myId)))) el.scrollTop = el.scrollHeight;
+  }, [messages, myId]);
 
   // 남이 보낸 메시지가 마지막이면 읽음 처리 (CHAT-12). 내가 보낸 메시지는 서버가 이미 읽은 것으로 친다
   // 안 읽은 사람 수는 내 메시지·남의 메시지 모두에 보인다 (단체방에서 남의 메시지도 누가 덜 읽었는지)
@@ -439,7 +448,15 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
           </div>
         )}
 
-        <div ref={scroller} className="flex-1 overflow-y-auto px-6 py-4" aria-label="대화 내용">
+        <div
+          ref={scroller}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          }}
+          className="flex-1 overflow-y-auto px-6 py-4"
+          aria-label="대화 내용"
+        >
           {hasMore && (
             <div className="pb-2 text-center">
               <button type="button" disabled={loadingOlder} onClick={() => void loadOlder()} className="text-[12px] text-ink-500 underline disabled:opacity-50">
