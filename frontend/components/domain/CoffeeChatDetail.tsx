@@ -555,7 +555,7 @@ function AcceptModal({ open, onClose, onConfirm, group, busy }: { open: boolean;
           )}
         </div>
         <Textarea label="한마디 (선택)" rows={3} placeholder="예) 반가워요! 편한 시간 골라주세요." value={note} onChange={(e) => setNote(e.target.value)} counter={{ value: note.length, max: 200 }} />
-        {group && <p className="rounded-[8px] border border-dashed border-ink-400 px-3.5 py-2.5 text-[12px] text-ink-500">여러 명 커피챗이에요. 수락하면 함께 신청한 동문까지 단체 채팅방(T-27)이 열려요.</p>}
+        {group && <p className="rounded-[8px] border border-dashed border-ink-400 px-3.5 py-2.5 text-[12px] text-ink-500">단체 커피챗이에요. 수락하면 함께 신청한 동문까지 단체 채팅방이 열려요.</p>}
       </div>
     </Modal>
   );
