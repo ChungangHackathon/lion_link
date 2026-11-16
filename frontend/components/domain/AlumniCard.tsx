@@ -53,6 +53,9 @@ export function useBookmarkToggle(person: Pick<AlumniSummary, "id" | "bookmarked
  * 커피챗 신청 → R-01, 💬 → 메시지(T-04). 받지 않는 동문은 비활성 + 툴팁.
  * onRequest·onMessage가 없으면(커피챗·채팅 API 연결 전) 버튼을 잠근다.
  */
+/** 카드 이름은 3글자까지만 (길면 옆 파트·기수 태그가 잘린다). 전체 이름은 title로 */
+const shortName = (name: string) => ([...name].length > 3 ? `${[...name].slice(0, 3).join("")}…` : name);
+
 export function AlumniCard({ person, onRequest, onMessage, onBookmark, className }: { person: AlumniSummary; onRequest?: (p: AlumniSummary) => void; onMessage?: (p: AlumniSummary) => void; onBookmark?: (next: boolean) => void; className?: string }) {
   const { saved, toggle } = useBookmarkToggle(person, onBookmark);
   const part = person.lionParts[0] ?? "ETC";
@@ -67,8 +70,10 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
           <Avatar name={person.name} part={part} size={90} online={canRequest} className="border-[6px] border-bg-50" />
         </div>
         <div className="flex flex-col gap-2.5 px-5 pb-[14px] pt-[55px]">
-          <div className="flex h-[26px] items-center gap-2 pr-7">
-            <h3 className="shrink-0 text-[18px] font-bold leading-[22px] text-ink-900">{person.name}</h3>
+          <div className="flex h-[26px] items-center gap-2">
+            <h3 title={person.name} className="shrink-0 text-[18px] font-bold leading-[22px] text-ink-900">
+              {shortName(person.name)}
+            </h3>
             <PartTag part={part} generation={person.generation} className="min-w-0 truncate" />
           </div>
           <p className="line-clamp-2 min-h-4 text-[13px] leading-4 text-ink-700">{alumniHeadline(person)}</p>
@@ -83,7 +88,7 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
         </div>
       </Link>
 
-      <button type="button" aria-label={saved ? "관심 동문 해제" : "관심 동문 저장"} aria-pressed={saved} onClick={toggle} className="absolute right-[16px] top-[115px] rounded p-0.5 text-navy hover:bg-line-200">
+      <button type="button" aria-label={saved ? "관심 동문 해제" : "관심 동문 저장"} aria-pressed={saved} onClick={toggle} className="absolute right-3 top-3 rounded p-0.5 text-navy hover:bg-white/60">
         <Icon name={saved ? "star-filled" : "star"} size={21} />
       </button>
 
