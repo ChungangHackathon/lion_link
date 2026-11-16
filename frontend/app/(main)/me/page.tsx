@@ -665,7 +665,12 @@ function SkillsModal({ skills, onClose, onSave }: { skills: string[]; onClose: (
             </span>
           ))}
         </div>
-        <Input placeholder="기술 입력 후 Enter (최대 5개, 1~20자)" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())} counter={{ value: all.length, max: 5 }} error={inputError} />
+        <Input placeholder="기술 입력 후 Enter (최대 5개, 1~20자)" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {
+            // 맥 한글 입력은 글자를 조합하는 중에도 Enter가 먼저 온다. 그때 추가하면 조합 중이던 마지막 글자가 입력칸에 다시 남는다
+            if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return;
+            e.preventDefault();
+            add();
+          }} counter={{ value: all.length, max: 5 }} error={inputError} />
         <p className="text-[12px] text-ink-500">대표 기술은 프로필 상단과 동문 카드에 입력한 순서대로 보여요. 모두 지우고 저장하면 섹션이 사라져요.</p>
       </div>
     </Modal>
