@@ -18,6 +18,8 @@ export interface Me {
   /** PENDING일 때만 true */
   signupInfoEditable: boolean;
   photoUrl: string | null;
+  /** 가입일 (ISO) */
+  createdAt?: string;
 }
 
 export interface SignupInfo {
