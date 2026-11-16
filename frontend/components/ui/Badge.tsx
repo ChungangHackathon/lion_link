@@ -12,7 +12,8 @@ export function CountBadge({ count, className }: { count: number; className?: st
 }
 
 /** StatusBadge — 모양 3종(채움/테두리/회색)에 라벨만 바꿔 씀 */
-export type StatusTone = "filled" | "outline" | "gray";
+/** recruit: 번개·커피챗 '모집 중' (Figma status 모집 중, orange/badge) */
+export type StatusTone = "filled" | "outline" | "gray" | "recruit";
 export function StatusBadge({ tone = "gray", children, className }: { tone?: StatusTone; children: React.ReactNode; className?: string }) {
   return (
     <span
@@ -21,6 +22,7 @@ export function StatusBadge({ tone = "gray", children, className }: { tone?: Sta
         tone === "filled" && "bg-primary text-white",
         tone === "outline" && "bg-white border border-ink-600 text-ink-600 text-[12px]",
         tone === "gray" && "bg-bg-100 text-ink-500",
+        tone === "recruit" && "bg-orange-badge text-white text-[12px]",
         className,
       )}
     >

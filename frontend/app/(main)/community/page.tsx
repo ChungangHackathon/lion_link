@@ -152,7 +152,7 @@ function Community() {
                 <li key={p.id} className="border-b border-line-200 py-3 last:border-b-0">
                   <Link href={`/community/${p.id}`} className="group flex flex-col gap-2">
                     <span className="flex items-center gap-2 text-[12px] text-ink-500">
-                      <StatusBadge tone="outline">모집 중</StatusBadge>
+                      <StatusBadge tone="recruit">모집 중</StatusBadge>
                       {p.recruit ? `마감 ${daysLeft(p.recruit.deadline)}` : p.meetup ? formatDateTime(p.meetup.meetAt) : ""}
                     </span>
                     <span className="truncate t-label2 text-ink-900 group-hover:underline">{p.title}</span>
