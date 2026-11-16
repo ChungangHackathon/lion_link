@@ -270,6 +270,11 @@ export function setMeetupJoined(postId: Id, joined: boolean) {
   return api<MeetupParticipation>(`/posts/${postId}/meetup/members/me`, { method: joined ? "PUT" : "DELETE" });
 }
 
+/** 번개 모집 마감 · 마감 해제 (작성자만). 정원이 남아도 마감할 수 있고, 마감하면 상태가 FULL이 된다 */
+export function setMeetupClosed(postId: Id, closed: boolean) {
+  return api<MeetupParticipation>(`/posts/${postId}/meetup/close`, { method: closed ? "PUT" : "DELETE" });
+}
+
 // ---------------------------------------------------------------------------
 // 번개 초대 (MEETUP-02) · 커피챗 모집 참여 (RECRUIT-01) · 파일 업로드 (FILE-01)
 // ---------------------------------------------------------------------------

@@ -229,6 +229,8 @@ export interface Post {
     place: string;
     max: number;
     memberIds: string[];
+    /** 작성자가 정원 전에 마감함 */
+    closed?: boolean;
   };
 }
 

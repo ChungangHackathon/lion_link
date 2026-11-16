@@ -47,7 +47,7 @@ function member(state: MockPostState, id: string, hostId: string): PostMember {
 
 function meetupStatus(m: NonNullable<Post["meetup"]>): MeetupStatus {
   if (new Date(m.at).getTime() < Date.now()) return "ENDED";
-  return m.memberIds.length >= m.max ? "FULL" : "OPEN";
+  return m.closed || m.memberIds.length >= m.max ? "FULL" : "OPEN";
 }
 
 const formatSize = (n: number) => (n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
@@ -318,6 +318,14 @@ export function mockSetMeetupJoined(state: MockPostState, actions: MockPostActio
     status: meetupStatus(next),
     members: memberIds.map((id) => member(state, id, post.authorId)),
   });
+}
+
+export function mockSetMeetupClosed(state: MockPostState, actions: MockPostActions, postId: Id, closed: boolean): Promise<MeetupParticipation> {
+  const post = state.posts.find((p) => p.id === String(postId));
+  if (!post?.meetup) return Promise.reject(notFound());
+  const next = { ...post.meetup, closed };
+  actions.updatePost(post.id, { meetup: next });
+  return delay({ postId, joined: next.memberIds.includes(ME_ID), participantCount: next.memberIds.length, capacity: next.max, status: meetupStatus(next), members: next.memberIds.map((id) => member(state, id, post.authorId)) });
 }
 
 // ---------------------------------------------------------------------------

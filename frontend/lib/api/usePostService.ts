@@ -25,6 +25,7 @@ export interface PostService {
   addComment: (postId: Id, content: string) => Promise<PostComment>;
   removeComment: (postId: Id, commentId: Id) => Promise<void>;
   setMeetupJoined: (postId: Id, joined: boolean) => Promise<MeetupParticipation>;
+  setMeetupClosed: (postId: Id, closed: boolean) => Promise<MeetupParticipation>;
   inviteToMeetup: (postId: Id, userIds: Id[]) => Promise<{ sentCount: number; skippedUserIds: Id[] }>;
   joinRecruit: (postId: Id) => Promise<RecruitParticipation>;
   uploadFile: (type: UploadType, file: File) => Promise<PostFileInput>;
@@ -43,6 +44,7 @@ const apiService: PostService = {
   addComment: posts.createComment,
   removeComment: posts.deleteComment,
   setMeetupJoined: posts.setMeetupJoined,
+  setMeetupClosed: posts.setMeetupClosed,
   inviteToMeetup: posts.inviteToMeetup,
   joinRecruit: posts.joinRecruit,
   uploadFile: posts.uploadFile,
@@ -66,6 +68,7 @@ export function usePostService(): PostService {
       addComment: (postId, content) => mock.mockAddComment(state, store, postId, content),
       removeComment: (postId, commentId) => mock.mockRemoveComment(state, store, postId, commentId),
       setMeetupJoined: (postId, joined) => mock.mockSetMeetupJoined(state, store, postId, joined),
+      setMeetupClosed: (postId, closed) => mock.mockSetMeetupClosed(state, store, postId, closed),
       inviteToMeetup: (postId, userIds) => mock.mockInviteToMeetup(state, postId, userIds),
       joinRecruit: (postId) => mock.mockJoinRecruit(state, store, postId),
       uploadFile: (type, file) => mock.mockUploadFile(type, file),

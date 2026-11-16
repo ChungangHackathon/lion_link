@@ -105,6 +105,22 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
+  /** 작성자가 정원 전에 모집을 마감하거나 다시 연다 */
+  const setMeetupClosed = async (closed: boolean) => {
+    if (joining) return;
+    setJoining(true);
+    try {
+      const res = await service.setMeetupClosed(post.id, closed);
+      setData((p) => (p?.meetup ? { ...p, meetup: { ...p.meetup, joinedByMe: res.joined, participantCount: res.participantCount, capacity: res.capacity, status: res.status, members: res.members } } : p));
+      toast(closed ? "모집을 마감했어요. 더는 참여할 수 없어요." : "다시 참여를 받아요");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      if (isApiError(e) && e.status === 409) reload();
+    } finally {
+      setJoining(false);
+    }
+  };
+
   const joinRecruit = async () => {
     if (joining) return;
     setJoining(true);
@@ -275,6 +291,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
             onLeave={() => setMeetupJoined(false)}
             onInvite={() => setInvite(true)}
             onCancel={() => setDel(true)}
+            onClose={(closed) => void setMeetupClosed(closed)}
           />
         ) : null}
 
@@ -568,11 +585,13 @@ function RecruitCard({ post, mine, applyReady, busy, onApply, onJoin, onCancel }
 }
 
 /** L-06 번개 상세 카드 · K-03 번개 states */
-function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCancel }: { post: PostDetail; mine: boolean; busy: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void }) {
+function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCancel, onClose }: { post: PostDetail; mine: boolean; busy: boolean; blocked: boolean; onJoin: () => void; onLeave: () => void; onInvite: () => void; onCancel: () => void; onClose: (closed: boolean) => void }) {
   const m = post.meetup!;
   const past = m.status === "ENDED";
   const canceled = m.status === "CANCELED";
   const full = m.status === "FULL";
+  // 정원이 남았는데 FULL이면 작성자가 직접 마감한 것 (응답에 따로 표시가 없다)
+  const closedEarly = full && m.participantCount < m.capacity;
   return (
     <Card className="flex flex-col gap-3 p-6">
       <div className="flex items-center justify-between">
@@ -592,6 +611,16 @@ function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCa
           <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
             초대 알림 보내기
           </Button>
+          {m.status === "OPEN" && (
+            <Button size="L" full variant="secondary" loading={busy} onClick={() => onClose(true)}>
+              모집 마감
+            </Button>
+          )}
+          {closedEarly && (
+            <Button size="L" full variant="secondary" loading={busy} onClick={() => onClose(false)}>
+              마감 해제
+            </Button>
+          )}
           <Button size="L" full variant="danger" onClick={onCancel} disabled={past || canceled}>
             번개 취소
           </Button>
