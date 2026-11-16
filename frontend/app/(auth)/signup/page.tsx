@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/lib/session";
 import { VillageHero } from "@/components/brand/VillageHero";
@@ -20,6 +21,9 @@ import { getGoogleInfo, landingPath, reapply, signup, updateSignupInfo } from "@
  *  - 승인 대기: [가입 정보 고치기] (AUTH-06)
  *  - 반려: [다시 신청하기] (AUTH-07)
  */
+/** 선택할 수 있는 기수 (서버 검증과 같은 1~14기) */
+const GENERATIONS = Array.from({ length: 14 }, (_, i) => i + 1);
+
 export default function SignupPage() {
   const router = useRouter();
   const toast = useToast();
@@ -34,7 +38,7 @@ export default function SignupPage() {
 
   const mode: "signup" | "edit" | "reapply" = me?.status === "PENDING" ? "edit" : me?.status === "REJECTED" ? "reapply" : "signup";
 
-  const genNum = Number(gen.replace(/[^0-9]/g, ""));
+  const genNum = Number(gen);
   const nameOk = name.trim().length >= 2 && name.trim().length <= 20;
   const genOk = genNum >= 1 && genNum <= 14;
   const ready = nameOk && genOk && (mode !== "signup" || agreed);
@@ -121,10 +125,22 @@ export default function SignupPage() {
             </label>
             <label className="flex flex-1 flex-col gap-1.5">
               <span className="t-label1 text-bg-100">기수</span>
-              <input value={gen} onChange={(e) => setGen(e.target.value)} placeholder="13기" inputMode="numeric" aria-invalid={touched && !genOk} className={`${field} ${touched && !genOk ? "border-orange" : "border-line-300"}`} />
+              <span className="relative">
+                <select value={gen} onChange={(e) => setGen(e.target.value)} aria-invalid={touched && !genOk} className={`${field} appearance-none pr-9 ${gen ? "" : "text-ink-400"} ${touched && !genOk ? "border-orange" : "border-line-300"}`}>
+                  <option value="" disabled>
+                    기수 선택
+                  </option>
+                  {GENERATIONS.map((g) => (
+                    <option key={g} value={g} className="text-ink-900">
+                      {g}기
+                    </option>
+                  ))}
+                </select>
+                <Icon name="chevron-down" size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-500" />
+              </span>
             </label>
           </div>
-          <p className="t-label2 text-bg-100">{touched && !nameOk ? "이름은 2~20글자로 입력해주세요." : touched && !genOk ? "기수는 1~14기 사이로 입력해주세요." : "이름·기수는 승인 전까지 고칠 수 있어요."}</p>
+          <p className="t-label2 text-bg-100">{touched && !nameOk ? "이름은 2~20글자로 입력해주세요." : touched && !genOk ? "기수를 선택해주세요." : "이름·기수는 승인 전까지 고칠 수 있어요."}</p>
         </div>
         {mode === "signup" && (
           <div className={`flex items-center justify-between rounded-[8px] border bg-white p-4 ${touched && !agreed ? "border-orange" : "border-line-200"}`}>
