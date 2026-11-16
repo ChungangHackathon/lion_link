@@ -176,7 +176,7 @@ public class ChatRequestService {
 		ChatRoom room = lockRequested(roomId);
 		ChatMessage message = findOwnMessage(userId, room, messageId);
 		message.edit(request.content().trim(), LocalDateTime.now());
-		return ChatMessageResponse.of(message, chatMessageWriter.unreadCount(message, chatRoomMemberRepository.findByRoomId(roomId)));
+		return chatMessageWriter.publishUpdated(room, message);
 	}
 
 	public void cancel(Long userId, Long roomId, Long messageId) {
@@ -184,6 +184,7 @@ public class ChatRequestService {
 		ChatRoom room = lockRequested(roomId);
 		ChatMessage message = findOwnMessage(userId, room, messageId);
 		message.delete(LocalDateTime.now());
+		chatMessageWriter.publishUpdated(room, message);
 		room.cancelRequest();
 		chatRoomService.notifyRoomUpdated(room);
 	}

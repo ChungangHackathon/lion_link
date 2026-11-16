@@ -19,6 +19,7 @@ import com.lionlink.backend.domain.chat.entity.ChatMessageType;
 import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomStatus;
 import com.lionlink.backend.domain.chat.entity.ChatRoomType;
+import com.lionlink.backend.domain.chat.event.ChatMessageUpdatedEvent;
 import com.lionlink.backend.domain.chat.exception.ChatErrorCode;
 import com.lionlink.backend.domain.notification.entity.Notification;
 import com.lionlink.backend.domain.notification.entity.NotificationTab;
@@ -37,11 +38,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @Transactional
+@RecordApplicationEvents
 class ChatRequestServiceTest {
+
+	@Autowired
+	private ApplicationEvents events;
 
 	@Autowired
 	private ChatRequestService chatRequestService;
@@ -173,6 +180,12 @@ class ChatRequestServiceTest {
 		assertError(() -> chatRequestService.updateMessage(kim, roomId, messageId, new ChatRequestMessageUpdateRequest("받은 사람이 고침")),
 				ChatErrorCode.FORBIDDEN_ACTION);
 
+		chatRequestService.updateMessage(me, roomId, messageId, new ChatRequestMessageUpdateRequest("다시 고친 메시지예요."));
+		flush();
+		assertThat(chatRequestService.getDetail(me, roomId).firstMessage().content()).isEqualTo("다시 고친 메시지예요.");
+		assertThat(chatRequestService.getReceived(kim, PageRequest.of(0, 20)).items().get(0).firstMessage().content())
+				.isEqualTo("다시 고친 메시지예요.");
+
 		chatRequestService.cancel(me, roomId, messageId);
 		flush();
 		assertThat(room(roomId).getStatus()).isEqualTo(ChatRoomStatus.CANCELED);
@@ -182,6 +195,27 @@ class ChatRequestServiceTest {
 
 		chatRoomService.leave(me, roomId);
 		assertThat(chatRoomService.getList(me, PageRequest.of(0, 20)).items()).isEmpty();
+	}
+
+	@Test
+	void 첫_메시지를_고치면_보낸_사람에게_바뀐_메시지가_전해진다() {
+		Long roomId = request(me, kim, "처음 보내는 메시지예요.").roomId();
+		Long messageId = messages(roomId).get(0).getId();
+
+		chatRequestService.updateMessage(me, roomId, messageId, new ChatRequestMessageUpdateRequest("고친 메시지예요."));
+
+		assertThat(events.stream(ChatMessageUpdatedEvent.class)).singleElement().satisfies(event -> {
+			assertThat(event.roomId()).isEqualTo(roomId);
+			assertThat(event.message().id()).isEqualTo(messageId);
+			assertThat(event.message().content()).isEqualTo("고친 메시지예요.");
+			assertThat(event.recipients()).containsOnlyKeys(me);
+		});
+
+		chatRequestService.cancel(me, roomId, messageId);
+
+		assertThat(events.stream(ChatMessageUpdatedEvent.class)).hasSize(2)
+				.last()
+				.satisfies(event -> assertThat(event.message().deleted()).isTrue());
 	}
 
 	@Test
