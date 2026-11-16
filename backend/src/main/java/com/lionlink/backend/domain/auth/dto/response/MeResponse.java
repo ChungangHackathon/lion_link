@@ -2,6 +2,7 @@ package com.lionlink.backend.domain.auth.dto.response;
 
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.entity.UserStatus;
+import java.time.LocalDateTime;
 
 public record MeResponse(
 		Long id,
@@ -13,7 +14,8 @@ public record MeResponse(
 		boolean profileCompleted,
 		String rejectReason,
 		boolean signupInfoEditable,
-		String photoUrl
+		String photoUrl,
+		LocalDateTime createdAt
 ) {
 
 	public static MeResponse of(User user, String photoUrl) {
@@ -27,7 +29,8 @@ public record MeResponse(
 				user.isProfileCompleted(),
 				user.getStatus() == UserStatus.REJECTED ? user.getRejectReason() : null,
 				user.getStatus() == UserStatus.PENDING,
-				photoUrl
+				photoUrl,
+				user.getCreatedAt()
 		);
 	}
 }
