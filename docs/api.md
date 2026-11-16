@@ -477,7 +477,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 추가 필드 | 타입 | 설명 |
 | --- | --- | --- |
 | `coffeeChat` | object | 남의 커피챗 설정 요약 `{ availability, nextAvailableDate, acceptGroup, topics, modes, availableSlots, preferredArea }`. 오른쪽 고정 카드에 쓰여 |
-| `coffeeChat.availability` | string | `AVAILABLE` 신청 가능, `RESTING` 쉼는 중, `NOT_ACCEPTING` 안 받는 중, `IN_PROGRESS` 이미 진행 중(내가 함께 신청자인 건 포함), `COOLDOWN` 재신청 대기 중 |
+| `coffeeChat.availability` | string | `AVAILABLE` 신청 가능, `RESTING` 쉼는 중, `NOT_ACCEPTING` 안 받는 중, `IN_PROGRESS` 이미 진행 중, `COOLDOWN` 재신청 대기 중 |
 | `coffeeChat.nextAvailableDate` | date / null | `RESTING`·`COOLDOWN`일 때 '날짜부터 신청할 수 있어요'에 쓰는 날짜 |
 | `chat` | object | `{ status, requestAvailableDate }`. `status`는 `NONE` `REQUESTED` `ACTIVE`, 거절된 날짜 + 7일 전이면 `requestAvailableDate`에 다시 보낼 수 있는 날짜 |
 | `commonalities` | object\[\] | 나와의 공통점 `{ type, label }`이 정해진 순서대로 오고 FE가 최대 3개를 보여줘. `type`은 `SAME_LION_PROJECT` `SAME_COMPANY` `SAME_GENERATION` `SAME_PART` `SHARED_INTEREST`. 상대의 비공개 회사명은 계산에서 빼 |
@@ -996,7 +996,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 섹션 항목 필드 | PROFILE-11 이름을 써. 자격증 `issuer`·`acquiredYm`, 수상 `host`·`awardedYm` |
 | 섹션 순서 | 경력·학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |
 | `isStaff` (추가) | 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`. 이름 옆 '운영진' 태그 |
-| `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. 거절되거나 만료된 지 7일이 안 됐으면 `COOLDOWN`이고 `nextAvailableDate`는 다시 신청할 수 있는 날이야(COFFEE-01과 같은 규칙) |
+| `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있으면 `IN_PROGRESS`. 내가 함께 신청자로만 들어가 있는 커피챗은 안 봐. 거절되거나 만료된 지 7일이 안 됐으면 `COOLDOWN`이고 `nextAvailableDate`는 다시 신청할 수 있는 날이야(COFFEE-01과 같은 규칙) |
 | `coffeeChat.pendingCoffeeChatId` (추가) | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |
 | `chat` | 둘 사이의 1:1 방 기준. `REQUESTED`는 누가 보냈든 대기 중인 요청이 있을 때야. 내가 보낸 요청이 거절된 날짜 + 7일 전이면 `status: NONE`과 `requestAvailableDate`(거절된 날짜 + 7일) |
 | `commonalities` | `SAME_LION_PROJECT` 같은 기수에 이름이 같은 멋사 프로젝트(`13기 라이언링크`), `SAME_COMPANY` 둘 다 지금 다니는 회사(`라이온컴퍼니`), `SAME_GENERATION`(`13기`), `SAME_PART`(`백엔드 파트`), `SHARED_INTEREST`(`데이터·AI`) 순서야. 한 종류가 여러 개면 각각 들어가 |
@@ -1410,7 +1410,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 - 이미 참여 중이면 참여는 그대로 성공해(알림은 다시 안 보내)
 - 마감일 당일까지 참여할 수 있어
 - 신청받을 사자 본인은 참여할 수 없어
-- 그 사자와 이미 진행 중인 커피챗(`PENDING` `ACCEPTED` `SCHEDULED`)이 있으면 참여할 수 없어. 내가 신청자, 받는 사람, 함께 신청자인 커피챗을 모두 봐
+- 그 사자와 이미 진행 중인 커피챗(`PENDING` `ACCEPTED` `SCHEDULED`)이 있으면 참여할 수 없어. 내가 신청자나 받는 사람인 커피챗만 보고, 함께 신청자로 들어가 있는 건 안 봐
 - 마지막 한 자리에 여러 명이 동시에 눌러도 한 명만 들어가(MEETUP-01과 같은 방식)
 - 참여하면 모집 작성자에게 `RECRUIT_JOINED` 알림을 저장해
 - 신청받을 사자가 여러 명 커피챗을 끄면(PROFILE-13) 그 사자의 모집 중인 모집은 바로 마감(`ENDED`)되고, 작성자와 참여자에게 `RECRUIT_CLOSED` 알림을 저장해. 커피챗 받기를 끄거나 쉬는 건(PROFILE-14) 잠깐일 수 있어서 모집은 그대로 두고, 그동안 신청하면 `409 NOT_ACCEPTING`이야
@@ -1607,7 +1607,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `fromRecruitId` | number | X | 커뮤니티 커피챗 모집글(4.11)에서 신청할 때 모집글 ID |
 
 - 받는 사자가 오늘 커피챗을 받는 중(`AVAILABLE`)이어야 해. 함께 신청자가 있으면 여러 명 신청도 받아야 해
-- 나와 함께 신청자 중 누구라도 그 사자와 진행 중인 커피챗이 있으면 막아
+- 나와 그 사자 사이에 진행 중인 커피챗이 있으면 막아. 1:1로 서로 주고받은 신청만 보고 함께 신청자는 안 봐. 함께 신청자가 그 사자와 진행 중이어도 신청할 수 있고, 내가 남의 커피챗에 함께 신청자로 들어가 있어도 그 사자에게 따로 신청할 수 있어
 - 거절되거나 만료된 지 7일이 안 됐으면 막아(`COOLDOWN`). 대표 신청자 기준이야
 - `fromRecruitId`가 있으면 모집글 작성자만 신청할 수 있고, 받는 사자는 모집글의 사자, 함께 신청자는 모집 참여자(작성자 제외)로 정해져(`receiverId`·`memberIds`는 무시). 참여자가 작성자 외 1명 이상이어야 하고, 신청하면 모집은 `APPLIED`가 돼
 - 신청 후 14일이 지나면 만료돼(`expiresAt`)
