@@ -45,7 +45,7 @@ export function Input({
   const auto = useId();
   const id = idProp ?? auto;
   return (
-    <div className={cn("flex flex-col gap-1.5 w-full", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-1.5 w-full", className)}>
       <Label id={id} label={label} hint={hint} required={required} />
       <div
         className={cn(
@@ -237,7 +237,7 @@ export function Select({
   const placeholder = !selected || selected.value === "";
 
   return (
-    <div className={cn("flex flex-col gap-1.5 w-full", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-1.5 w-full", className)}>
       <Label id={id} label={label} hint={hint} required={required} />
       <button
         ref={buttonRef}

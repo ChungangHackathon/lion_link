@@ -110,7 +110,7 @@ export default function SignupPage() {
     }
   };
 
-  const field = "h-10 w-full rounded-[6px] border bg-white px-3 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-ink-700";
+  const field = "h-10 w-full min-w-0 rounded-[6px] border bg-white px-3 text-[15px] text-ink-900 outline-none placeholder:text-ink-400 focus:border-ink-700";
 
   return (
     <VillageHero generation={genOk ? genNum : null} tag={nameOk ? `${name.trim()}의 집` : undefined}>
@@ -118,11 +118,11 @@ export default function SignupPage() {
         <h1 className="t-title text-light-card [@media(max-height:900px)]:text-[24px] [@media(max-height:900px)]:leading-[32px]">멋사 중앙대 동문이신가요? 이름과 기수를 알려주세요</h1>
         <div className="flex flex-col gap-2.5">
           <div className="flex gap-3">
-            <label className="flex flex-1 flex-col gap-1.5">
+            <label className="flex min-w-0 flex-1 flex-col gap-1.5">
               <span className="t-label1 text-bg-100">이름</span>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="박중앙" autoComplete="name" aria-invalid={touched && !nameOk} className={`${field} ${touched && !nameOk ? "border-orange" : "border-line-300"}`} />
             </label>
-            <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <span className="t-label1 text-bg-100">기수</span>
               <Select aria-label="기수" value={gen} onChange={(e) => setGen(e.target.value)} invalid={touched && !genOk}>
                 <option value="" disabled>
