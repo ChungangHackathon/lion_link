@@ -93,6 +93,8 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   const partner = room.type === "DIRECT" ? room.members[0] : undefined;
   const pendingRequest = room.status === "REQUESTED" && room.requestedByMe;
   const ended = room.status === "DECLINED" || room.status === "CANCELED";
+  // 번개가 진행 중인 방에서 나가면 번개 참여도 함께 취소된다 (CHAT-07)
+  const ongoingMeetup = !!room.meetup && room.meetup.status !== "ENDED" && room.meetup.status !== "CANCELED";
 
   // 커피챗 방: 일정 확정·변경은 채팅 화면에서 바로 연다. 할 수 있는지(대표 신청자·받은 사람만)는 상세의 actions로 본다
   const coffeeService = useCoffeeService();
@@ -413,7 +415,17 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
             )}
           </div>
         )}
-        {pendingRequest && <PendingRequestBanner service={service} roomId={roomId} request={request.data} onEdited={(m) => setMessages((ms) => ms.map((x) => (x.id === m.id ? m : x)))} />}
+        {pendingRequest && (
+          <PendingRequestBanner
+            service={service}
+            roomId={roomId}
+            request={request.data}
+            onEdited={(m) => {
+              setMessages((ms) => ms.map((x) => (x.id === m.id ? m : x)));
+              request.setData((prev) => (prev ? { ...prev, firstMessage: m } : prev));
+            }}
+          />
+        )}
         {room.status === "DECLINED" && (
           <div className="mx-6 mt-4">
             <Banner tone="warn">{declinedText(request.data)}</Banner>
@@ -659,8 +671,16 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
         onClose={() => setLeave(false)}
         onConfirm={() => void doLeave()}
         loading={leaving}
-        title={ended ? "이 요청을 목록에서 지울까요?" : room.type === "GROUP" ? "단체 채팅방에서 나갈까요?" : "나가면 대화 내용이 모두 지워져요"}
-        description={ended ? undefined : room.type === "GROUP" ? "나간 사람은 다시 들어올 수 없어요." : "상대가 새 메시지를 보내면 방이 다시 나타나요. 이전 대화는 보이지 않아요."}
+        title={ended ? "이 요청을 목록에서 지울까요?" : ongoingMeetup ? "번개 참여를 취소하고 나갈까요?" : room.type === "GROUP" ? "단체 채팅방에서 나갈까요?" : "나가면 대화 내용이 모두 지워져요"}
+        description={
+          ended
+            ? undefined
+            : ongoingMeetup
+              ? "방에서 나가면 번개 참여도 함께 취소돼요. 다시 참여하면 방에 들어올 수 있어요."
+              : room.type === "GROUP"
+                ? "나간 사람은 다시 들어올 수 없어요."
+                : "상대가 새 메시지를 보내면 방이 다시 나타나요. 이전 대화는 보이지 않아요."
+        }
         confirmLabel={ended ? "지우기" : "나가기"}
         danger
       />

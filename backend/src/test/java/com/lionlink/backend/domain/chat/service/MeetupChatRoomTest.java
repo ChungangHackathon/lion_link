@@ -12,7 +12,9 @@ import com.lionlink.backend.domain.chat.entity.ChatRoom;
 import com.lionlink.backend.domain.chat.entity.ChatRoomType;
 import com.lionlink.backend.domain.chat.exception.ChatErrorCode;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
+import com.lionlink.backend.domain.community.meetup.entity.MeetupMemberId;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupStatus;
+import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
 import com.lionlink.backend.domain.community.meetup.service.MeetupService;
 import com.lionlink.backend.domain.community.post.dto.request.PostUpdateRequest;
 import com.lionlink.backend.domain.community.post.entity.PostCategory;
@@ -47,6 +49,9 @@ class MeetupChatRoomTest {
 
 	@Autowired
 	private ChatRoomRepository chatRoomRepository;
+
+	@Autowired
+	private MeetupMemberRepository meetupMemberRepository;
 
 	@Autowired
 	private EntityManager entityManager;
@@ -107,17 +112,41 @@ class MeetupChatRoomTest {
 	}
 
 	@Test
-	void 번개가_끝나기_전에는_채팅방만_나갈_수_없다() {
+	void 번개방에서_나가면_번개_참여도_취소된다() {
 		Long postId = postService.create(me, TestPosts.meetup("금요일 저녁 번개", 4, List.of(kim))).id();
 		Long roomId = roomId(postId);
 
-		assertError(() -> chatRoomService.leave(kim, roomId), ChatErrorCode.INVALID_ROOM_STATUS);
+		chatRoomService.leave(kim, roomId);
+
+		assertThat(lastMessage(me, roomId)).isEqualTo("김사자님이 나갔어요.");
+		assertThat(meetupMemberRepository.existsById(new MeetupMemberId(postId, kim))).isFalse();
+		assertError(() -> chatRoomService.getDetail(kim, roomId), ChatErrorCode.ROOM_NOT_FOUND);
+
+		assertThat(meetupService.join(kim, postId).joined()).isTrue();
+		assertThat(chatRoomService.getDetail(kim, roomId).canSend()).isTrue();
+	}
+
+	@Test
+	void 번개를_만든_사자는_방에서_나갈_수_없다() {
+		Long postId = postService.create(me, TestPosts.meetup("금요일 저녁 번개", 4, List.of(kim))).id();
+		Long roomId = roomId(postId);
+
 		assertError(() -> chatRoomService.leave(me, roomId), ChatErrorCode.INVALID_ROOM_STATUS);
 
+		assertThat(meetupMemberRepository.existsById(new MeetupMemberId(postId, me))).isTrue();
+	}
+
+	@Test
+	void 끝난_번개방은_참여를_그대로_두고_나간다() {
+		Long postId = postService.create(me, TestPosts.meetup("금요일 저녁 번개", 4, List.of(kim))).id();
+		Long roomId = roomId(postId);
 		TestPosts.update(entityManager, "update meetups set meet_at = dateadd('HOUR', -1, current_timestamp) where post_id = :id", postId);
+
 		chatRoomService.leave(kim, roomId);
+
 		assertThat(lastMessage(me, roomId)).isEqualTo("김사자님이 나갔어요.");
 		assertThat(chatRoomService.getDetail(me, roomId).meetup().status()).isEqualTo(MeetupStatus.ENDED);
+		assertThat(meetupMemberRepository.existsById(new MeetupMemberId(postId, kim))).isTrue();
 	}
 
 	@Test
