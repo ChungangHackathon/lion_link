@@ -515,7 +515,7 @@ function RecruitCard({ post, mine, applyReady, busy, onApply, onJoin, onCancel }
   return (
     <Card className="flex flex-col gap-3 p-6">
       <div className="flex items-center justify-between">
-        <StatusBadge tone={r.status === "APPLIED" ? "filled" : r.status === "OPEN" && !full ? "outline" : "gray"}>{label}</StatusBadge>
+        <StatusBadge tone={r.status === "APPLIED" ? "filled" : r.status === "OPEN" && !full ? "recruit" : "gray"}>{label}</StatusBadge>
         <span className="text-[13px] text-ink-500">마감 {daysLeft(r.deadline)}</span>
       </div>
       <p className="text-[17px] font-bold text-ink-900">
@@ -576,7 +576,7 @@ function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCa
   return (
     <Card className="flex flex-col gap-3 p-6">
       <div className="flex items-center justify-between">
-        <StatusBadge tone={m.status === "OPEN" ? "outline" : "gray"}>{canceled ? "취소됨" : past ? "종료" : full ? "모집 마감" : "모집 중"}</StatusBadge>
+        <StatusBadge tone={m.status === "OPEN" ? "recruit" : "gray"}>{canceled ? "취소됨" : past ? "종료" : full ? "모집 마감" : "모집 중"}</StatusBadge>
         <span className="text-[13px] text-ink-500">정원 {m.capacity}명</span>
       </div>
       <p className="text-[17px] font-bold text-ink-900">

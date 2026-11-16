@@ -43,8 +43,8 @@ export function PostRow({ post, className }: { post: PostSummary; className?: st
           <div className="flex items-center gap-[5px]">
             <span className="rounded-[4px] bg-bg-100 px-2 py-1 t-caption2 text-ink-700">{POST_CATEGORY_LABEL[post.category]}</span>
             {post.deadline && <span className="grid h-[19px] min-w-[39px] place-items-center rounded-[4px] border-[0.5px] border-orange bg-orange-back px-1.5 t-caption2 text-orange-badge">{daysLeft(post.deadline)}</span>}
-            {post.recruit && <StatusBadge tone={post.recruit.status === "OPEN" ? "outline" : post.recruit.status === "APPLIED" ? "filled" : "gray"}>{RECRUIT_LABEL[post.recruit.status]}</StatusBadge>}
-            {post.meetup && <StatusBadge tone={post.meetup.status === "OPEN" ? "outline" : "gray"}>{MEETUP_LABEL[post.meetup.status]}</StatusBadge>}
+            {post.recruit && <StatusBadge tone={post.recruit.status === "OPEN" ? "recruit" : post.recruit.status === "APPLIED" ? "filled" : "gray"}>{RECRUIT_LABEL[post.recruit.status]}</StatusBadge>}
+            {post.meetup && <StatusBadge tone={post.meetup.status === "OPEN" ? "recruit" : "gray"}>{MEETUP_LABEL[post.meetup.status]}</StatusBadge>}
             {post.hasFile ? <Icon name="clip" size={15} className="ml-1 text-ink-500" /> : null}
           </div>
           <div className="flex items-center justify-between gap-4">
