@@ -63,6 +63,7 @@ export function mockListAlumni(state: MockAlumniState, query: AlumniQuery): Prom
       a.id !== ME_ID &&
       !state.blocked.includes(a.id) &&
       (!query.available || a.receive === "OPEN") &&
+      (!query.bookmarked || state.bookmarks.includes(a.id)) &&
       (!query.generations?.length || query.generations.includes(a.generation)) &&
       (!query.parts?.length || s.lionParts.some((p) => query.parts!.includes(p))) &&
       (!query.statuses?.length || query.statuses.includes(a.status)) &&
