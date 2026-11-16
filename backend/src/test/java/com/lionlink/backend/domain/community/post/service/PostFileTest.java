@@ -25,6 +25,8 @@ import java.util.stream.Stream;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
@@ -87,6 +89,22 @@ class PostFileTest {
 		postService.update(me, postId, new PostUpdateRequest(null, null, null, null, null, null, null, List.of()));
 		flush();
 		assertThat(fileUrls(postId)).isEmpty();
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = PostCategory.class, names = {"CONTEST", "JOB"})
+	void 마감일_없이_등록한_글의_이미지와_첨부파일을_교체할_수_있다(PostCategory category) {
+		Long postId = postService.create(me, new PostCreateRequest(category, "게시글", "본문입니다.",
+				null, false, null, null, null, List.of(image("old.png"), attachment("old.pdf")))).id();
+		flush();
+		PostFileRequest newImage = image("new.webp");
+		PostFileRequest newFile = attachment("new.pdf");
+
+		postService.update(me, postId, new PostUpdateRequest(null, null, null, null, null, null, null,
+				List.of(newImage, newFile)));
+		flush();
+
+		assertThat(fileUrls(postId)).containsExactly(newImage.url(), newFile.url());
 	}
 
 	@Test
