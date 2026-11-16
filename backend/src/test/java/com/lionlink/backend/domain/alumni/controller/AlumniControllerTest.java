@@ -50,7 +50,7 @@ class AlumniControllerTest {
 		TestProfiles.save(entityManager, TestProfiles.profile(kim)
 				.skills(List.of("Spring", "MySQL"))
 				.bio("서버 개발 이야기를 좋아해요"));
-		TestProfiles.currentCareer(entityManager, kim, "예시회사", "백엔드 개발자");
+		TestProfiles.company(entityManager, kim, "예시회사", "백엔드 개발자");
 		TestProfiles.coffeeSetting(entityManager, kim, ReceiveMode.ON, true);
 		LocalDate today = LocalDate.now();
 		TestProfiles.coffeePeriod(entityManager, kim, today, today.plusDays(3));
@@ -68,6 +68,7 @@ class AlumniControllerTest {
 				.andExpect(jsonPath("$.items[0].lionParts[0]").value("BACKEND"))
 				.andExpect(jsonPath("$.items[0].status").value("EMPLOYED"))
 				.andExpect(jsonPath("$.items[0].company").value("예시회사"))
+				.andExpect(jsonPath("$.items[0].jobTitle").value("백엔드 개발자"))
 				.andExpect(jsonPath("$.items[0].interests[0]").value("BACKEND"))
 				.andExpect(jsonPath("$.items[0].skills[1]").value("MySQL"))
 				.andExpect(jsonPath("$.items[0].bookmarked").value(false))

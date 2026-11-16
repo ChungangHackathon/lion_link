@@ -72,9 +72,9 @@ class AlumniServiceTest {
 		Long bySkill = TestUsers.approved(entityManager, "기술사자");
 		TestProfiles.save(entityManager, TestProfiles.profile(bySkill).skills(List.of("SpringBoot", "Kotlin")));
 		Long byCompany = alumni("회사사자");
-		TestProfiles.currentCareer(entityManager, byCompany, "라이온컴퍼니", "백엔드 개발자");
+		TestProfiles.company(entityManager, byCompany, "라이온컴퍼니", "백엔드 개발자");
 		Long hiddenCompany = alumni("비공개사자");
-		TestProfiles.currentCareer(entityManager, hiddenCompany, "라이온컴퍼니", "디자이너");
+		TestProfiles.company(entityManager, hiddenCompany, "라이온컴퍼니", "디자이너");
 		TestProfiles.visibility(entityManager, hiddenCompany, "company_visibility", "PRIVATE");
 
 		assertThat(ids(search(query("검색")))).containsExactly(byName);
@@ -117,9 +117,9 @@ class AlumniServiceTest {
 	@Test
 	void 목록에_관심_동문_여부와_공개된_현재_회사를_표시한다() {
 		Long kim = alumni("김사자");
-		TestProfiles.currentCareer(entityManager, kim, "라이온컴퍼니", "백엔드 개발자");
+		TestProfiles.company(entityManager, kim, "라이온컴퍼니", "백엔드 개발자");
 		Long lee = alumni("이사자");
-		TestProfiles.currentCareer(entityManager, lee, "비밀회사", "백엔드 개발자");
+		TestProfiles.company(entityManager, lee, "비밀회사", "백엔드 개발자");
 		TestProfiles.visibility(entityManager, lee, "company_visibility", "CONNECTED");
 		bookmarkService.bookmark(me, kim);
 

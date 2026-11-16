@@ -10,9 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
-import com.lionlink.backend.domain.profile.section.career.Career;
 import com.lionlink.backend.global.security.DevHeaderCurrentUserProvider;
 import com.lionlink.backend.support.AuthIntegrationTest;
+import com.lionlink.backend.support.TestProfiles;
 import com.lionlink.backend.support.TestUsers;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	void 파트를_2개에서_1개로_줄이면_두번째_파트가_사라진다() throws Exception {
 		Session lion = onboarded(EMPLOYED_BODY);
 
-		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND']}")
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크A", "백엔드 개발자"))
 				.andExpect(status().isOk());
 
 		getMyProfile(lion).andExpect(jsonPath("$.lionParts", contains("BACKEND")));
@@ -102,51 +102,69 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 재직에서_다른_상태로_바꿔도_경력은_그대로다() throws Exception {
+	void 재직에서_다른_상태로_바꾸면_회사와_직무는_null이_되고_경력은_그대로다() throws Exception {
 		Session lion = onboarded(EMPLOYED_BODY);
+		TestProfiles.currentCareer(entityManager, lion.userId(), "핀테크A", "백엔드 개발자");
 
 		putJson(lion, BASIC, "{'status':'STUDENT','lionParts':['BACKEND'],'interests':['BACKEND']}")
-				.andExpect(status().isOk());
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.company").value(nullValue()))
+				.andExpect(jsonPath("$.jobTitle").value(nullValue()));
 
 		getMyProfile(lion)
 				.andExpect(jsonPath("$.status").value("STUDENT"))
+				.andExpect(jsonPath("$.company").value(nullValue()))
+				.andExpect(jsonPath("$.jobTitle").value(nullValue()))
 				.andExpect(jsonPath("$.careers", hasSize(1)))
 				.andExpect(jsonPath("$.careers[0].company").value("핀테크A"));
 	}
 
 	@Test
-	void 재직으로_바꾸고_재직_경력이_없으면_회사와_직무로_경력을_만든다() throws Exception {
+	void 재직으로_바꾸면_회사와_직무를_프로필에_저장하고_경력은_만들지_않는다() throws Exception {
 		Session lion = onboarded(STUDENT_BODY);
 
 		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("  핀테크B ", " 서버 개발자 "))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("EMPLOYED"));
+				.andExpect(jsonPath("$.status").value("EMPLOYED"))
+				.andExpect(jsonPath("$.company").value("핀테크B"))
+				.andExpect(jsonPath("$.jobTitle").value("서버 개발자"));
 
 		getMyProfile(lion)
-				.andExpect(jsonPath("$.careers", hasSize(1)))
-				.andExpect(jsonPath("$.careers[0].company").value("핀테크B"))
-				.andExpect(jsonPath("$.careers[0].jobTitle").value("서버 개발자"))
-				.andExpect(jsonPath("$.careers[0].isCurrent").value(true))
-				.andExpect(jsonPath("$.careers[0].employmentType").value(nullValue()))
-				.andExpect(jsonPath("$.careers[0].startYm").value(nullValue()));
+				.andExpect(jsonPath("$.company").value("핀테크B"))
+				.andExpect(jsonPath("$.jobTitle").value("서버 개발자"))
+				.andExpect(jsonPath("$.careers", hasSize(0)));
 	}
 
 	@Test
-	void 재직으로_바꾸는데_회사나_직무가_없으면_400이고_프로필도_바뀌지_않는다() throws Exception {
+	void 창업도_회사와_직무를_저장한다() throws Exception {
 		Session lion = onboarded(STUDENT_BODY);
 
-		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND']}")
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("라이온랩", "대표").replace("EMPLOYED", "FOUNDER"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("FOUNDER"))
+				.andExpect(jsonPath("$.company").value("라이온랩"))
+				.andExpect(jsonPath("$.jobTitle").value("대표"));
+
+		getMyProfile(lion).andExpect(jsonPath("$.careers", hasSize(0)));
+	}
+
+	@ParameterizedTest(name = "{0}인데 회사나 직무가 없으면 400이고 프로필도 바뀌지 않는다")
+	@ValueSource(strings = {"EMPLOYED", "FOUNDER"})
+	void 재직_창업인데_회사나_직무가_없으면_400이고_프로필도_바뀌지_않는다(String status) throws Exception {
+		Session lion = onboarded(STUDENT_BODY);
+
+		putJson(lion, BASIC, "{'status':'" + status + "','lionParts':['BACKEND'],'interests':['BACKEND']}")
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-				.andExpect(jsonPath("$.fieldErrors[?(@.field=='company')]").exists())
-				.andExpect(jsonPath("$.fieldErrors[?(@.field=='jobTitle')]").exists());
-		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "  "))
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "  ").replace("EMPLOYED", status))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.fieldErrors", hasSize(1)))
-				.andExpect(jsonPath("$.fieldErrors[0].field").value("jobTitle"));
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("  ", "개발자").replace("EMPLOYED", status))
+				.andExpect(status().isBadRequest());
 
 		getMyProfile(lion)
 				.andExpect(jsonPath("$.status").value("STUDENT"))
+				.andExpect(jsonPath("$.company").value(nullValue()))
 				.andExpect(jsonPath("$.careers", hasSize(0)));
 	}
 
@@ -160,35 +178,34 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 이미_재직_경력이_있으면_회사와_직무는_무시한다() throws Exception {
+	void 재직이_아니면_보낸_회사와_직무는_무시하고_null로_저장한다() throws Exception {
 		Session lion = onboarded(EMPLOYED_BODY);
 
-		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("다른회사", "다른직무")).andExpect(status().isOk());
-		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['BACKEND'],'interests':['BACKEND']}")
-				.andExpect(status().isOk());
+		putJson(lion, BASIC, """
+				{'status':'GRADUATED','lionParts':['BACKEND'],'interests':['BACKEND'],
+				 'company':'무시될회사','jobTitle':'무시될직무'}""")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.company").value(nullValue()))
+				.andExpect(jsonPath("$.jobTitle").value(nullValue()));
 
 		getMyProfile(lion)
-				.andExpect(jsonPath("$.careers", hasSize(1)))
-				.andExpect(jsonPath("$.careers[0].company").value("핀테크A"))
-				.andExpect(jsonPath("$.careers[0].jobTitle").value("백엔드 개발자"));
+				.andExpect(jsonPath("$.company").value(nullValue()))
+				.andExpect(jsonPath("$.jobTitle").value(nullValue()));
 	}
 
 	@Test
-	void 재직_경력이_없고_경력이_10개면_409_LIMIT_EXCEEDED() throws Exception {
-		Session lion = onboarded(STUDENT_BODY);
-		for (int i = 0; i < 10; i++) {
-			entityManager.persist(Career.builder().userId(lion.userId()).company("회사" + i).title("개발자").build());
-		}
-		entityManager.flush();
-		entityManager.clear();
+	void 경력이_이미_있어도_회사와_직무는_경력과_따로_바뀐다() throws Exception {
+		Session lion = onboarded(EMPLOYED_BODY);
+		TestProfiles.currentCareer(entityManager, lion.userId(), "핀테크A", "백엔드 개발자");
 
-		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크B", "서버 개발자"))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.code").value("LIMIT_EXCEEDED"));
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("다른회사", "다른직무")).andExpect(status().isOk());
 
 		getMyProfile(lion)
-				.andExpect(jsonPath("$.status").value("STUDENT"))
-				.andExpect(jsonPath("$.careers", hasSize(10)));
+				.andExpect(jsonPath("$.company").value("다른회사"))
+				.andExpect(jsonPath("$.jobTitle").value("다른직무"))
+				.andExpect(jsonPath("$.careers", hasSize(1)))
+				.andExpect(jsonPath("$.careers[0].company").value("핀테크A"))
+				.andExpect(jsonPath("$.careers[0].jobTitle").value("백엔드 개발자"));
 	}
 
 	@Test
@@ -230,7 +247,7 @@ class ProfileEditControllerTest extends AuthIntegrationTest {
 	void 기본_정보의_대표_파트를_바꾸면_가입_기수_멋사_활동_파트도_바뀐다() throws Exception {
 		Session lion = onboarded(EMPLOYED_BODY);
 
-		putJson(lion, BASIC, "{'status':'EMPLOYED','lionParts':['DESIGN'],'interests':['BACKEND']}")
+		putJson(lion, BASIC, EMPLOYED_SWITCH.formatted("핀테크A", "백엔드 개발자").replace("BACKEND", "DESIGN"))
 				.andExpect(status().isOk());
 
 		getMyProfile(lion)

@@ -210,7 +210,7 @@ class AdminSignupControllerTest {
 	void 온보딩한_회원은_파트_현재_상태_재직_회사가_나온다_회사는_비공개여도_보인다() throws Exception {
 		Long done = signup("온보딩함", 13, UserStatus.PENDING);
 		TestProfiles.save(entityManager, TestProfiles.profile(done).lionPart(LionPart.FRONTEND));
-		TestProfiles.currentCareer(entityManager, done, "핀테크A", "백엔드 개발자");
+		TestProfiles.company(entityManager, done, "핀테크A", "백엔드 개발자");
 		TestProfiles.visibility(entityManager, done, "company_visibility", "PRIVATE");
 
 		mockMvc.perform(get(SIGNUPS).header(USER_HEADER, admin))
