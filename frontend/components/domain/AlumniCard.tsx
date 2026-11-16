@@ -54,6 +54,26 @@ export function useBookmarkToggle(person: Pick<AlumniSummary, "id" | "bookmarked
  * 커피챗 신청 → R-01, 💬 → 메시지(T-04). 받지 않는 동문은 비활성 + 툴팁.
  * onRequest·onMessage가 없으면(커피챗·채팅 API 연결 전) 버튼을 잠근다.
  */
+/**
+ * 대표 기술 태그를 한 줄(카드 안쪽 224px)에 잘리지 않게 들어가는 만큼만 보이고 나머지는 '+N'.
+ * 글자 폭을 대략 계산한다 (12px 기준 한글 12px · 영문·숫자 7px, 태그 좌우 여백 16px, 간격 8px).
+ */
+const SKILL_ROW = 224;
+const tagWidth = (text: string) => [...text].reduce((w, ch) => w + (/[ㄱ-힣]/.test(ch) ? 12 : 7), 0) + 16;
+function fitSkills(skills: string[]): { shown: string[]; rest: number } {
+  const shown: string[] = [];
+  let used = 0;
+  for (let i = 0; i < skills.length; i++) {
+    const w = tagWidth(skills[i]) + (shown.length ? 8 : 0);
+    const left = skills.length - i - 1;
+    const room = left > 0 ? tagWidth(`+${left}`) + 8 : 0; // 뒤에 남는 게 있으면 '+N' 자리를 남긴다
+    if (used + w + room > SKILL_ROW) break;
+    shown.push(skills[i]);
+    used += w;
+  }
+  return { shown, rest: skills.length - shown.length };
+}
+
 /** 카드 이름은 3글자까지만 (길면 옆 파트·기수 태그가 잘린다). 전체 이름은 title로 */
 const shortName = (name: string) => ([...name].length > 3 ? `${[...name].slice(0, 3).join("")}…` : name);
 
@@ -62,6 +82,7 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
   const part = person.lionParts[0] ?? "ETC";
   const canRequest = person.coffeeChat.availability === "AVAILABLE";
   const style = PART_STYLE[part];
+  const skillRow = fitSkills(person.skills);
 
   return (
     <article className={cn("group relative flex w-[264px] flex-col rounded-[11px] border border-light-layout bg-bg-50 transition-shadow hover:shadow-[0_4px_16px_rgba(17,24,39,0.08)]", className)}>
@@ -82,11 +103,13 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
           <p className="truncate text-[13px] leading-4 text-ink-700">{person.company ?? PROFILE_STATUS_LABEL[person.status]}</p>
           <hr className="border-line-200" />
           <p className="line-clamp-2 h-[36px] text-[14px] leading-[18px] text-ink-500">{person.headline}</p>
-          <div className="flex h-[17px] items-center gap-2 overflow-hidden">
-            {person.skills.slice(0, 3).map((s) => (
-              <Tag key={s}>{s}</Tag>
+          <div className="flex h-[17px] items-center gap-2">
+            {skillRow.shown.map((s) => (
+              <Tag key={s} className="shrink-0">
+                {s}
+              </Tag>
             ))}
-            {person.skills.length > 3 && <Tag>+{person.skills.length - 3}</Tag>}
+            {skillRow.rest > 0 && <Tag className="shrink-0">+{skillRow.rest}</Tag>}
           </div>
         </div>
       </Link>
