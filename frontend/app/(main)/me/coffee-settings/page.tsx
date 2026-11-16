@@ -10,6 +10,7 @@ import { COFFEE_TOPIC_LABEL } from "@/lib/api/coffee";
 import { addDays, PERIOD_LIMIT, periodError, periodStarted, todayKst, type CoffeePeriod, type CoffeeSettings } from "@/lib/api/coffeeSettings";
 import { useApi } from "@/lib/api/useApi";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
+import { useLeaveGuard } from "@/lib/useLeaveGuard";
 import { Button, Chip } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Input, Select, Switch } from "@/components/ui/Input";
@@ -95,6 +96,16 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
   const savedBase = saved.defaultMode === "ON" ? "OPEN" : "CLOSED";
   const baseDirty = base !== savedBase;
   const kind = base === "OPEN" ? "REST" : "OPEN";
+  // 저장 안 한 변경이 있는지 (기간은 추가·삭제·수정 때 바로 저장되니 빼고 본다)
+  const sameSet = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join();
+  const dirty =
+    baseDirty ||
+    group !== saved.acceptGroup ||
+    regions.trim() !== (saved.preferredArea ?? "") ||
+    !sameSet(topics, saved.topics) ||
+    !sameSet(modes, saved.modes) ||
+    !sameSet(slots, toKeys(saved.availableSlots));
+  const guard = useLeaveGuard(dirty);
   const shownPeriods = clearPending ? [] : periods;
 
   // 상태 문구: 저장된 서버 상태 기준. 기본 상태를 바꾸고 아직 저장 전이면 저장 후 모습을 안내한다
@@ -127,9 +138,10 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
     setBase(v);
   };
 
-  const save = async (confirmClear = clearPending) => {
-    if (modes.length === 0) return toast("가능한 방식을 1개 이상 골라주세요", { kind: "error" });
-    if (regions.trim().length > 30) return toast("선호 지역은 30자 이내로 적어주세요", { kind: "error" });
+  /** 저장에 성공하면 true */
+  const save = async (confirmClear = clearPending): Promise<boolean> => {
+    if (modes.length === 0) return (toast("가능한 방식을 1개 이상 골라주세요", { kind: "error" }), false);
+    if (regions.trim().length > 30) return (toast("선호 지역은 30자 이내로 적어주세요", { kind: "error" }), false);
     setSaving(true);
     try {
       const res = await service.save({
@@ -146,9 +158,11 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
       setClearPending(false);
       setBase(res.defaultMode === "ON" ? "OPEN" : "CLOSED");
       toast("커피챗 설정을 저장했어요");
+      return true;
     } catch (e) {
       if (isApiError(e, "PERIODS_WILL_BE_CLEARED")) setConfirmSave(true);
       else toast(errorMessage(e), { kind: "error" });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -372,6 +386,24 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
       </div>
 
       {/* CS-03 기간 추가 (PROFILE-15) */}
+      {/* 저장 안 하고 나가려 할 때 */}
+      <Modal
+        open={!!guard.pendingHref}
+        onClose={guard.stay}
+        title="변경한 설정을 저장할까요?"
+        description="저장하지 않고 나가면 바꾼 내용이 사라져요."
+        width={420}
+        footer={
+          <>
+            <Button variant="secondary" onClick={guard.leave}>
+              저장 안 함
+            </Button>
+            <Button loading={saving} onClick={async () => ((await save()) ? guard.leave() : guard.stay())}>
+              저장하고 나가기
+            </Button>
+          </>
+        }
+      />
       {addOpen && <PeriodModal open onClose={() => setAddOpen(false)} kind={kind} existing={periods} onConfirm={addPeriod} />}
       {editing && <PeriodModal open onClose={() => setEditing(null)} kind={kind} existing={periods} editing={editing} onConfirm={(from, to) => updatePeriod(editing.id, from, to)} />}
       {/* CF-5: 기본 상태를 바꾸면 저장할 때 기간이 모두 지워진다 (confirmClearPeriods) */}
