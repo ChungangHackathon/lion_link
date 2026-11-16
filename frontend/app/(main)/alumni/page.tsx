@@ -131,7 +131,8 @@ function AlumniList() {
       <aside className="flex h-fit flex-col gap-4 rounded-[10px] border border-line-200 bg-white p-5">
         <div className="flex items-center justify-between">
           <h2 className="t-title3 text-ink-900">필터</h2>
-          <button type="button" onClick={reset} className="rounded-full border border-light-layout bg-light-card px-2.5 py-[3px] t-label2 text-[#5a6170] hover:bg-light-layout">
+          {/* 필터를 골랐으면 눌러볼 수 있게 진하게, 아무것도 안 골랐으면 흐리게 */}
+          <button type="button" onClick={reset} disabled={!applied} className={cn("rounded-full border px-2.5 py-[3px] t-label2 transition-colors", applied ? "border-navy bg-navy text-white hover:bg-navy/90" : "cursor-default border-light-layout bg-light-card text-ink-400")}>
             초기화
           </button>
         </div>
