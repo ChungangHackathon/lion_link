@@ -84,7 +84,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		assertEquals(Visibility.PUBLIC, profile.getCompanyVisibility());
 		assertTrue(entityManager.find(User.class, lion.userId()).isProfileCompleted());
 
-		List<Career> careers = careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId());
+		List<Career> careers = careerRepository.findByUserIdOrderByStartYmDescIdDesc(lion.userId());
 		assertEquals(1, careers.size());
 		assertEquals("핀테크A", careers.get(0).getCompany());
 		assertEquals("백엔드 개발자", careers.get(0).getTitle());
@@ -120,7 +120,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		entityManager.flush();
 		entityManager.clear();
 
-		assertTrue(careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId()).isEmpty());
+		assertTrue(careerRepository.findByUserIdOrderByStartYmDescIdDesc(lion.userId()).isEmpty());
 		assertEquals(1, educationRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId()).size());
 		assertNull(profileRepository.findById(lion.userId()).orElseThrow().getLinks());
 		LionActivity activity = lionActivityRepository.findByUserIdAndIsDefaultTrue(lion.userId()).orElseThrow();
@@ -329,7 +329,7 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		entityManager.clear();
 
 		assertEquals(1, lionActivityRepository.findByUserIdOrderByGenerationDesc(lion.userId()).size());
-		assertTrue(careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId()).isEmpty());
+		assertTrue(careerRepository.findByUserIdOrderByStartYmDescIdDesc(lion.userId()).isEmpty());
 	}
 
 	// ---------- 접근 제어 ----------
