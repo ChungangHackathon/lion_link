@@ -147,6 +147,14 @@ export function listMessages(roomId: Id, cursor: { before?: Id; after?: Id } = {
 export function sendMessage(roomId: Id, content: string, clientMsgId?: string) {
   return api<ChatMessage>(`/chat-rooms/${roomId}/messages`, { method: "POST", body: { content, clientMsgId } });
 }
+/** CHAT-10 메시지 수정 (내가 보낸 것만, editedAt이 채워진다) */
+export function editMessage(roomId: Id, messageId: Id, content: string) {
+  return api<ChatMessage>(`/chat-rooms/${roomId}/messages/${messageId}`, { method: "PATCH", body: { content } });
+}
+/** CHAT-10 메시지 삭제 (자리는 남고 deleted: true, content: null) */
+export function deleteMessage(roomId: Id, messageId: Id) {
+  return api<ChatMessage>(`/chat-rooms/${roomId}/messages/${messageId}`, { method: "DELETE" });
+}
 export function readRoom(roomId: Id, lastMessageId?: Id) {
   return api<{ roomId: Id; lastReadMessageId: Id }>(`/chat-rooms/${roomId}/read`, { method: "PUT", body: lastMessageId != null ? { lastMessageId } : {} });
 }

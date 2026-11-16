@@ -26,6 +26,8 @@ export interface ChatService {
   getRoom: (roomId: Id, signal?: AbortSignal) => Promise<RoomDetail>;
   listMessages: (roomId: Id, cursor?: { before?: Id; after?: Id }, signal?: AbortSignal) => Promise<{ items: ChatMessage[]; hasMore: boolean }>;
   send: (roomId: Id, content: string, clientMsgId?: string) => Promise<ChatMessage>;
+  editMessage: (roomId: Id, messageId: Id, content: string) => Promise<ChatMessage>;
+  deleteMessage: (roomId: Id, messageId: Id) => Promise<ChatMessage>;
   read: (roomId: Id, lastMessageId?: Id) => Promise<void>;
   setPreferences: (roomId: Id, patch: { pinned?: boolean; muted?: boolean }) => Promise<{ pinned: boolean; muted: boolean }>;
   leave: (roomId: Id) => Promise<void>;
@@ -48,6 +50,8 @@ const apiService: ChatService = {
   getRoom: chat.getRoom,
   listMessages: (roomId, cursor, signal) => chat.listMessages(roomId, cursor, 30, signal),
   send: chat.sendMessage,
+  editMessage: chat.editMessage,
+  deleteMessage: chat.deleteMessage,
   read: async (roomId, lastMessageId) => {
     await chat.readRoom(roomId, lastMessageId);
   },
@@ -213,6 +217,19 @@ export function useChatService(): ChatService {
         if (r.status !== "ACTIVE") return Promise.reject(new ApiError(409, "INVALID_ROOM_STATUS", "지금은 메시지를 보낼 수 없어요"));
         store.sendMessage(r.id, content);
         return delay({ id: `local-${Date.now()}`, type: "TEXT" as const, senderId: ME_ID, content, deleted: false, clientMsgId: clientMsgId ?? null, createdAt: new Date().toISOString(), editedAt: null, unreadCount: r.memberIds.length - 1 });
+      },
+      // 프로토타입: 화면에만 반영한다 (mock 대화 기록은 그대로)
+      editMessage: (roomId, messageId, content) => {
+        const r = find(roomId);
+        const m = r?.messages.find((x) => x.id === String(messageId));
+        if (!r || !m) return notFound();
+        return delay({ ...messageOf(m, r), content, editedAt: new Date().toISOString() });
+      },
+      deleteMessage: (roomId, messageId) => {
+        const r = find(roomId);
+        const m = r?.messages.find((x) => x.id === String(messageId));
+        if (!r || !m) return notFound();
+        return delay({ ...messageOf(m, r), content: "", deleted: true });
       },
       read: (roomId) => {
         // 이미 읽은 방이면 store를 건드리지 않는다 (불필요한 다시 그리기 방지)

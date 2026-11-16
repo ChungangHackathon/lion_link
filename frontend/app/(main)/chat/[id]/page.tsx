@@ -72,6 +72,11 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   const [leave, setLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [questionsOpen, setQuestionsOpen] = useState(false);
+  /** 내 메시지 수정 · 삭제 (CHAT-10) */
+  const [editingMsg, setEditingMsg] = useState<Item | null>(null);
+  const [editText, setEditText] = useState("");
+  const [deletingMsg, setDeletingMsg] = useState<Item | null>(null);
+  const [msgBusy, setMsgBusy] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const keepScroll = useRef<number | null>(null);
   const lastRead = useRef<Id | null>(null);
@@ -139,7 +144,8 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   useEffect(
     () =>
       subscribeRoom(roomId, (e) => {
-        if (e.type === "MESSAGE") {
+        if (e.type === "MESSAGE_UPDATED") replaceMessage(e.message);
+        else if (e.type === "MESSAGE") {
           setMessages((ms) => mergeNew(ms, [e.message]));
           // 수락 대기 중이던 방에 안내 메시지가 오면 방 상태가 바뀐 것이다
           if (live.current.status !== "ACTIVE" && e.message.type === "SYSTEM") reloadRoom();
@@ -223,6 +229,40 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
     if (!m.clientId) return;
     setMessages((ms) => ms.map((x) => (x.clientId === m.clientId ? { ...x, state: "sending" } : x)));
     void deliver(m.content, m.clientId);
+  };
+
+  /** 수정·삭제된 메시지를 제자리에서 바꾼다 (안 읽은 수 등은 서버 값) */
+  function replaceMessage(m: ChatMessage) {
+    setMessages((ms) => ms.map((x) => (String(x.id) === String(m.id) ? { ...x, ...m } : x)));
+  }
+
+  const saveEdit = async () => {
+    const content = editText.trim();
+    if (!editingMsg || !content || content.length > 1000) return;
+    setMsgBusy(true);
+    try {
+      replaceMessage(await service.editMessage(roomId, editingMsg.id, content));
+      setEditingMsg(null);
+      refreshList();
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setMsgBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingMsg) return;
+    setMsgBusy(true);
+    try {
+      replaceMessage(await service.deleteMessage(roomId, deletingMsg.id));
+      refreshList();
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setMsgBusy(false);
+      setDeletingMsg(null);
+    }
   };
 
   const setPref = async (patch: { pinned?: boolean; muted?: boolean }) => {
@@ -349,8 +389,9 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                   );
                 const mine = isMine(m);
                 const sender = mine ? undefined : senderOf(m);
+                const editable = mine && !m.state && !m.deleted && room.status === "ACTIVE" && room.canSend;
                 return (
-                  <div key={String(m.id)} className={cn("flex gap-2.5", mine ? "justify-end" : "items-start")}>
+                  <div key={String(m.id)} className={cn("group/msg flex gap-2.5", mine ? "justify-end" : "items-start")}>
                     {!mine && <Avatar name={userName(sender)} part={partOf(sender)} size={40} />}
                     <div className={cn("flex max-w-[70%] flex-col gap-1", mine && "items-end")}>
                       {!mine && <span className="text-[13px] text-ink-700">{userName(sender)}</span>}
@@ -365,6 +406,16 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                             "보내는 중"
                           ) : (
                             <>
+                              {editable && (
+                                <span className="flex gap-1.5 opacity-0 transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100">
+                                  <button type="button" onClick={() => { setEditText(m.content); setEditingMsg(m); }} className="hover:text-ink-900 hover:underline">
+                                    수정
+                                  </button>
+                                  <button type="button" onClick={() => setDeletingMsg(m)} className="hover:text-orange hover:underline">
+                                    삭제
+                                  </button>
+                                </span>
+                              )}
                               {mine && m.unreadCount > 0 && <span className="text-orange">{m.unreadCount}</span>}
                               {formatTime(m.createdAt)}
                               {m.editedAt && " · 수정됨"}
@@ -494,6 +545,26 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       </aside>
 
       {/* CF-9 / CF-9b 나가기 확인 */}
+      {/* 내 메시지 수정 · 삭제 (CHAT-10) */}
+      <Modal
+        open={!!editingMsg}
+        onClose={() => setEditingMsg(null)}
+        title="메시지 수정"
+        width={480}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditingMsg(null)}>
+              취소
+            </Button>
+            <Button disabled={!editText.trim() || editText.trim().length > 1000 || editText.trim() === editingMsg?.content} loading={msgBusy} onClick={() => void saveEdit()}>
+              저장
+            </Button>
+          </>
+        }
+      >
+        <Textarea label="메시지" rows={4} value={editText} onChange={(e) => setEditText(e.target.value)} counter={{ value: editText.length, max: 1000 }} />
+      </Modal>
+      <ConfirmModal open={!!deletingMsg} onClose={() => setDeletingMsg(null)} onConfirm={() => void confirmDelete()} title="메시지를 삭제할까요?" description="상대에게는 '삭제된 메시지예요'로 보여요." confirmLabel="삭제" danger />
       <ConfirmModal
         open={leave}
         onClose={() => setLeave(false)}
