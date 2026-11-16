@@ -189,7 +189,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         <div className="flex flex-col gap-2.5">
           <p className="t-label2 text-ink-700">카테고리 *</p>
           <div role="radiogroup" aria-label="카테고리" className="flex flex-wrap gap-2">
-            {POST_CATEGORIES.filter((c) => c !== "NOW" || cat === "NOW").map((c) => (
+            {POST_CATEGORIES.map((c) => (
               <button
                 key={c}
                 type="button"
