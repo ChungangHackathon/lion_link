@@ -48,6 +48,8 @@ function Community() {
   const [page, setPage] = useState(1);
   const query = useDebounced(q.trim());
 
+  // 글쓰기는 보고 있던 카테고리로 열린다 (전체면 기본 카테고리)
+  const newHref = cat === "ALL" ? "/community/new" : `/community/new?cat=${cat}`;
   const listState = useApi((signal) => service.list({ category: cat === "ALL" ? undefined : [cat], q: query || undefined, sort, page: page - 1, size: PER }, signal), [service, cat, query, sort, page]);
   const counts = useApi(() => service.categoryCounts(), [service]).data;
   const recruits = useApi((signal) => service.list({ recruiting: true, size: 3 }, signal), [service]).data?.items ?? [];
@@ -69,7 +71,7 @@ function Community() {
     <div className="grid grid-cols-[220px_1fr_312px] gap-6">
       {/* Left: 글쓰기 + 카테고리 */}
       <aside className="flex flex-col gap-4">
-        <Button size="L" full href="/community/new" className="text-[18px] font-bold shadow-[0_2px_4px_rgba(0,0,0,0.15)]" leading={<Icon name="edit" size={24} />}>
+        <Button size="L" full href={newHref} className="text-[18px] font-bold shadow-[0_2px_4px_rgba(0,0,0,0.15)]" leading={<Icon name="edit" size={24} />}>
           글쓰기
         </Button>
         <Card className="rounded-[10px] p-2">
@@ -113,7 +115,7 @@ function Community() {
             ))}
           </div>
         ) : list.items.length === 0 ? (
-          <EmptyState title={searching ? "검색 결과가 없어요" : "아직 글이 없어요"} description={searching ? "다른 검색어로 찾아보세요" : "첫 글을 남겨보세요"} action={searching ? { label: "검색 지우기", onClick: () => search("") } : { label: "글쓰기", href: "/community/new" }} />
+          <EmptyState title={searching ? "검색 결과가 없어요" : "아직 글이 없어요"} description={searching ? "다른 검색어로 찾아보세요" : "첫 글을 남겨보세요"} action={searching ? { label: "검색 지우기", onClick: () => search("") } : { label: "글쓰기", href: newHref }} />
         ) : (
           <ul className={cn(listState.loading && "opacity-60")}>
             {list.items.map((p) => (
