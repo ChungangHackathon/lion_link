@@ -406,6 +406,15 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
   const ids = new Set(loaded.map((c) => String(c.id)));
   const comments = [...loaded, ...added.filter((c) => !ids.has(String(c.id)))].map((c) => (removed.has(String(c.id)) ? { ...c, deleted: true, author: null, content: "삭제된 댓글이에요." } : c));
   const hasNext = extra ? extra.hasNext : !!first.data?.hasNext;
+  // 원댓글 아래에 답글을 모은다 (방금 단 답글도 원댓글 밑으로)
+  const tops = comments.filter((c) => c.parentId == null);
+  const topIds = new Set(tops.map((c) => String(c.id)));
+  const repliesOf = (id: Id) => comments.filter((c) => c.parentId != null && String(c.parentId) === String(id));
+  // 원댓글이 아직 안 불러와진 답글(페이지 경계)은 맨 뒤에 그대로 둔다
+  const orphans = comments.filter((c) => c.parentId != null && !topIds.has(String(c.parentId)));
+  const [replyTo, setReplyTo] = useState<PostComment | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replying, setReplying] = useState(false);
 
   const loadMore = async () => {
     setLoadingMore(true);
@@ -436,6 +445,23 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
     }
   };
 
+  const submitReply = async () => {
+    const content = replyText.trim();
+    if (!replyTo || !content || content.length > 500 || replying) return;
+    setReplying(true);
+    try {
+      const created = await service.addComment(postId, content, replyTo.id);
+      setAdded((a) => [...a, created]);
+      setReplyText("");
+      setReplyTo(null);
+      onCountChange(1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setReplying(false);
+    }
+  };
+
   const remove = async () => {
     if (!target) return;
     const c = target;
@@ -462,24 +488,30 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
         <p className="py-4 text-[14px] text-ink-500">첫 댓글을 남겨보세요</p>
       ) : (
         <ul>
-          {comments.map((c) => (
-            <li key={c.id} className="flex gap-3 border-b border-line-200 py-4 last:border-b-0">
-              <Avatar name={c.author && !c.author.isDeleted ? c.author.name ?? undefined : undefined} part={firstPart(c.author)} size={32} withdrawn={!c.deleted && !c.isAnonymous && (!c.author || c.author.isDeleted)} />
-              <div className="flex flex-col gap-1">
-                <p className="text-[13px]">
-                  <span className="font-bold text-ink-900">{c.deleted ? "" : c.isAnonymous ? "익명의 사자" : c.author && !c.author.isDeleted ? c.author.name : "알 수 없음"}</span>
-                  <span className={cn("text-ink-500", !c.deleted && "ml-1.5")}>
-                    {!c.deleted && !c.isAnonymous && c.author && !c.author.isDeleted && `${c.author.generation}기 · `}
-                    {timeAgo(c.createdAt)}
-                  </span>
-                  {!c.deleted && (c.isMine || canModerate) && (
-                    <button type="button" onClick={() => setTarget(c)} className="ml-2 text-ink-500 underline">
-                      삭제{!c.isMine && " (관리자)"}
-                    </button>
-                  )}
-                </p>
-                <p className={cn("whitespace-pre-line text-[14px]", c.deleted ? "text-ink-400" : "text-ink-900")}>{c.content}</p>
-              </div>
+          {[...tops, ...orphans].map((c) => (
+            <li key={c.id} className="border-b border-line-200 py-4 last:border-b-0">
+              <CommentItem c={c} canModerate={canModerate} onDelete={() => setTarget(c)} onReply={c.parentId == null && !c.deleted ? () => { setReplyTo(replyTo?.id === c.id ? null : c); setReplyText(""); } : undefined} />
+              {c.parentId == null && repliesOf(c.id).length > 0 && (
+                <ul className="mt-3 flex flex-col gap-3 border-l-2 border-line-200 pl-4 ml-4">
+                  {repliesOf(c.id).map((r) => (
+                    <li key={r.id}>
+                      <CommentItem c={r} canModerate={canModerate} onDelete={() => setTarget(r)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {replyTo?.id === c.id && (
+                <form onSubmit={(e) => { e.preventDefault(); void submitReply(); }} className="ml-4 mt-3 flex items-center gap-2 pl-4">
+                  <span className="text-[13px] text-ink-400">↳</span>
+                  <input autoFocus aria-label="답글" value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="답글을 입력하세요 (1~500자)" maxLength={500} className="h-9 flex-1 rounded-[6px] border border-line-300 px-3 text-[14px] outline-none placeholder:text-ink-400 focus:border-ink-700" />
+                  <Button size="S" variant="secondary" className="h-9" onClick={() => setReplyTo(null)}>
+                    취소
+                  </Button>
+                  <Button type="submit" size="S" className="h-9" disabled={!replyText.trim()} loading={replying}>
+                    등록
+                  </Button>
+                </form>
+              )}
             </li>
           ))}
         </ul>
@@ -497,6 +529,35 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
       </form>
       <ConfirmModal open={!!target} onClose={() => setTarget(null)} onConfirm={remove} title="댓글을 삭제할까요?" description="삭제한 댓글은 '삭제된 댓글이에요'로 남아요." confirmLabel="삭제" danger />
     </>
+  );
+}
+
+/** 댓글 한 줄 (원댓글·답글 공통). onReply가 있으면 [답글] 버튼 */
+function CommentItem({ c, canModerate, onDelete, onReply }: { c: PostComment; canModerate: boolean; onDelete: () => void; onReply?: () => void }) {
+  return (
+    <div className="flex gap-3">
+      <Avatar name={c.author && !c.author.isDeleted ? c.author.name ?? undefined : undefined} part={firstPart(c.author)} size={32} withdrawn={!c.deleted && !c.isAnonymous && (!c.author || c.author.isDeleted)} />
+      <div className="flex flex-col gap-1">
+        <p className="text-[13px]">
+          <span className="font-bold text-ink-900">{c.deleted ? "" : c.isAnonymous ? "익명의 사자" : c.author && !c.author.isDeleted ? c.author.name : "알 수 없음"}</span>
+          <span className={cn("text-ink-500", !c.deleted && "ml-1.5")}>
+            {!c.deleted && !c.isAnonymous && c.author && !c.author.isDeleted && `${c.author.generation}기 · `}
+            {timeAgo(c.createdAt)}
+          </span>
+          {onReply && (
+            <button type="button" onClick={onReply} className="ml-2 text-ink-500 underline">
+              답글
+            </button>
+          )}
+          {!c.deleted && (c.isMine || canModerate) && (
+            <button type="button" onClick={onDelete} className="ml-2 text-ink-500 underline">
+              삭제{!c.isMine && " (관리자)"}
+            </button>
+          )}
+        </p>
+        <p className={cn("whitespace-pre-line text-[14px]", c.deleted ? "text-ink-400" : "text-ink-900")}>{c.content}</p>
+      </div>
+    </div>
   );
 }
 

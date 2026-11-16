@@ -230,6 +230,8 @@ export function setPostLike(id: Id, liked: boolean) {
 export interface PostComment {
   id: Id;
   postId: Id;
+  /** 답글이면 원댓글 id (답글에는 답글을 달 수 없다) */
+  parentId: Id | null;
   /** 삭제된 댓글은 '삭제된 댓글이에요.' */
   content: string;
   /** 익명 글의 작성자가 쓴 댓글만 익명 (서버가 정한다) */
@@ -250,14 +252,14 @@ export interface MeetupParticipation {
   members: PostMember[];
 }
 
-/** COMMENT-01 댓글 목록 (오래된 순) */
+/** COMMENT-01 댓글 목록 (원댓글 오래된 순, 답글은 원댓글 바로 뒤) */
 export function listComments(postId: Id, page = 0, size = 20) {
   return api<Slice<PostComment>>(`/posts/${postId}/comments`, { query: { page, size } });
 }
 
-/** COMMENT-02 댓글 작성 (1~500자) */
-export function createComment(postId: Id, content: string) {
-  return api<PostComment>(`/posts/${postId}/comments`, { method: "POST", body: { content } });
+/** COMMENT-02 댓글 작성 (1~500자). parentId를 주면 그 댓글의 답글 */
+export function createComment(postId: Id, content: string, parentId?: Id) {
+  return api<PostComment>(`/posts/${postId}/comments`, { method: "POST", body: { content, parentId } });
 }
 
 /** COMMENT-03 댓글 삭제 */
