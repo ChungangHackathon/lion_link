@@ -42,6 +42,7 @@ public record AlumniDetailResponse(
 		List<String> skills,
 		@JsonInclude(JsonInclude.Include.NON_NULL) List<ProfileLink> links,
 		Contact contact,
+		ContactVisibility contactVisibility,
 		List<CareerResponse> careers,
 		List<EducationResponse> educations,
 		List<LionActivityResponse> lionActivities,
@@ -80,6 +81,7 @@ public record AlumniDetailResponse(
 						visibility.email() ? profile.getContactEmail() : null,
 						visibility.phone() ? profile.getPhone() : null
 				),
+				ContactVisibility.of(profile),
 				sections.careers().stream().map(career -> CareerResponse.of(career, visibility.company())).toList(),
 				sections.educations().stream().map(EducationResponse::from).toList(),
 				sections.lionActivities().stream().map(LionActivityResponse::from).toList(),
@@ -126,6 +128,23 @@ public record AlumniDetailResponse(
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record Contact(String email, String phone) {
+	}
+
+	/** 연락처 항목별 공개 범위(PUBLIC·CONNECTED·PRIVATE). 입력하지 않은 항목은 null. */
+	public record ContactVisibility(String email, String phone, String links) {
+
+		static ContactVisibility of(Profile profile) {
+			List<ProfileLink> links = profile.getLinks();
+			return new ContactVisibility(
+					isBlank(profile.getContactEmail()) ? null : profile.getEmailVisibility().name(),
+					isBlank(profile.getPhone()) ? null : profile.getPhoneVisibility().name(),
+					links == null || links.isEmpty() ? null : profile.getLinksVisibility().name()
+			);
+		}
+
+		private static boolean isBlank(String value) {
+			return value == null || value.isBlank();
+		}
 	}
 
 	public record CoffeeChat(
