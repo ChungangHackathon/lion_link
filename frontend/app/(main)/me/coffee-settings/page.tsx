@@ -475,7 +475,8 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
   );
 }
 
-const DAY = (iso: string) => ["일", "월", "화", "수", "목", "금", "토"][new Date(iso).getDay()];
+/** "2026-11-20" → "금" (날짜 문자열 그대로, 시간대 영향 없이) */
+const DAY = (iso: string) => ["일", "월", "화", "수", "목", "금", "토"][new Date(`${iso.slice(0, 10)}T00:00:00Z`).getUTCDay()];
 
 function Group({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
@@ -509,14 +510,14 @@ function Preview({ icon, k, v }: { icon: IconName; k: string; v: string }) {
 
 function MiniCalendar({ periods, large }: { periods: { from: string; to: string; kind: "REST" | "OPEN" }[]; large?: boolean }) {
   const [offset, setOffset] = useState(0);
-  const base = new Date();
-  const month = new Date(base.getFullYear(), base.getMonth() + offset, 1);
-  const y = month.getFullYear();
-  const m = month.getMonth();
-  const first = new Date(y, m, 1).getDay();
-  const days = new Date(y, m + 1, 0).getDate();
+  // 날짜는 모두 한국 시간 기준 (서버도 +09:00). 브라우저 시간대나 UTC 날짜를 쓰면 오전 9시 전에 오늘이 하루 밀린다
+  const today = todayKst();
+  const month = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 + offset, 1));
+  const y = month.getUTCFullYear();
+  const m = month.getUTCMonth();
+  const first = new Date(Date.UTC(y, m, 1)).getUTCDay();
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
   const iso = (d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-  const today = new Date().toISOString().slice(0, 10);
   return (
     <div className={cn("rounded-[14px] border border-line-200 bg-white", large ? "p-5" : "mt-2 w-[320px] p-3")}>
       <div className="mb-3 flex items-center justify-between">
