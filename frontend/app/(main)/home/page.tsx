@@ -35,7 +35,8 @@ import { useAlumniActions } from "@/components/domain/useAlumniActions";
 const NEWS_TABS: { label: string; category?: PostCategory[] }[] = [
   { label: "전체" },
   { label: "공모전·채용", category: ["CONTEST", "JOB"] },
-  { label: "지금 사자는", category: ["NOW", "FREE"] },
+  { label: "지금 사자는", category: ["NOW"] },
+  { label: "자유", category: ["FREE"] },
   { label: "자료", category: ["MATERIAL"] },
 ];
 const DAY = ["일", "월", "화", "수", "목", "금", "토"];
