@@ -70,70 +70,40 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
       </Section>
 
       <Section title="멋사 활동" onEdit={onEdit && (() => onEdit("lion"))}>
-        <ol className="relative ml-3 flex flex-col gap-6 border-l-2 border-part-be-line pl-7">
-          {(lionOpen ? detail.lion : detail.lion.slice(0, 2)).map((l, i) => (
-            <li key={i} className="relative">
-              <span className={cn("absolute -left-[46px] top-0 grid size-8 place-items-center rounded-full text-[11px] font-bold", PART_STYLE[l.part].bg, PART_STYLE[l.part].text)}>{l.generation}기</span>
-              <p className="pt-1.5 text-[14px] font-semibold text-ink-900">{l.role}</p>
-              {l.projects.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-5">
-                  {l.projects.map((p, j) => (
-                    <div key={j} className="flex flex-col gap-2 rounded-[8px] border border-line-200 p-3">
-                      <div className="grid h-[100px] place-items-center rounded-[6px] bg-bg-100 text-ink-400">
-                        <Glyph name="image" size={20} />
-                      </div>
-                      <span className="w-fit rounded-[4px] bg-part-be-bg px-2 py-0.5 text-[11px] font-semibold text-primary">{p.event}</span>
-                      <p className="text-[13px] font-bold text-ink-900">{p.name}</p>
-                      <p className="text-[12px] text-ink-500">{p.desc}</p>
-                      <p className="text-[12px] text-ink-700">{p.role}</p>
-                      {p.link && (
-                        <a href={`https://${p.link}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] text-primary hover:underline">
-                          <Glyph name="link" size={12} /> {p.link}
-                        </a>
-                      )}
+        {detail.lion.length === 0 ? (
+          <Empty text={mine ? "멋사에서 한 활동과 프로젝트를 추가해보세요" : "등록된 멋사 활동이 없어요"} />
+        ) : (
+          <>
+            <ol className="relative ml-3 flex flex-col gap-6 border-l-2 border-part-be-line pl-7">
+              {(lionOpen ? detail.lion : detail.lion.slice(0, 2)).map((l, i) => (
+                <li key={i} className="relative">
+                  <span className={cn("absolute -left-[46px] top-0 grid size-8 place-items-center rounded-full text-[11px] font-bold", PART_STYLE[l.part].bg, PART_STYLE[l.part].text)}>{l.generation}기</span>
+                  <p className="pt-1.5 text-[14px] font-semibold text-ink-900">{l.role || `${l.generation}기 프로젝트`}</p>
+                  {l.projects.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 gap-5">
+                      {l.projects.map((p, j) => (
+                        <ProjectCard key={j} tag={p.event} name={p.name} desc={p.desc} role={p.role} link={p.link} />
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
-        {detail.lion.length > 2 && <More open={lionOpen} onClick={() => setLionOpen((o) => !o)} />}
+                  )}
+                </li>
+              ))}
+            </ol>
+            {detail.lion.length > 2 && <More open={lionOpen} onClick={() => setLionOpen((o) => !o)} />}
+          </>
+        )}
       </Section>
 
+      {/* 프로젝트도 멋사 활동 프로젝트와 같은 카드로 보여준다 */}
       <Section title="프로젝트" onEdit={onEdit && (() => onEdit("project"))}>
         {detail.projects.length === 0 ? (
           <Empty text={mine ? "사이드 프로젝트를 추가해보세요" : "등록된 프로젝트가 없어요"} />
         ) : (
-          <ul className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-5">
             {detail.projects.map((p, i) => (
-              <li key={i} className="flex items-start gap-3">
-                {p.link ? (
-                  <a href={toHref(p.link)} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} 사이트 열기`} title={p.link} className="grid size-10 shrink-0 place-items-center rounded-full bg-part-be-bg text-primary transition-colors hover:bg-primary hover:text-white">
-                    <Glyph name="link" size={16} />
-                  </a>
-                ) : (
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bg-100 text-ink-400" title="등록된 링크가 없어요">
-                    <Glyph name="link" size={16} />
-                  </span>
-                )}
-                <div className="flex flex-1 flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] font-semibold text-ink-900">{p.name}</span>
-                    <span className="text-[12px] text-ink-500">
-                      {p.from} ~ {p.to}
-                    </span>
-                  </div>
-                  <span className="text-[12px] text-ink-500">{p.type}</span>
-                  <div className="flex gap-1.5">
-                    {p.skills.map((s) => (
-                      <Tag key={s}>{s}</Tag>
-                    ))}
-                  </div>
-                </div>
-              </li>
+              <ProjectCard key={i} tag={p.from ? `${p.from} ~ ${p.to}` : undefined} name={p.name} role={p.type} skills={p.skills} link={p.link} />
             ))}
-          </ul>
+          </div>
         )}
       </Section>
 
@@ -198,6 +168,30 @@ function Section({ title, children, onEdit }: { title: string; children: React.R
       </div>
       <div>{children}</div>
     </Card>
+  );
+}
+
+/** 멋사 활동 프로젝트·프로젝트 공통 카드 */
+function ProjectCard({ tag, name, desc, role, skills, link }: { tag?: string; name: string; desc?: string; role?: string; skills?: string[]; link?: string }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-[8px] border border-line-200 p-3">
+      {tag && <span className="w-fit rounded-[4px] bg-part-be-bg px-2 py-0.5 text-[11px] font-semibold text-primary">{tag}</span>}
+      <p className="text-[13px] font-bold text-ink-900">{name}</p>
+      {desc && <p className="text-[12px] text-ink-500">{desc}</p>}
+      {role && <p className="text-[12px] text-ink-700">{role}</p>}
+      {skills && skills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {skills.map((s) => (
+            <Tag key={s}>{s}</Tag>
+          ))}
+        </div>
+      )}
+      {link && (
+        <a href={toHref(link)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 break-all text-[11px] text-primary hover:underline">
+          <Glyph name="link" size={12} /> {link.replace(/^https?:\/\//i, "")}
+        </a>
+      )}
+    </div>
   );
 }
 
