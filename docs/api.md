@@ -980,6 +980,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
   "lionParts": ["BACKEND"], "interests": ["DATA_AI"], "skills": ["Spring"],
   "links": [{ "type": "GITHUB", "url": "https://github.com/kim" }],
   "contact": { "email": "kim@test.com" },
+  "contactVisibility": { "email": "CONNECTED", "phone": null, "links": "PUBLIC" },
   "careers": [{ "id": 31, "company": "라이온컴퍼니", "companyHidden": false, "jobTitle": "백엔드 개발자", "employmentType": "FULL_TIME", "startYm": "2024-03", "endYm": null, "isCurrent": true, "description": null }],
   "educations": [], "lionActivities": [], "lionProjects": [], "projects": [],
   "certifications": [], "awards": [], "activities": [], "languages": [],
@@ -995,6 +996,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 항목 | 정한 내용 |
 | --- | --- |
 | 가려진 값 | `contact.email`, `contact.phone`, `links`는 키째 빠져. 둘 다 가려지면 `contact`는 `{}` |
+| `contactVisibility` (추가) | 이메일·전화·링크의 공개 범위(`PUBLIC` `CONNECTED` `PRIVATE`). 값이 가려져도 범위는 항상 내려와서 '연결되면 보여요' 같은 안내에 써. 입력하지 않은 항목(연락처 이메일·전화가 비었거나 링크가 없음)은 `null`. 내 프로필을 볼 때도 같은 형식 |
 | `careers[].companyHidden` | 회사명이 비공개면 경력마다 `company` 키가 빠지고 `companyHidden: true`. 직무(`jobTitle`)는 그대로 |
 | 섹션 항목 필드 | PROFILE-11 이름을 써. 자격증 `issuer`·`acquiredYm`, 수상 `host`·`awardedYm` |
 | 섹션 순서 | 경력은 시작일 최신순, 학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |

@@ -20,6 +20,7 @@ import com.lionlink.backend.domain.coffeechat.entity.CoffeeSetting;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
 import com.lionlink.backend.domain.coffeechat.entity.ReceiveMode;
 import com.lionlink.backend.domain.profile.LionPart;
+import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.section.activity.Activity;
 import com.lionlink.backend.domain.profile.section.award.Award;
 import com.lionlink.backend.domain.profile.section.certification.Certification;
@@ -133,6 +134,67 @@ class AlumniDetailServiceTest {
 		assertThat(owner.contact().email()).isEqualTo("kim@test.com");
 		assertThat(owner.careers().get(0).company()).isEqualTo("라이온컴퍼니");
 		assertThat(owner.links()).isEmpty();
+	}
+
+	@Test
+	void 연결_안_된_사람이_봐도_PRIVATE_연락처는_값이_빠지고_공개_범위는_온다() {
+		Long kim = contactAlumni("김사자");
+		for (String column : List.of("email_visibility", "phone_visibility", "links_visibility")) {
+			TestProfiles.visibility(entityManager, kim, column, "PRIVATE");
+		}
+
+		AlumniDetailResponse detail = alumniDetailService.getDetail(me, kim);
+
+		assertThat(detail.contact().email()).isNull();
+		assertThat(detail.contact().phone()).isNull();
+		assertThat(detail.links()).isNull();
+		assertThat(detail.contactVisibility()).isEqualTo(new AlumniDetailResponse.ContactVisibility("PRIVATE", "PRIVATE", "PRIVATE"));
+	}
+
+	@Test
+	void 연결_안_된_사람이_봐도_CONNECTED_연락처는_값이_빠지고_공개_범위는_온다() {
+		Long kim = contactAlumni("김사자");
+		TestProfiles.visibility(entityManager, kim, "links_visibility", "CONNECTED");
+
+		AlumniDetailResponse stranger = alumniDetailService.getDetail(me, kim);
+
+		assertThat(stranger.contact().email()).isNull();
+		assertThat(stranger.contact().phone()).isNull();
+		assertThat(stranger.links()).isNull();
+		assertThat(stranger.contactVisibility()).isEqualTo(new AlumniDetailResponse.ContactVisibility("CONNECTED", "CONNECTED", "CONNECTED"));
+
+		TestProfiles.coffeeChat(entityManager, kim, me, CoffeeChatStatus.ACCEPTED);
+		AlumniDetailResponse connected = alumniDetailService.getDetail(me, kim);
+		assertThat(connected.contact().email()).isEqualTo("kim@test.com");
+		assertThat(connected.links()).hasSize(1);
+		assertThat(connected.contactVisibility()).isEqualTo(stranger.contactVisibility());
+	}
+
+	@Test
+	void 입력하지_않은_연락처의_공개_범위는_null이다() {
+		Long none = alumni("없는사자");
+		Long emptyLinks = TestUsers.approved(entityManager, "빈링크사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(emptyLinks).contactEmail(" ").phone("").links(List.of()));
+		Long onlyPhone = TestUsers.approved(entityManager, "전화사자");
+		TestProfiles.save(entityManager, TestProfiles.profile(onlyPhone).phone("010-0000-0000"));
+
+		assertThat(alumniDetailService.getDetail(me, none).contactVisibility())
+				.isEqualTo(new AlumniDetailResponse.ContactVisibility(null, null, null));
+		assertThat(alumniDetailService.getDetail(me, emptyLinks).contactVisibility())
+				.isEqualTo(new AlumniDetailResponse.ContactVisibility(null, null, null));
+		assertThat(alumniDetailService.getDetail(me, onlyPhone).contactVisibility())
+				.isEqualTo(new AlumniDetailResponse.ContactVisibility(null, "CONNECTED", null));
+	}
+
+	@Test
+	void 내_프로필도_같은_형식으로_공개_범위를_준다() {
+		Long kim = contactAlumni("김사자");
+		TestProfiles.visibility(entityManager, kim, "email_visibility", "PRIVATE");
+
+		AlumniDetailResponse owner = alumniDetailService.getDetail(kim, kim);
+
+		assertThat(owner.contact().email()).isEqualTo("kim@test.com");
+		assertThat(owner.contactVisibility()).isEqualTo(new AlumniDetailResponse.ContactVisibility("PRIVATE", "CONNECTED", "PUBLIC"));
 	}
 
 	@Test
@@ -323,6 +385,15 @@ class AlumniDetailServiceTest {
 	private Long alumni(String name) {
 		Long userId = TestUsers.approved(entityManager, name);
 		TestProfiles.save(entityManager, TestProfiles.profile(userId));
+		return userId;
+	}
+
+	private Long contactAlumni(String name) {
+		Long userId = TestUsers.approved(entityManager, name);
+		TestProfiles.save(entityManager, TestProfiles.profile(userId)
+				.contactEmail("kim@test.com")
+				.phone("010-0000-0000")
+				.links(List.of(new ProfileLink("GITHUB", "https://github.com/kim"))));
 		return userId;
 	}
 
