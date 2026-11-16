@@ -95,16 +95,7 @@ export function sectionsToDetail(d: SectionSource): Pick<ProfileDetail, "careers
       to: c.isCurrent ? "현재" : ym(c.endYm),
       duration: duration(c.startYm, c.endYm, c.isCurrent),
     })),
-    lion: [...d.lionActivities]
-      .sort((a, b) => a.generation - b.generation)
-      .map((a) => ({
-        generation: a.generation,
-        role: `${a.parts.map((p) => LION_PART_LABEL[p]).join("·")} ${LION_ROLE_LABEL[a.role] ?? ""}`.trim(),
-        part: a.parts[0] ?? "ETC",
-        projects: d.lionProjects
-          .filter((p) => p.generation === a.generation)
-          .map((p) => ({ event: `${EVENT_LABEL[p.eventType] ?? ""} · ${p.generation}기`, name: p.name, desc: p.description ?? "", role: p.myRole ?? "", link: p.link ? stripScheme(p.link) : undefined })),
-      })),
+    lion: lionByGeneration(d),
     projects: d.projects.map((p) => ({ name: p.name, type: p.role ?? "", from: ym(p.startYm), to: p.isCurrent ? "현재" : ym(p.endYm), skills: p.tags ?? [], link: p.link ?? undefined })),
     certs: [
       ...d.certifications.map((c) => ({ kind: "자격증" as const, text: [c.name, c.issuer, ym(c.acquiredYm)].filter(Boolean).join(" · ") })),
@@ -113,6 +104,29 @@ export function sectionsToDetail(d: SectionSource): Pick<ProfileDetail, "careers
       ...d.languages.map((l) => ({ kind: "언어" as const, text: `${l.language} · ${LEVEL_LABEL[l.level] ?? l.level}` })),
     ],
   };
+}
+
+/**
+ * 멋사 활동을 기수별로 묶는다. 활동을 등록하지 않은 기수의 프로젝트도 빠뜨리지 않고 그 기수 칸을 만들어 보여준다
+ * (가입 기수가 아닌 기수에서 한 프로젝트만 넣은 경우 등).
+ */
+function lionByGeneration(d: Pick<SectionSource, "lionActivities" | "lionProjects">): ProfileDetail["lion"] {
+  const generations = [...new Set([...d.lionActivities.map((a) => a.generation), ...d.lionProjects.map((p) => p.generation)])].sort((a, b) => a - b);
+  const fallbackPart = d.lionActivities[0]?.parts[0] ?? "ETC";
+  return generations.flatMap((g) => {
+    const projects = d.lionProjects
+      .filter((p) => p.generation === g)
+      .map((p) => ({ event: `${EVENT_LABEL[p.eventType] ?? ""} · ${p.generation}기`, name: p.name, desc: p.description ?? "", role: p.myRole ?? "", link: p.link ? stripScheme(p.link) : undefined }));
+    const activities = d.lionActivities.filter((a) => a.generation === g);
+    if (!activities.length) return [{ generation: g, role: "", part: fallbackPart, projects }];
+    // 한 기수에 활동이 여럿이면 프로젝트는 첫 줄에만 붙인다
+    return activities.map((a, i) => ({
+      generation: g,
+      role: `${a.parts.map((p) => LION_PART_LABEL[p]).join("·")} ${LION_ROLE_LABEL[a.role] ?? ""}`.trim(),
+      part: a.parts[0] ?? "ETC",
+      projects: i === 0 ? projects : [],
+    }));
+  });
 }
 
 /** 학력 → 헤더 오른쪽 학력 줄 */
