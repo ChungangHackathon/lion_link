@@ -2,7 +2,7 @@
 import { cn } from "@/lib/cn";
 
 /**
- * A-01 hero: gradient sky, white wordmark with roof, and the 1기~14기 village
+ * A-01 hero (가입·로그인 공통): gradient sky, 멋사동네 wordmark, and the 1기~14기 village
  * strip along the bottom. The applicant's 기수 house is "lit" (gen-N-lit.svg) with a tag.
  * Assets exported from Figma (public/brand).
  *
@@ -22,17 +22,12 @@ export function VillageHero({ children, generation, tag }: { children: React.Rea
   );
 }
 
+/** 제목: 다른 화면(GNB 등)과 같은 멋사동네 글씨(logo.svg) + 한 줄 설명. 화면 높이에 맞춰 크기를 줄인다 */
 function Wordmark() {
   return (
-    <div className="relative max-w-full shrink-0 [container-type:size]" style={{ height: "clamp(90px, 15vh, 235px)", aspectRatio: "462 / 235" }}>
-      {/* wordmark pieces – positions from Figma inset values */}
-      <img src="/brand/logo-meot.svg" alt="" className="absolute" style={{ left: "5.95%", top: "37.5%", width: "16.27%", height: "36.72%" }} />
-      <img src="/brand/logo-sa.svg" alt="" className="absolute" style={{ left: "28.57%", top: "35.94%", width: "19.05%", height: "36.72%" }} />
-      <img src="/brand/logo-dong.svg" alt="" className="absolute" style={{ left: "50.4%", top: "39.06%", width: "17.85%", height: "38.67%" }} />
-      <img src="/brand/logo-ne.svg" alt="" className="absolute" style={{ left: "73.81%", top: "35.94%", width: "15.87%", height: "38.28%" }} />
-      <img src="/brand/logo-roof.svg" alt="멋사동네" className="absolute" style={{ left: "49.6%", top: "12.5%", width: "42.07%", height: "17.19%" }} />
-      <span className="absolute border-orange" style={{ left: "85.91%", top: "4.69%", width: "11.71%", height: "23.04%", borderWidth: "3.4cqh" }} />
-      <p className="absolute w-full text-center font-bold leading-none text-light-text" style={{ top: "88.09%", fontSize: "8.1cqh" }}>
+    <div className="flex shrink-0 flex-col items-center gap-[clamp(8px,1.4vh,16px)]">
+      <img src="/brand/logo.svg" alt="멋사동네" draggable={false} className="w-auto max-w-full" style={{ height: "clamp(52px, 9vh, 100px)" }} />
+      <p className="text-center font-bold leading-none text-light-text" style={{ fontSize: "clamp(14px, 2.2vh, 20px)" }}>
         멋쟁이사자처럼 동문 네트워크
       </p>
     </div>

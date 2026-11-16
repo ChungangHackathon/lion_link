@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AuthShell } from "@/components/layout/AuthShell";
+import { VillageHero } from "@/components/brand/VillageHero";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -10,7 +10,10 @@ import { API_ENABLED, GOOGLE_LOGIN_URL } from "@/lib/api/client";
 import { googleErrorMessage, landingPath } from "@/lib/api/auth";
 import { useSession } from "@/lib/session";
 
-/** ★ A-10 로그인 / 기본 → A-04b(구글) → H-01. "계정에 문제가 있나요?" → CF-2 */
+/**
+ * ★ A-10 로그인 / 기본 → A-04b(구글) → H-01. "계정에 문제가 있나요?" → CF-2
+ * 가입 신청 화면(A-01)과 같은 배경·제목·마을 그림 위에 반투명 로그인 상자를 띄운다.
+ */
 export default function LoginPage() {
   const router = useRouter();
   const { login, ready, me } = useSession();
@@ -46,29 +49,28 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell>
-      <div className="flex flex-col items-center gap-2 pb-4 pt-2 text-center">
-        <h1 className="pb-1">
-          {/* 워드마크 "멋사동네" (GNB 로고와 같은 SVG) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.svg" alt="멋사동네" width={171} height={48} draggable={false} />
-        </h1>
-        <p className="t-body-bold text-ink-500">1기부터 지금까지, 멋사 중앙대 사자와 사자를 잇는 동문 네트워크</p>
-      </div>
-      <Button size="L" variant="secondary" full loading={loading} onClick={google} className="border-ink-500" leading={<GoogleMark />}>
-        구글로 계속하기
-      </Button>
-      <hr className="border-line-200" />
-      <p className="t-label2 text-center text-ink-500">멋사 중앙대 동문 네트워크예요. 처음이면 구글 계정으로 가입 신청하고, 운영진 승인 후 이용할 수 있어요.</p>
-      <div className="flex justify-center">
-        <button type="button" onClick={() => setHelp(true)} className="t-label2 text-ink-700 underline underline-offset-2">
-          계정에 문제가 있나요?
-        </button>
+    <VillageHero generation={null}>
+      <div className="flex w-full flex-col gap-6 rounded-[16px] border border-white/70 bg-white/10 p-10 shadow-[0_8px_40px_rgba(0,36,94,0.12)] backdrop-blur-md [@media(max-height:900px)]:gap-4 [@media(max-height:900px)]:p-7">
+        <p className="text-center t-title3 text-light-card">
+          1기부터 지금까지,
+          <br />
+          멋사 중앙대 사자와 사자를 잇는 동문 네트워크
+        </p>
+        <Button size="L" variant="secondary" full loading={loading} onClick={google} leading={<GoogleMark />}>
+          구글로 계속하기
+        </Button>
+        <hr className="border-white/40" />
+        <p className="t-label2 text-center text-bg-100">처음이면 구글 계정으로 가입 신청하고, 운영진 승인 후 이용할 수 있어요.</p>
+        <div className="flex justify-center">
+          <button type="button" onClick={() => setHelp(true)} className="t-label2 text-white underline underline-offset-2">
+            계정에 문제가 있나요?
+          </button>
+        </div>
       </div>
 
       {/* 프로토타입 모드(NEXT_PUBLIC_API_URL 없음) 전용: 역할 바꿔 로그인 */}
       {!API_ENABLED && (
-        <div className="mt-2 flex flex-wrap justify-center gap-2 border-t border-dashed border-line-300 pt-4">
+        <div className="flex flex-wrap justify-center gap-2">
           <DemoLogin label="승인 대기 회원으로" onClick={() => { login({ status: "PENDING" }); router.push("/pending"); }} />
           <DemoLogin label="관리자(정운영)로" onClick={() => { login({ role: "ADMIN" }); router.push("/admin"); }} />
           <DemoLogin label="가입 신청 화면 보기" onClick={() => router.push("/signup")} />
@@ -84,13 +86,13 @@ export default function LoginPage() {
         confirmLabel="확인"
         cancelLabel="닫기"
       />
-    </AuthShell>
+    </VillageHero>
   );
 }
 
 function DemoLogin({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-[8px] border border-dashed border-ink-400 px-3 py-2 text-[12px] text-ink-500 hover:bg-bg-100">
+    <button type="button" onClick={onClick} className="rounded-[8px] border border-dashed border-white/70 px-3 py-2 text-[12px] text-white hover:bg-white/10">
       ▶ 프로토타입: {label}
     </button>
   );

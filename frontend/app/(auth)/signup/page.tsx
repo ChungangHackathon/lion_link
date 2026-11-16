@@ -115,7 +115,11 @@ export default function SignupPage() {
   return (
     <VillageHero generation={genOk ? genNum : null} tag={nameOk ? `${name.trim()}의 집` : undefined}>
       <form onSubmit={submit} className="flex w-full flex-col gap-6 rounded-[16px] border border-white/70 bg-white/10 p-10 shadow-[0_8px_40px_rgba(0,36,94,0.12)] backdrop-blur-md [@media(max-height:900px)]:gap-4 [@media(max-height:900px)]:p-7">
-        <h1 className="t-title text-light-card [@media(max-height:900px)]:text-[24px] [@media(max-height:900px)]:leading-[32px]">멋사 중앙대 동문이신가요? 이름과 기수를 알려주세요</h1>
+        <h1 className="t-title text-light-card [@media(max-height:900px)]:text-[24px] [@media(max-height:900px)]:leading-[32px] text-left">
+          멋사 중앙대 동문이신가요?
+          <br />
+          이름과 기수를 알려주세요
+        </h1>
         <div className="flex flex-col gap-2.5">
           <div className="flex gap-3">
             <label className="flex min-w-0 flex-1 flex-col gap-1.5">
