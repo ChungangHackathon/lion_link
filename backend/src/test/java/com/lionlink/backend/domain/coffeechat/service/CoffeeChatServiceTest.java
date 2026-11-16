@@ -199,7 +199,35 @@ class CoffeeChatServiceTest {
 		assertThat(room.getStatus()).isEqualTo(ChatRoomStatus.ACTIVE);
 		assertThat(roomMemberIds(room.getId())).containsExactlyInAnyOrder(me, senior);
 		assertThat(systemMessages(room.getId())).containsExactly("커피챗이 수락됐어요. 채팅으로 일정을 정해보세요.");
+		assertThat(messages(room.getId())).extracting(ChatMessage::getType, ChatMessage::getSenderId, ChatMessage::getContent)
+				.containsExactly(
+						tuple(ChatMessageType.SYSTEM, null, "커피챗이 수락됐어요. 채팅으로 일정을 정해보세요."),
+						tuple(ChatMessageType.TEXT, senior, "반가워요!"));
 		assertThat(notifications("COFFEE_CHAT_ACCEPTED")).extracting(Notification::getUserId).containsExactly(me);
+	}
+
+	@Test
+	void 한마디를_적지_않으면_수락_안내만_올라간다() {
+		Long id = create(me, request(senior, List.of())).id();
+
+		Long roomId = coffeeChatService.accept(senior, id, new CoffeeChatAcceptRequest(List.of(LocalDateTime.now().plusDays(3)), " ")).roomId();
+
+		assertThat(messages(roomId)).extracting(ChatMessage::getContent)
+				.containsExactly("커피챗이 수락됐어요. 채팅으로 일정을 정해보세요.");
+	}
+
+	@Test
+	void 여러_명_커피챗은_단체방에_한마디가_올라간다() {
+		Long id = create(me, request(senior, List.of(kim))).id();
+
+		Long roomId = coffeeChatService.accept(senior, id, new CoffeeChatAcceptRequest(List.of(LocalDateTime.now().plusDays(3)), "다들 반가워요!")).roomId();
+
+		assertThat(entityManager.find(ChatRoom.class, roomId).getType()).isEqualTo(ChatRoomType.GROUP);
+		assertThat(roomMemberIds(roomId)).containsExactlyInAnyOrder(me, senior, kim);
+		assertThat(messages(roomId)).extracting(ChatMessage::getSenderId, ChatMessage::getContent)
+				.containsExactly(
+						tuple(null, "커피챗이 수락됐어요. 채팅으로 일정을 정해보세요."),
+						tuple(senior, "다들 반가워요!"));
 	}
 
 	@Test
@@ -435,6 +463,13 @@ class CoffeeChatServiceTest {
 	private List<Long> roomMemberIds(Long roomId) {
 		flush();
 		return entityManager.createQuery("select m.userId from ChatRoomMember m where m.room.id = :roomId and m.leftAt is null", Long.class)
+				.setParameter("roomId", roomId)
+				.getResultList();
+	}
+
+	private List<ChatMessage> messages(Long roomId) {
+		flush();
+		return entityManager.createQuery("select m from ChatMessage m where m.room.id = :roomId order by m.id", ChatMessage.class)
 				.setParameter("roomId", roomId)
 				.getResultList();
 	}
