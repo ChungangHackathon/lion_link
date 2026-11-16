@@ -114,7 +114,7 @@ public class PostController {
 	@ApiResponse(responseCode = "201")
 	@ApiResponse(responseCode = "400", description = "입력값 오류 (VALIDATION_ERROR, ANONYMOUS_NOT_ALLOWED, INVALID_CATEGORY_DETAIL, INVALID_MEETUP_TIME, INVALID_COMPANIONS, INVALID_RECRUIT_SENIOR)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-	@ApiResponse(responseCode = "404", description = "함께하는 동문 또는 신청할 사자 없음 (USER_NOT_FOUND)",
+	@ApiResponse(responseCode = "404", description = "함께하는 동문 또는 커피챗 받는 사자 없음 (USER_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@ApiResponse(responseCode = "409", description = "지금 여러 명 커피챗을 받지 않는 사자 (GROUP_COFFEE_CHAT_NOT_ALLOWED)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))

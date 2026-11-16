@@ -19,6 +19,7 @@ public class CommunityNotificationListener {
 
 	static final String MEETUP_INVITED = "MEETUP_INVITED";
 	static final String MEETUP_CANCELED = "MEETUP_CANCELED";
+	static final String RECRUIT_INVITED = "RECRUIT_INVITED";
 	static final String RECRUIT_JOINED = "RECRUIT_JOINED";
 	static final String RECRUIT_CANCELED = "RECRUIT_CANCELED";
 	static final String RECRUIT_CLOSED = "RECRUIT_CLOSED";
@@ -40,6 +41,12 @@ public class CommunityNotificationListener {
 	}
 
 	@EventListener
+	public void onRecruitInvited(RecruitInvitedEvent event) {
+		String message = "님이 커피챗 모집에 초대했어요. " + event.title();
+		save(event.inviteeIds(), RECRUIT_INVITED, event.postId(), event.hostId(), message);
+	}
+
+	@EventListener
 	public void onRecruitJoined(RecruitJoinedEvent event) {
 		String message = "님이 내 모집글에 참여했어요. " + event.title();
 		save(List.of(event.authorId()), RECRUIT_JOINED, event.postId(), event.memberId(), message);
@@ -54,7 +61,7 @@ public class CommunityNotificationListener {
 	@EventListener
 	public void onRecruitClosed(RecruitClosedEvent event) {
 		String message = event.seniorId() == null
-				? "신청받을 사자가 탈퇴해서 모집이 마감됐어요. " + event.title()
+				? "커피챗 받는 사자가 탈퇴해서 모집이 마감됐어요. " + event.title()
 				: "님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. " + event.title();
 		save(event.memberIds(), RECRUIT_CLOSED, event.postId(), event.seniorId(), message);
 	}

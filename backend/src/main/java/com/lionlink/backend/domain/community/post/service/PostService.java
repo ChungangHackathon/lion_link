@@ -4,6 +4,7 @@ import com.lionlink.backend.domain.alumni.exception.AlumniErrorCode;
 import com.lionlink.backend.domain.chat.service.MeetupChatRoomService;
 import com.lionlink.backend.domain.community.event.MeetupCanceledEvent;
 import com.lionlink.backend.domain.community.event.RecruitCanceledEvent;
+import com.lionlink.backend.domain.community.event.RecruitInvitedEvent;
 import com.lionlink.backend.domain.community.exception.CommunityErrorCode;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupMember;
@@ -86,6 +87,7 @@ public class PostService {
 		}
 		if (category == PostCategory.RECRUIT) {
 			validateSenior(userId, request.recruit().seniorId());
+			companionIds = validateRecruitCompanions(userId, request.recruit());
 		}
 		validateFiles(userId, request.files());
 
@@ -105,7 +107,7 @@ public class PostService {
 		}
 		if (category == PostCategory.RECRUIT) {
 			PostCreateRequest.RecruitRequest recruit = request.recruit();
-			createRecruit(post, userId, recruit.seniorId(), recruit.capacity(), recruit.deadline());
+			createRecruit(post, userId, recruit.seniorId(), recruit.capacity(), recruit.deadline(), companionIds);
 		}
 		saveFiles(post, request.files());
 		return PostCreateResponse.from(post);
@@ -250,7 +252,7 @@ public class PostService {
 			createMeetup(post, userId, newMeetup.meetAt(), newMeetup.place(), newMeetup.capacity(), List.of());
 		}
 		if (category == PostCategory.RECRUIT) {
-			createRecruit(post, userId, newRecruit.seniorId(), newRecruit.capacity(), newRecruit.deadline());
+			createRecruit(post, userId, newRecruit.seniorId(), newRecruit.capacity(), newRecruit.deadline(), List.of());
 		}
 	}
 
@@ -294,14 +296,22 @@ public class PostService {
 		meetupChatRoomService.open(post.getId(), LocalDateTime.now());
 	}
 
-	private void createRecruit(Post post, Long userId, Long seniorId, Integer capacity, LocalDate deadline) {
+	private void createRecruit(Post post, Long userId, Long seniorId, Integer capacity, LocalDate deadline,
+			List<Long> companionIds) {
 		CoffeeChatRecruit recruit = coffeeChatRecruitRepository.save(CoffeeChatRecruit.builder()
 				.post(post)
 				.seniorId(seniorId)
 				.capacity(capacity)
 				.deadline(deadline)
 				.build());
-		recruitMemberRepository.save(RecruitMember.builder().recruit(recruit).userId(userId).build());
+
+		List<RecruitMember> members = new ArrayList<>();
+		members.add(RecruitMember.builder().recruit(recruit).userId(userId).build());
+		companionIds.forEach(companionId -> members.add(RecruitMember.builder().recruit(recruit).userId(companionId).build()));
+		recruitMemberRepository.saveAll(members);
+		if (!companionIds.isEmpty()) {
+			eventPublisher.publishEvent(new RecruitInvitedEvent(post.getId(), post.getTitle(), userId, companionIds));
+		}
 	}
 
 	private void updateMeetup(Post post, PostUpdateRequest.MeetupRequest request) {
@@ -395,6 +405,20 @@ public class PostService {
 		List<Long> companionIds = Objects.requireNonNullElse(request.companionIds(), List.<Long>of());
 		List<Long> distinct = companionIds.stream().filter(Objects::nonNull).distinct().toList();
 		if (distinct.size() != companionIds.size() || distinct.contains(userId) || distinct.size() > request.capacity() - 1) {
+			throw new BusinessException(CommunityErrorCode.INVALID_COMPANIONS);
+		}
+		if (!distinct.isEmpty()
+				&& userRepository.countByIdInAndStatusAndDeletedAtIsNull(distinct, UserStatus.APPROVED) != distinct.size()) {
+			throw new BusinessException(AlumniErrorCode.USER_NOT_FOUND);
+		}
+		return distinct;
+	}
+
+	private List<Long> validateRecruitCompanions(Long userId, PostCreateRequest.RecruitRequest request) {
+		List<Long> companionIds = Objects.requireNonNullElse(request.companionIds(), List.<Long>of());
+		List<Long> distinct = companionIds.stream().filter(Objects::nonNull).distinct().toList();
+		if (distinct.size() != companionIds.size() || distinct.contains(userId) || distinct.contains(request.seniorId())
+				|| distinct.size() > request.capacity() - 1) {
 			throw new BusinessException(CommunityErrorCode.INVALID_COMPANIONS);
 		}
 		if (!distinct.isEmpty()

@@ -194,7 +194,7 @@ function toMockInput(body: PostWriteRequest, prev?: Post): Omit<Post, "id" | "vi
       ? { at: new Date(body.meetup.meetAt).toISOString(), place: body.meetup.place, max: body.meetup.capacity, memberIds: prev?.meetup?.memberIds ?? [ME_ID, ...(body.meetup.companionIds ?? []).map(String)] }
       : undefined,
     recruit: body.recruit
-      ? { targetId: String(body.recruit.seniorId), status: prev?.recruit?.status ?? "OPEN", max: body.recruit.capacity, memberIds: prev?.recruit?.memberIds ?? [ME_ID], deadline: new Date(`${body.recruit.deadline}T23:59:00+09:00`).toISOString() }
+      ? { targetId: String(body.recruit.seniorId), status: prev?.recruit?.status ?? "OPEN", max: body.recruit.capacity, memberIds: prev?.recruit?.memberIds ?? [ME_ID, ...(body.recruit.companionIds ?? []).map(String)], deadline: new Date(`${body.recruit.deadline}T23:59:00+09:00`).toISOString() }
       : undefined,
   };
 }
@@ -347,7 +347,7 @@ export function mockJoinRecruit(state: MockPostState, actions: MockPostActions, 
   if (!post) return Promise.reject(notFound());
   if (!post.recruit) return Promise.reject(new ApiError(404, "RECRUIT_NOT_FOUND", "커피챗 모집 글이 아니에요."));
   const r = post.recruit;
-  if (r.targetId === ME_ID) return Promise.reject(new ApiError(403, "SENIOR_CANNOT_JOIN", "신청받을 사자는 참여할 수 없어요."));
+  if (r.targetId === ME_ID) return Promise.reject(new ApiError(403, "SENIOR_CANNOT_JOIN", "커피챗 받는 사자는 참여할 수 없어요."));
   if (r.status !== "OPEN") return Promise.reject(new ApiError(409, "RECRUIT_CLOSED", "마감된 모집이에요."));
   if (!r.memberIds.includes(ME_ID) && r.memberIds.length >= r.max) return Promise.reject(new ApiError(409, "RECRUIT_FULL", "정원이 다 찼어요."));
   const memberIds = r.memberIds.includes(ME_ID) ? r.memberIds : [...r.memberIds, ME_ID];

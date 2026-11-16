@@ -66,7 +66,7 @@ const todayKst = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(
  * 등록: 번개 → CF-14 → L-11 초대 → L-06, 커피챗 → K-01. 취소(변경 있음) → C-08.
  * ?edit=<id> → B-09 글 수정 (모집글 잠금).
  *
- * 함께하는 동문·신청할 사자 고르기와 번개 초대는 동문 목록(mock)을 써서 프로토타입 모드에서만 된다.
+ * 함께하는 동문·커피챗 받는 사자 고르기와 번개 초대는 동문 목록(mock)을 써서 프로토타입 모드에서만 된다.
  * API 모드에서는 동문 찾기·번개 초대를 연결한 뒤 열린다.
  */
 function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initialCategory: PostCategory }) {
@@ -131,7 +131,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         const patch: PostUpdateRequest = { ...base };
         if (meetup) patch.meetup = meetup;
         if (cat === "RECRUIT" && !lockedAll) {
-          // 참여자가 있으면 신청받을 사자는 바꿀 수 없으니 보내지 않는다
+          // 참여자가 있으면 커피챗 받는 사자는 바꿀 수 없으니 보내지 않는다
           patch.recruit = locked ? { capacity: cap, deadline } : { seniorId: targetId!, capacity: cap, deadline };
         }
         await service.update(editing.id, patch);
@@ -142,7 +142,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
 
       const req: PostWriteRequest = { ...base, isAnonymous: cat === "FREE" ? anonymous : undefined };
       if (meetup) req.meetup = { ...meetup, companionIds: companions.length ? companions.map((a) => a.id) : undefined };
-      if (cat === "RECRUIT") req.recruit = { seniorId: targetId!, capacity: cap, deadline };
+      if (cat === "RECRUIT") req.recruit = { seniorId: targetId!, capacity: cap, deadline, companionIds: companions.length ? companions.map((a) => a.id) : undefined };
       const res = await service.create(req);
       if (cat === "MEETUP") {
         setNotify(res.id);
@@ -243,27 +243,14 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           <Input label="장소" required placeholder="예) 흑석역 2번 출구" value={place} onChange={(e) => setPlace(e.target.value)} />
           <Counter label="정원" hint="2~30명, 작성자 포함" value={cap} min={minCap} max={30} onChange={setCap} error={cap < minCap ? "지금 참여 인원보다 적게 정할 수 없어요" : undefined} />
           {!editing && (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="t-label1 text-ink-700">함께하는 동문 (선택)</p>
-                <p className="text-[12px] text-ink-500">등록하면 바로 참여자가 돼요</p>
-              </div>
-              <Button size="S" variant="secondary" onClick={() => setPicker("companion")}>
-                + 함께하는 동문 추가
-              </Button>
-            </div>
-          )}
-          {companions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {companions.map((a) => (
-                <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold">
-                  <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" /> {a.name}
-                  <button type="button" aria-label={`${a.name} 빼기`} onClick={() => setCompanions((c) => c.filter((x) => x.id !== a.id))} className="text-ink-400">
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
+            <CompanionField
+              label="함께하는 동문 (선택)"
+              hint="등록하면 바로 참여자가 돼요"
+              addLabel="+ 함께하는 동문 추가"
+              people={companions}
+              onAdd={() => setPicker("companion")}
+              onRemove={(id) => setCompanions((c) => c.filter((x) => x.id !== id))}
+            />
           )}
         </div>
       )}
@@ -275,7 +262,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           {lockedAll && <p className="rounded-[6px] bg-bg-100 px-3 py-2 text-[13px] text-ink-500">신청한 뒤에는 모집 정보를 바꿀 수 없어요</p>}
           <div className="flex items-center justify-between">
             <div>
-              <p className="t-label1 text-ink-700">신청할 사자 *</p>
+              <p className="t-label1 text-ink-700">커피챗 받는 사자 *</p>
               {target ? (
                 <p className="text-[14px] text-ink-900">
                   {target.name} · {target.generation}기 · {LION_PART_LABEL[target.part]} · {target.acceptGroup ? "여러 명 신청 가능" : <span className="text-orange">1:1만 받아요</span>}
@@ -283,7 +270,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
               ) : (
                 <p className="text-[13px] text-ink-500">여러 명 신청을 받는 사자만 고를 수 있어요</p>
               )}
-              {locked && <p className="text-[12px] text-ink-500">참여자가 있어 신청할 사자를 바꿀 수 없어요</p>}
+              {locked && <p className="text-[12px] text-ink-500">참여자가 있어 커피챗 받는 사자를 바꿀 수 없어요</p>}
             </div>
             <Button size="S" variant="secondary" disabled={locked || lockedAll} onClick={() => setPicker("target")}>
               사자 선택
@@ -291,6 +278,16 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           </div>
           <Counter label="모집 인원" hint="2~5명, 작성자 포함" value={cap} min={minCap} max={5} onChange={setCap} disabled={lockedAll} />
           <Input label="모집 마감일" required type="date" min={todayKst()} value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={lockedAll} error={deadline && deadline < todayKst() ? "오늘 이후로 정해주세요" : undefined} />
+          {!editing && (
+            <CompanionField
+              label="함께 신청할 동문 (선택)"
+              hint="등록하면 바로 모집 참여자가 돼요"
+              addLabel="+ 함께 신청할 동문 추가"
+              people={companions}
+              onAdd={() => setPicker("companion")}
+              onRemove={(id) => setCompanions((c) => c.filter((x) => x.id !== id))}
+            />
+          )}
         </div>
       )}
 
@@ -319,9 +316,18 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
       )}
       </Card>
 
-      <AlumniPicker open={picker === "companion"} onClose={() => setPicker(null)} onConfirm={(_, people) => setCompanions(people)} initial={companions} max={cap - 1} title="함께하는 동문 추가" description="등록하면 바로 참여자가 돼요" />
+      <AlumniPicker
+        open={picker === "companion"}
+        onClose={() => setPicker(null)}
+        onConfirm={(_, people) => setCompanions(people)}
+        initial={companions}
+        max={cap - 1}
+        title={cat === "RECRUIT" ? "함께 신청할 동문 추가" : "함께하는 동문 추가"}
+        description={cat === "RECRUIT" ? "등록하면 바로 모집 참여자가 돼요" : "등록하면 바로 참여자가 돼요"}
+        exclude={cat === "RECRUIT" && targetId ? [targetId] : []}
+      />
       {/* 커피챗 모집의 사자는 오늘 받는 중이면서 여러 명 신청을 받는 사자만 (POST-03 recruit.seniorId) */}
-      <AlumniPicker open={picker === "target"} onClose={() => setPicker(null)} onConfirm={(_, people) => setPicked(people[0] ?? null)} single title="신청할 사자 선택" description="여러 명 신청을 받는 사자만 보여요" query={{ available: true }} filter={(a) => a.coffeeChat.acceptGroup} confirmLabel="선택" />
+      <AlumniPicker open={picker === "target"} onClose={() => setPicker(null)} onConfirm={(_, people) => setPicked(people[0] ?? null)} single title="커피챗 받는 사자 선택" description="여러 명 신청을 받는 사자만 보여요" query={{ available: true }} filter={(a) => a.coffeeChat.acceptGroup} confirmLabel="선택" />
 
       <ConfirmModal open={leave} onClose={() => setLeave(false)} onConfirm={() => router.back()} title="작성 중인 내용이 사라져요. 나갈까요?" confirmLabel="나가기" />
       {/* ◇[O] CF-14 번개 알림 확인 */}
@@ -356,6 +362,35 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         exclude={companions.map((a) => a.id)}
       />
     </div>
+  );
+}
+
+/** 번개·커피챗 모집에서 글을 올릴 때 바로 참여자로 넣을 동문을 고르는 줄 */
+function CompanionField({ label, hint, addLabel, people, onAdd, onRemove }: { label: string; hint: string; addLabel: string; people: AlumniSummary[]; onAdd: () => void; onRemove: (id: Id) => void }) {
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="t-label1 text-ink-700">{label}</p>
+          <p className="text-[12px] text-ink-500">{hint}</p>
+        </div>
+        <Button size="S" variant="secondary" onClick={onAdd}>
+          {addLabel}
+        </Button>
+      </div>
+      {people.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {people.map((a) => (
+            <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold">
+              <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" /> {a.name}
+              <button type="button" aria-label={`${a.name} 빼기`} onClick={() => onRemove(a.id)} className="text-ink-400">
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 

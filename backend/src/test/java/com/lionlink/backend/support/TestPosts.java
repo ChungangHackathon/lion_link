@@ -25,8 +25,12 @@ public final class TestPosts {
 	}
 
 	public static PostCreateRequest recruit(String title, Long seniorId, int capacity) {
+		return recruit(title, seniorId, capacity, null);
+	}
+
+	public static PostCreateRequest recruit(String title, Long seniorId, int capacity, List<Long> companionIds) {
 		return new PostCreateRequest(PostCategory.RECRUIT, title, "함께 신청할 동문을 찾아요.", null, false, null, null,
-				new PostCreateRequest.RecruitRequest(seniorId, capacity, LocalDate.now().plusDays(3)), null);
+				new PostCreateRequest.RecruitRequest(seniorId, capacity, LocalDate.now().plusDays(3), companionIds), null);
 	}
 
 	public static void acceptGroupCoffeeChat(EntityManager entityManager, Long userId) {

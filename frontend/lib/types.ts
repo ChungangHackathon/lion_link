@@ -217,7 +217,7 @@ export interface Post {
   edited?: boolean;
   // 모집글 (RECRUIT)
   recruit?: {
-    targetId: string; // 신청할 사자
+    targetId: string; // 커피챗 받는 사자
     status: RecruitStatus;
     max: number;
     memberIds: string[];

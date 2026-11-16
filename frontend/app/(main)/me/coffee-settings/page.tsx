@@ -303,7 +303,7 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
                 <p className="t-body-bold text-ink-900">여러 명 커피챗 받기</p>
                 <p className="text-[12px] text-ink-500">
                   끄면 1:1 신청만 받아요{!group && " · 진행 중인 여러 명 커피챗은 그대로 이어져요"}
-                  {!group && saved.acceptGroup && " · 나를 신청할 사자로 고른 모집 중인 커피챗 모집글은 저장하면 마감돼요"}
+                  {!group && saved.acceptGroup && " · 나를 커피챗 받는 사자로 고른 모집 중인 커피챗 모집글은 저장하면 마감돼요"}
                 </p>
               </div>
               <Switch checked={group} onChange={setGroup} label="여러 명 커피챗 받기" />
