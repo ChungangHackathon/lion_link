@@ -390,7 +390,22 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
       )}
 
       {/* E-14 대표 기술 (PROFILE-07) */}
-      {edit === "skills" && <SkillsModal skills={p.skills} onClose={() => setEdit(null)} onSave={(skills) => save("대표 기술", () => service.updateSkills(skills))} />}
+      {edit === "skills" && (
+        <SkillsModal
+          skills={p.skills}
+          onClose={() => setEdit(null)}
+          onSave={async (skills) => {
+            // 창을 닫지 않고 바로 저장한다 (save()는 저장 뒤 창을 닫는다)
+            try {
+              update(await service.updateSkills(skills));
+              return true;
+            } catch (e) {
+              toast(errorMessage(e), { kind: "error" });
+              return false;
+            }
+          }}
+        />
+      )}
 
       {/* E-15 외부 링크 (PROFILE-08 + 10) */}
       {edit === "links" && (
@@ -625,53 +640,69 @@ function ContactModal({ profile: p, onClose, onSave }: { profile: MyProfile; onC
 }
 
 /** ◇[O] E-14 대표 기술 편집 (PROFILE-07) — 최대 5개, 태그당 1~20자. 순서대로 보여요 */
-function SkillsModal({ skills, onClose, onSave }: { skills: string[]; onClose: () => void; onSave: (skills: string[]) => Promise<unknown> }) {
+/**
+ * ◇[O] 대표 기술 편집 (PROFILE-07). [추가]·Enter로 넣거나 ✕로 빼면 바로 저장한다. 닫기는 오른쪽 위 X.
+ * 저장에 실패하면 목록을 바꾸지 않고 입력값도 남겨 둔다.
+ */
+function SkillsModal({ skills, onClose, onSave }: { skills: string[]; onClose: () => void; onSave: (skills: string[]) => Promise<boolean> }) {
   const [all, setAll] = useState<string[]>(skills);
   const [input, setInput] = useState("");
-  const { busy, run } = useSaving();
+  const [busy, setBusy] = useState(false);
   const v = input.trim();
-  const inputError = v.length > 20 ? "20자 이내로 적어주세요" : all.length >= 5 && v ? "대표 기술은 5개까지예요" : undefined;
-  const add = () => {
-    if (!v || v.length > 20 || all.length >= 5) return;
-    if (!all.includes(v)) setAll((s) => [...s, v]);
-    setInput("");
+  const full = all.length >= 5;
+  const inputError = v.length > 20 ? "20자 이내로 적어주세요" : full && v ? "대표 기술은 5개까지예요" : v && all.includes(v) ? "이미 추가한 기술이에요" : undefined;
+  const canAdd = !!v && !inputError && !busy;
+
+  const commit = async (next: string[]) => {
+    setBusy(true);
+    const ok = await onSave(next);
+    setBusy(false);
+    if (ok) setAll(next);
+    return ok;
   };
+  const add = async () => {
+    if (!canAdd) return;
+    if (await commit([...all, v])) setInput("");
+  };
+  const remove = (s: string) => {
+    if (!busy) void commit(all.filter((x) => x !== s));
+  };
+
   return (
-    <Modal
-      open
-      onClose={onClose}
-      title="대표 기술 편집"
-      width={560}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            취소
-          </Button>
-          <Button loading={busy} onClick={() => run(() => onSave(all))}>
-            저장
-          </Button>
-        </>
-      }
-    >
+    <Modal open onClose={onClose} title="대표 기술 편집" width={560}>
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-2">
-          {all.length === 0 && <span className="text-[13px] text-ink-400">아직 없어요. 아래에 입력하고 Enter를 눌러주세요.</span>}
+          {all.length === 0 && <span className="text-[13px] text-ink-400">아직 없어요. 아래에 입력하고 [추가]를 눌러주세요.</span>}
           {all.map((s) => (
             <span key={s} className="inline-flex items-center gap-1 rounded-[4px] bg-part-be-bg px-2 py-1 text-[13px] font-semibold text-primary">
               {s}
-              <button type="button" aria-label={`${s} 삭제`} onClick={() => setAll((a) => a.filter((x) => x !== s))} className="ml-1 text-ink-400">
+              <button type="button" aria-label={`${s} 삭제`} disabled={busy} onClick={() => remove(s)} className="ml-1 text-ink-400 hover:text-ink-900 disabled:cursor-not-allowed">
                 ✕
               </button>
             </span>
           ))}
         </div>
-        <Input placeholder="기술 입력 후 Enter (최대 5개, 1~20자)" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => {
-            // 맥 한글 입력은 글자를 조합하는 중에도 Enter가 먼저 온다. 그때 추가하면 조합 중이던 마지막 글자가 입력칸에 다시 남는다
-            if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return;
-            e.preventDefault();
-            add();
-          }} counter={{ value: all.length, max: 5 }} error={inputError} />
-        <p className="text-[12px] text-ink-500">대표 기술은 프로필 상단과 동문 카드에 입력한 순서대로 보여요. 모두 지우고 저장하면 섹션이 사라져요.</p>
+        <div className="flex items-start gap-2">
+          <Input
+            className="flex-1"
+            placeholder="기술 입력 (최대 5개, 1~20자)"
+            value={input}
+            disabled={full}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              // 맥 한글 입력은 글자를 조합하는 중에도 Enter가 먼저 온다. 그때 추가하면 조합 중이던 마지막 글자가 입력칸에 다시 남는다
+              if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return;
+              e.preventDefault();
+              void add();
+            }}
+            counter={{ value: all.length, max: 5 }}
+            error={inputError}
+          />
+          <Button disabled={!canAdd} loading={busy} onClick={() => void add()}>
+            추가
+          </Button>
+        </div>
+        <p className="text-[12px] text-ink-500">추가하거나 지우면 바로 저장돼요. 프로필 상단과 동문 카드에 입력한 순서대로 보여요.</p>
       </div>
     </Modal>
   );
