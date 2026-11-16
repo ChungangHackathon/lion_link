@@ -45,6 +45,14 @@ function CoffeeList() {
   const [filter, setFilter] = useState<CoffeeFilter>("ALL");
   const [selectedId, setSelectedId] = useState<string | null>(params.get("id"));
   const box: CoffeeBox = tab === "received" ? "RECEIVED" : "SENT";
+  // ?id=만 들고 왔으면(채팅·홈·알림의 '상세 보기') 그 커피챗에서 내 역할을 보고 탭을 고른다. 내가 보낸·함께 신청한 건 '보낸 신청'
+  const linkedId = params.get("tab") ? null : params.get("id");
+  const linked = useApi(() => service.get(linkedId!), [service, linkedId], linkedId != null);
+  const [tabFixed, setTabFixed] = useState(false);
+  if (!tabFixed && linked.data) {
+    setTabFixed(true);
+    if (linked.data.myRole !== "RECEIVER" && tab === "received") setTab("sent");
+  }
 
   const first = useApi((signal) => service.list(box, filter, 0, SIZE, signal), [service, box, filter]);
   const [more, setMore] = useState<{ items: CoffeeChatItem[]; page: number; hasNext: boolean } | null>(null);
