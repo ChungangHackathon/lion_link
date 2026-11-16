@@ -73,8 +73,9 @@ public class AlumniController {
 	}
 
 	@Operation(summary = "동문 프로필 상세 조회",
-			description = "공개 범위로 가려진 연락처·링크는 키째 빠지고, 회사가 비공개면 경력의 company 대신 companyHidden=true가 온다.")
-	@ApiResponse(responseCode = "200")
+			description = "공개 범위로 가려진 연락처·링크는 키째 빠지고, 회사가 비공개면 경력의 company 대신 companyHidden=true가 온다. "
+					+ "contactVisibility에는 이메일·전화·링크의 공개 범위(PUBLIC·CONNECTED·PRIVATE)가 값이 가려져도 항상 오고, 입력하지 않은 항목은 null이다.")
+	@ApiResponse(responseCode = "200", description = "contactVisibility: 값을 볼 수 없어도 공개 범위는 내려간다. 미입력 항목은 null")
 	@ApiResponse(responseCode = "404", description = "동문 없음 또는 탈퇴 (USER_NOT_FOUND)",
 			content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
 	@GetMapping("/{userId}")
