@@ -42,7 +42,7 @@ const DAY = ["일", "월", "화", "수", "목", "금", "토"];
 const firstPart = (parts: string[] | null | undefined): LionPart => (parts?.[0] as LionPart) ?? "ETC";
 const monthDay = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
 
-const RECOMMEND_COUNT = 4;
+const RECOMMEND_COUNT = 8;
 
 const shuffle = <T,>(items: T[]) => {
   const a = [...items];
@@ -70,6 +70,43 @@ async function recommendLions(list: (q: AlumniQuery, signal?: AbortSignal) => Pr
     for (const a of shuffle(items)) if (picked.size < RECOMMEND_COUNT && !picked.has(String(a.id))) picked.set(String(a.id), a);
   }
   return [...picked.values()];
+}
+
+/** 추천 사자: 한 번에 2명씩, 양옆 동그란 화살표로 넘긴다 */
+function RecommendCarousel({ people, onRequest, onMessage }: { people: AlumniSummary[]; onRequest: (p: AlumniSummary) => void; onMessage: (p: AlumniSummary) => void }) {
+  const pages = Math.ceil(people.length / 2);
+  const [page, setPage] = useState(0);
+  const shown = people.slice(page * 2, page * 2 + 2);
+  // 카드 두 장(264px)이 가운데 칸을 거의 채워서, 화살표는 카드 양끝에 겹쳐 띄운다. 넘길 곳이 없는 쪽은 숨긴다
+  const arrow = "absolute top-1/2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-line-200 bg-white text-ink-700 shadow-[0_2px_8px_rgba(17,24,39,0.12)] transition-colors hover:bg-bg-50";
+  return (
+    <div className="flex flex-col items-center gap-3 py-5">
+      <div className="relative w-full">
+        <div className="grid grid-cols-2 justify-items-center gap-5">
+          {shown.map((a) => (
+            <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} />
+          ))}
+        </div>
+        {page > 0 && (
+          <button type="button" aria-label="이전 추천 사자" onClick={() => setPage((p) => p - 1)} className={cn(arrow, "-left-5")}>
+            <Icon name="chevron-left" size={18} />
+          </button>
+        )}
+        {page < pages - 1 && (
+          <button type="button" aria-label="다음 추천 사자" onClick={() => setPage((p) => p + 1)} className={cn(arrow, "-right-5")}>
+            <Icon name="chevron-right" size={18} />
+          </button>
+        )}
+      </div>
+      {pages > 1 && (
+        <div className="flex gap-1.5" aria-label={`${pages}쪽 중 ${page + 1}쪽`}>
+          {Array.from({ length: pages }, (_, i) => (
+            <button key={i} type="button" aria-label={`${i + 1}쪽`} onClick={() => setPage(i)} className={cn("size-1.5 rounded-full", i === page ? "bg-ink-700" : "bg-line-300")} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** ★ H-01 홈 / 전체 — 3단 300 / 576 / 312. ◇ H-04 승인 후 첫 방문 (첫 커피챗 가이드). (HOME-01 · 02, PROFILE-14) */
@@ -192,11 +229,7 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
               <Skeleton className="h-[300px] w-full" />
             </div>
           ) : recommended.length ? (
-            <div className="grid grid-cols-2 justify-items-center gap-5 py-5">
-              {recommended.map((a) => (
-                <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} />
-              ))}
-            </div>
+            <RecommendCarousel people={recommended} onRequest={onRequest} onMessage={onMessage} />
           ) : (
             <p className="py-6 text-center text-[14px] text-ink-500">아직 추천할 사자가 없어요</p>
           )}
