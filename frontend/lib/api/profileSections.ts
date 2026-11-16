@@ -58,7 +58,7 @@ const DEGREE_OPTIONS = [["BACHELOR", "학사"], ["MASTER", "석사"], ["DOCTOR",
 const LION_ROLE_OPTIONS = [["LION", "아기사자"], ["STAFF", "운영진"], ["PRESIDENT", "회장·부회장"], ["PART_LEAD", "파트장"], ["ETC", "기타"]] as const;
 const EVENT_OPTIONS = [["REGULAR", "정기 프로젝트"], ["JUNGKATHON", "중커톤"], ["UNION_HACKATHON", "연합 해커톤"], ["ETC", "기타"]] as const;
 const LEVEL_OPTIONS = [["BASIC", "기초"], ["DAILY", "일상 회화"], ["BUSINESS", "비즈니스"], ["NATIVE", "원어민"]] as const;
-export const LION_PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
+export const LION_PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "PLANNING_DESIGN", "FRONTEND", "BACKEND"];
 export const MAX_GENERATION = 14;
 
 export interface SectionSchema {
@@ -108,7 +108,7 @@ export const SECTION_SCHEMA: Record<SectionKey, SectionSchema> = {
     fields: [
       { key: "generation", label: "기수", kind: "generation", required: true },
       { key: "role", label: "역할", kind: "select", required: true, options: LION_ROLE_OPTIONS },
-      { key: "parts", label: "파트 (1~2개)", kind: "parts" },
+      { key: "parts", label: "파트", kind: "parts" },
     ],
     summary: (a: any) => ({ title: `${a.generation}기 ${label(LION_ROLE_OPTIONS, a.role)}`, sub: join((a.parts as ApiLionPart[]).map((p) => LION_PART_LABEL[p]).join("·"), a.isDefault && "가입 기수") }),
   },
@@ -242,7 +242,7 @@ export function validate(section: SectionKey, v: FormValues, now = thisMonth()):
     const s = typeof raw === "string" ? raw.trim() : "";
     if (f.kind === "parts") {
       const n = (raw as string[]).length;
-      if (n < 1 || n > 2) errors[f.key] = "파트를 1~2개 골라주세요";
+      if (n !== 1) errors[f.key] = "파트를 골라주세요";
       continue;
     }
     if (f.kind === "current") continue;

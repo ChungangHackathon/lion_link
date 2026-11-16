@@ -22,7 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { isImageUrl } from "@/components/domain/PostRow";
 import { SectionListModal } from "@/components/domain/ProfileSectionEditor";
 import { EducationList, ProfileSections } from "@/components/domain/ProfileSections";
-import type { SectionKey } from "@/lib/api/profileSections";
+import { LION_PARTS, type SectionKey } from "@/lib/api/profileSections";
 
 type Section = "basic" | "about" | "contact" | "career" | "education" | "lion" | "project" | "skills" | "links" | "certs";
 /** 목록형 섹션 (PROFILE-11) → 한 팝업에서 편집하는 API 섹션들 */
@@ -33,7 +33,6 @@ const LIST_SECTIONS: Partial<Record<Section, { title: string; keys: SectionKey[]
   project: { title: "프로젝트 편집", keys: ["projects"] },
   certs: { title: "자격증·수상·대외활동·언어 편집", keys: ["certifications", "awards", "activities", "languages"] },
 };
-const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
 
 /**
  * ★ P-02 마이페이지 / 내 프로필 (= 마이페이지 첫 화면). 다른 동문에게 보이는 모습(P-01)을 그대로 보여주고,
@@ -256,7 +255,13 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
           profile={p}
           onClose={() => setEdit(null)}
           onPhoto={openPhotoPicker}
-          onSave={(body) => save("기본 정보", () => service.updateBasic(body))}
+          onSave={(body) =>
+            save("기본 정보", async () => {
+              await service.updateBasic(body);
+              // 파트를 바꾸면 가입 기수 멋사 활동 파트도 서버에서 같이 바뀐다. 프로필을 다시 불러온다
+              return service.get();
+            })
+          }
         />
       )}
 
@@ -366,9 +371,8 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
   const [headline, setHeadline] = useState(p.headline ?? "");
   const [region, setRegion] = useState(p.region ?? "");
   const { busy, run } = useSaving();
-  const togglePart = (x: ApiLionPart) => setParts((s) => (s.includes(x) ? s.filter((y) => y !== x) : s.length >= 2 ? (toast("멋사 파트는 최대 2개까지 고를 수 있어요", { kind: "error" }), s) : [...s, x]));
   const toggleInterest = (code: InterestCode) => setInterests((s) => (s.includes(code) ? s.filter((x) => x !== code) : s.length >= 3 ? (toast("관심 분야는 최대 3개까지 고를 수 있어요", { kind: "error" }), s) : [...s, code]));
-  const valid = parts.length >= 1 && interests.length >= 1 && headline.trim().length <= 100 && region.trim().length <= 20;
+  const valid = parts.length === 1 && interests.length >= 1 && headline.trim().length <= 100 && region.trim().length <= 20;
   return (
     <Modal
       open
@@ -429,11 +433,11 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
         </Select>
         <div className="flex flex-col gap-2">
           <p className="t-body-bold text-ink-700">
-            멋사 파트 <span className="text-[12px] font-normal text-ink-400">(1~2개)</span>
+            멋사 파트 <span className="text-[12px] font-normal text-ink-400">(1개 · 가입 기수 멋사 활동 파트도 같이 바뀌어요)</span>
           </p>
           <div className="flex flex-wrap gap-2">
-            {PARTS.map((x) => (
-              <Chip key={x} selected={parts.includes(x)} onClick={() => togglePart(x)}>
+            {LION_PARTS.map((x) => (
+              <Chip key={x} selected={parts.includes(x)} onClick={() => setParts([x])}>
                 {LION_PART_LABEL[x]}
               </Chip>
             ))}

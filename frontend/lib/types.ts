@@ -3,10 +3,12 @@
 export type UserRole = "MEMBER" | "ADMIN";
 export type UserStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type LionPart = "PLANNING" | "DESIGN" | "FRONTEND" | "BACKEND" | "ETC";
+export type LionPart = "PLANNING" | "DESIGN" | "PLANNING_DESIGN" | "FRONTEND" | "BACKEND" | "ETC";
+/** 멋사 파트는 1개만 고른다 (lionParts·parts는 배열이지만 항상 1개) */
 export const LION_PART_LABEL: Record<LionPart, string> = {
   PLANNING: "기획",
   DESIGN: "디자인",
+  PLANNING_DESIGN: "기획디자인",
   FRONTEND: "프론트엔드",
   BACKEND: "백엔드",
   ETC: "기타",

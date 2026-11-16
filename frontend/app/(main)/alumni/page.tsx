@@ -21,7 +21,7 @@ import { AlumniCard } from "@/components/domain/AlumniCard";
 import { useAlumniActions } from "@/components/domain/useAlumniActions";
 
 const GENS = Array.from({ length: 14 }, (_, i) => i + 1);
-const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
+const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "PLANNING_DESIGN", "FRONTEND", "BACKEND"];
 const STATUSES = Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[];
 /** ALUMNI-01 정렬은 세 가지 (기수 내림차순은 API에 없어서 뺐다) */
 const SORT_LABEL: Record<AlumniSort, string> = { RECOMMEND: "추천순", GENERATION: "앞 기수부터", LATEST: "최근 가입순" };

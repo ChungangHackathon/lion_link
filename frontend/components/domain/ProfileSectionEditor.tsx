@@ -340,7 +340,7 @@ function FieldInput({ field: f, values, error, set, lockGeneration }: { field: F
           <p className="t-body-bold text-ink-700">{f.label} *</p>
           <div className="flex flex-wrap gap-2">
             {LION_PARTS.map((p) => (
-              <Chip key={p} selected={parts.includes(p)} onClick={() => set(f.key, parts.includes(p) ? parts.filter((x) => x !== p) : parts.length >= 2 ? parts : [...parts, p])}>
+              <Chip key={p} selected={parts.includes(p)} onClick={() => set(f.key, [p])}>
                 {LION_PART_LABEL[p]}
               </Chip>
             ))}
