@@ -5,14 +5,14 @@ import { cn } from "@/lib/cn";
 import { INTEREST_OPTIONS, INTEREST_CODE, LION_PART_LABEL, PROFILE_STATUS_LABEL, type InterestCode, type ProfileStatus } from "@/lib/types";
 import { errorMessage } from "@/lib/api/client";
 import { receiveBadge, type LinkType } from "@/lib/api/alumni";
-import { educationRows, sectionsToDetail } from "@/lib/api/alumniView";
-import { completionOf, isEmail, isPhone, linkLabel, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, type BasicInfo, type MyProfile, type Scope } from "@/lib/api/myProfile";
+import { detailFromMine } from "@/lib/api/alumniView";
+import { completionOf, isEmail, isPhone, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, type BasicInfo, type MyProfile, type Scope } from "@/lib/api/myProfile";
 import { isHttpUrl, normalizeLink, type ApiLionPart } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
 import { useMyProfileService } from "@/lib/api/useMyProfileService";
 import { Avatar } from "@/components/ui/Avatar";
-import { AvailabilityBadge } from "@/components/ui/Badge";
+import { AvailabilityBadge, PartTag, Tag } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Input, Select, Textarea } from "@/components/ui/Input";
@@ -21,6 +21,7 @@ import { Card, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 import { isImageUrl } from "@/components/domain/PostRow";
 import { SectionListModal } from "@/components/domain/ProfileSectionEditor";
+import { EducationList, ProfileSections } from "@/components/domain/ProfileSections";
 import type { SectionKey } from "@/lib/api/profileSections";
 
 type Section = "basic" | "about" | "contact" | "career" | "education" | "lion" | "project" | "skills" | "links" | "certs";
@@ -33,20 +34,10 @@ const LIST_SECTIONS: Partial<Record<Section, { title: string; keys: SectionKey[]
   certs: { title: "자격증·수상·대외활동·언어 편집", keys: ["certifications", "awards", "activities", "languages"] },
 };
 const PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];
-const ADDABLE: { key: Section; label: string; desc: string }[] = [
-  { key: "about", label: "소개", desc: "나를 소개하는 글" },
-  { key: "career", label: "경력", desc: "회사 · 직무 · 기간" },
-  { key: "education", label: "학력", desc: "학교 · 전공 · 학위" },
-  { key: "lion", label: "멋사 활동", desc: "기수 · 역할 · 프로젝트" },
-  { key: "project", label: "프로젝트", desc: "사이드 프로젝트 · 대외 활동" },
-  { key: "skills", label: "대표 기술", desc: "대표 기술 최대 5개" },
-  { key: "links", label: "외부 링크", desc: "깃허브 · 링크드인 · 포트폴리오" },
-  { key: "certs", label: "자격증·수상·언어", desc: "자격증 · 수상 · 대외활동 · 언어" },
-];
 
 /**
- * ★ P-02 마이페이지 / 내 프로필 (= 마이페이지 첫 화면). 섹션별 바로 편집(연필) → E-09~E-15 팝업,
- * + 프로필 항목 추가 → E-07. (PROFILE-02, 04~10)
+ * ★ P-02 마이페이지 / 내 프로필 (= 마이페이지 첫 화면). 다른 동문에게 보이는 모습(P-01)을 그대로 보여주고,
+ * 섹션마다 편집(연필) → E-09~E-15 팝업. (PROFILE-02, 04~10)
  */
 export default function MyProfilePage() {
   const service = useMyProfileService();
@@ -64,14 +55,12 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
   const [edit, setEdit] = useState<Section | null>(null);
   /** 목록형 섹션을 '추가'로 열면 비어 있는 첫 섹션의 폼부터 연다 */
   const [startAdding, setStartAdding] = useState<SectionKey | undefined>();
-  const [addOpen, setAddOpen] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
 
   const part = p.lionParts[0] ?? "ETC";
-  const sections = sectionsToDetail(p);
-  const educations = educationRows(p);
+  const detail = detailFromMine(p);
   const completion = completionOf(p);
   const nextStep = !p.bio ? { text: `자기소개를 쓰면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.careers.length ? { text: `경력을 추가하면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.projects.length ? { text: `프로젝트를 추가하면 ${Math.min(100, completion + 7)}%가 돼요` } : null;
   const badge = coffee ? receiveBadge(coffee.status) : null;
@@ -170,102 +159,68 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
         </div>
       )}
 
-      {/* 상단 소개 카드 (E-12) */}
-      <Card className="flex gap-8 rounded-[10px] p-8">
-        <div className="relative h-[140px] w-[140px] shrink-0">
-          {isImageUrl(p.photoUrl) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.photoUrl} alt={`${p.name} 프로필 사진`} className="size-[140px] rounded-full object-cover" />
-          ) : (
-            <Avatar name={p.name} part={part} size={96} className="!size-[140px] !text-[52px]" />
-          )}
-          {photoBusy && <span className="absolute inset-0 grid place-items-center rounded-full bg-white/70 text-[12px] font-semibold text-ink-700">올리는 중</span>}
-          <button type="button" aria-label="프로필 사진 바꾸기" onClick={openPhotoPicker} className="absolute bottom-0 right-0 grid size-9 place-items-center rounded-full border border-line-200 bg-white text-ink-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:bg-bg-50">
-            <Icon name="edit" size={18} />
-          </button>
-          {p.photoUrl && (
-            <button type="button" onClick={() => void removePhoto()} className="absolute -bottom-6 left-0 w-full text-center text-[12px] text-ink-500 underline">
-              기본 사진으로
-            </button>
-          )}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-3 pt-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <h1 className="t-title text-ink-900">{p.name}</h1>
-              <span className="rounded-[5px] bg-part-be-bg px-2.5 py-1 t-label2 text-ink-500">
-                {p.generation}기 · {p.lionParts.map((x) => LION_PART_LABEL[x]).join("·")}
-              </span>
-              {badge && <AvailabilityBadge mode={badge.mode} note={badge.note} small />}
+      {/* 상단 소개 카드 — 동문 프로필(P-01)과 같은 모양에 편집 버튼만 더한다 (E-12) */}
+      <Card className="rounded-[10px] p-[30px]">
+        <div className="flex gap-[19px]">
+          <div className="flex w-[150px] flex-col items-center gap-2">
+            <div className="relative size-[150px]">
+              {isImageUrl(p.photoUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.photoUrl} alt={`${p.name} 프로필 사진`} className="size-[150px] rounded-full object-cover" />
+              ) : (
+                <Avatar name={p.name} part={part} size={96} className="!size-[150px] !text-[56px]" />
+              )}
+              {photoBusy && <span className="absolute inset-0 grid place-items-center rounded-full bg-white/70 text-[12px] font-semibold text-ink-700">올리는 중</span>}
+              <button type="button" aria-label="프로필 사진 바꾸기" onClick={openPhotoPicker} className="absolute right-0 top-1 grid size-9 place-items-center rounded-full border border-line-200 bg-white text-ink-900 shadow-[0_1px_3px_rgba(0,0,0,0.12)] hover:bg-bg-50">
+                <Icon name="edit" size={18} />
+              </button>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Button size="S" variant="secondary" href={`/alumni/${p.userId}?preview=1`} className="h-[34px]" leading={<Icon name="monitor" size={16} />}>
-                다른 동문에게 보이는 모습
-              </Button>
-              <button type="button" onClick={() => setEdit("basic")} className="flex h-[34px] items-center gap-1.5 rounded-[6px] bg-part-be-bg px-3 t-label2 text-primary-strong hover:bg-part-be-line">
+            {badge && <AvailabilityBadge mode={badge.mode} note={badge.note} className="-mt-5 bg-white" />}
+            {p.photoUrl && (
+              <button type="button" onClick={() => void removePhoto()} className="text-[12px] text-ink-500 underline">
+                기본 사진으로
+              </button>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-4 pt-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-[28px] font-bold leading-[34px] text-ink-900">{p.name}</h1>
+                <PartTag part={part} generation={p.generation} />
+              </div>
+              <button type="button" onClick={() => setEdit("basic")} className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-[6px] bg-part-be-bg px-3 t-label2 text-primary-strong hover:bg-part-be-line">
                 <Icon name="edit" size={16} /> 프로필 편집
               </button>
             </div>
-          </div>
-          <p className="text-[18px] leading-7 text-ink-700">{p.headline || <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
-          <div className="flex items-center gap-2 t-caption1">
-            <span className="text-ink-500">대표 기술</span>
-            {p.skills.length ? (
-              p.skills.map((s) => (
-                <span key={s} className="rounded-[4px] bg-bg-100 px-2 py-1 text-[12px] text-ink-700">
-                  {s}
-                </span>
-              ))
-            ) : (
-              <span className="text-ink-400">아직 없어요</span>
-            )}
-            <button type="button" aria-label="대표 기술 편집" onClick={() => setEdit("skills")} className="rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
-              <Icon name="edit" size={14} />
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[14px] text-ink-500">
-            <span className="flex items-center gap-1.5">
-              <Icon name="user" size={16} className="text-ink-900" /> {subline}
-            </span>
-            {p.region && (
-              <span className="flex items-center gap-1.5">
-                <Icon name="place" size={16} className="text-ink-900" /> {p.region}
-              </span>
-            )}
-            {p.links[0] && (
-              <span className="flex items-center gap-1.5">
-                <Icon name="link" size={16} className="text-ink-900" /> {p.links[0].url.replace(/^https?:\/\//, "")}
-              </span>
-            )}
+            {p.bio && <p className="line-clamp-3 t-body2 text-ink-700">{p.bio}</p>}
           </div>
         </div>
-      </Card>
 
-      {saved && <p className="rounded-[8px] bg-part-be-bg px-4 py-2 text-[13px] text-primary-strong">{saved} 저장 완료 · 프로필에 바로 반영됐어요</p>}
-
-      {/* 본문 — 추가한 항목만 한 카드 안에 */}
-      <Card className="flex flex-col gap-9 rounded-[10px] p-7">
-        {p.bio && (
-          <MySection title="소개" onEdit={() => setEdit("about")}>
-            <p className="whitespace-pre-line text-[14px] leading-6 text-ink-700">{p.bio}</p>
-          </MySection>
-        )}
-        {sections.careers.length > 0 && (
-          <MySection title="경력" onEdit={() => openSection("career")} note={p.visibility.company === "PRIVATE" ? "회사명 비공개" : undefined}>
-            <ul className="flex flex-col gap-4">
-              {sections.careers.map((c, i) => (
-                <ItemRow key={i} title={c.company} sub={`${c.role}${c.type ? ` · ${c.type}` : ""}`} meta={c.from ? `${c.from} ~ ${c.to}${c.duration ? ` · ${c.duration}` : ""}` : "시작 시점을 입력해주세요"} />
-              ))}
-            </ul>
-          </MySection>
-        )}
-        {(educations.length > 0 || p.minor) && (
-          <MySection title="학력" onEdit={() => openSection("education")}>
-            <ul className="flex flex-col gap-4">
-              {educations.map((e, i) => (
-                <ItemRow key={i} title={e.school} sub={[e.major, e.degree].filter(Boolean).join(" · ")} meta={e.from ? `${e.from} ~ ${e.to}` : undefined} />
-              ))}
-            </ul>
+        <div className="mt-6 grid grid-cols-[1fr_300px] gap-6">
+          <div className="flex flex-col gap-3 text-[13px]">
+            <p className="t-label1 text-ink-900">{p.headline || subline || <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-ink-500">대표 기술</span>
+              {p.skills.length ? p.skills.map((s) => <Tag key={s}>{s}</Tag>) : <span className="text-ink-400">아직 없어요</span>}
+              <button type="button" aria-label="대표 기술 편집" onClick={() => setEdit("skills")} className="rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
+                <Icon name="edit" size={14} />
+              </button>
+            </div>
+            {p.region && (
+              <p className="flex items-center gap-1 text-ink-700">
+                <Icon name="pin" size={14} /> {p.region}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="t-label2 text-ink-500">학력</span>
+              <button type="button" aria-label="학력 편집" onClick={() => openSection("education", true)} className="flex items-center gap-1 rounded px-1.5 py-1 text-[12px] text-ink-500 hover:bg-bg-100 hover:text-ink-900">
+                <Icon name="edit" size={14} /> {detail.educations.length ? "편집" : "추가"}
+              </button>
+            </div>
+            {detail.educations.length === 0 && !p.minor && <p className="text-[12px] text-ink-400">아직 학력이 없어요</p>}
+            <EducationList educations={detail.educations} />
             {/* 복수·부전공은 마이페이지에서만 보여준다 (프로필 기본 정보 minor, 학력 편집에서 저장) */}
             {p.minor && (
               <p className="flex items-center gap-2 text-[13px] text-ink-700">
@@ -273,85 +228,14 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
                 {p.minor}
               </p>
             )}
-          </MySection>
-        )}
-        {sections.lion.length > 0 && (
-          <MySection title="멋사 활동" onEdit={() => openSection("lion")}>
-            <ul className="flex flex-col gap-2">
-              {sections.lion.map((l, i) => (
-                <li key={i} className="rounded-[8px] border border-line-200 bg-bg-50 px-[15px] py-3 t-body-bold font-medium text-ink-900">
-                  {l.generation}기 {l.role}
-                  {l.projects.length > 0 && <span className="ml-2 text-[12px] font-normal text-ink-500">프로젝트 {l.projects.map((x) => x.name).join(", ")}</span>}
-                </li>
-              ))}
-            </ul>
-          </MySection>
-        )}
-        {sections.projects.length > 0 && (
-          <MySection title="프로젝트" onEdit={() => openSection("project")}>
-            <ul className="flex flex-col gap-4">
-              {sections.projects.map((pj, i) => (
-                <ItemRow key={i} title={pj.name} sub={pj.type} meta={pj.from ? `${pj.from} ~ ${pj.to}` : undefined} />
-              ))}
-            </ul>
-          </MySection>
-        )}
-        {sections.certs.length > 0 && (
-          <MySection title="자격증·수상·대외활동·언어" onEdit={() => openSection("certs")}>
-            <dl className="flex flex-col gap-2 text-[14px]">
-              {sections.certs.map((c, i) => (
-                <div key={i} className="flex gap-4">
-                  <dt className="w-16 text-ink-500">{c.kind}</dt>
-                  <dd className="text-ink-900">{c.text}</dd>
-                </div>
-              ))}
-            </dl>
-          </MySection>
-        )}
-        {p.links.length > 0 && (
-          <MySection title="외부 링크" onEdit={() => setEdit("links")} note={`${SCOPE_LABEL[p.visibility.links]}`}>
-            <ul className="flex flex-col gap-2">
-              {p.links.map((l, i) => (
-                <li key={i} className="flex items-center gap-2 text-[14px] text-ink-700">
-                  <Icon name="link" size={18} className="text-ink-700" /> {linkLabel(l.type)} ·{" "}
-                  <a href={l.url} target="_blank" rel="noreferrer" className="font-medium text-ink-900 hover:underline">
-                    {l.url.replace(/^https?:\/\//, "")}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </MySection>
-        )}
-        <MySection title="연락처" onEdit={() => setEdit("contact")}>
-          <div className="flex flex-col gap-1.5">
-            <ContactLine icon="mail" value={p.contact.email} empty="아직 이메일이 없어요" scope={p.visibility.email} />
-            {p.contact.phone && <ContactLine icon="chat" value={p.contact.phone} scope={p.visibility.phone} />}
           </div>
-        </MySection>
-        <button type="button" onClick={() => setAddOpen(true)} className="flex h-[46px] items-center justify-center gap-2 rounded-[8px] border border-dashed border-line-300 text-[14px] font-medium text-ink-500 hover:bg-bg-50">
-          <Icon name="plus" size={16} /> 프로필 항목 추가
-        </button>
+        </div>
       </Card>
 
-      {/* ★[O] E-07 프로필 항목 추가 */}
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="프로필 항목 추가" description="추가한 항목만 프로필에 보여요" width={560}>
-        <ul className="grid grid-cols-2 gap-2">
-          {ADDABLE.map((a) => {
-            const added = a.key === "about" ? !!p.bio : a.key === "career" ? p.careers.length > 0 : a.key === "education" ? p.educations.length > 0 : a.key === "lion" ? p.lionActivities.length > 0 : a.key === "project" ? p.projects.length > 0 : a.key === "skills" ? p.skills.length > 0 : a.key === "links" ? p.links.length > 0 : sections.certs.length > 0;
-            return (
-              <li key={a.key}>
-                <button type="button" onClick={() => { setAddOpen(false); openSection(a.key, !added); }} className={cn("flex w-full items-center justify-between rounded-[8px] border px-4 py-3 text-left hover:bg-bg-50", added ? "border-line-200" : "border-line-300")}>
-                  <span className="flex flex-col">
-                    <span className="t-label1 text-ink-900">{a.label}</span>
-                    <span className="text-[12px] text-ink-500">{a.desc}</span>
-                  </span>
-                  <span className="text-[12px] text-ink-400">{added ? "편집" : "+ 추가"}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </Modal>
+      {saved && <p className="rounded-[8px] bg-part-be-bg px-4 py-2 text-[13px] text-primary-strong">{saved} 저장 완료 · 프로필에 바로 반영됐어요</p>}
+
+      {/* 본문 — 동문 프로필과 같은 섹션, 섹션마다 편집 연필 */}
+      <ProfileSections detail={detail} onEdit={(s) => (s === "about" || s === "links" || s === "contact" ? setEdit(s) : openSection(s as Section, true))} />
 
       {/* 목록형 섹션 편집 (PROFILE-11) */}
       {edit && LIST_SECTIONS[edit] && (
@@ -430,19 +314,6 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
         />
       )}
     </div>
-  );
-}
-
-function ContactLine({ icon, value, empty, scope }: { icon: IconName; value: string | null; empty?: string; scope: Scope }) {
-  return (
-    <p className="flex items-center gap-2 text-[14px] font-medium text-ink-900">
-      <Icon name={icon} size={18} className="text-ink-700" /> {value ?? empty}
-      {value && (
-        <span className="ml-1 flex items-center gap-1 text-[12px] font-normal text-ink-500">
-          <Icon name="lock" size={12} /> {SCOPE_LABEL[scope]}
-        </span>
-      )}
-    </p>
   );
 }
 
@@ -773,41 +644,5 @@ function LinksModal({ links, scope, onClose, onSave }: { links: MyProfile["links
         <p className="text-[12px] text-ink-500">최대 5개까지 추가할 수 있어요. https://는 안 붙여도 돼요.</p>
       </div>
     </Modal>
-  );
-}
-
-function MySection({ title, onEdit, note, children }: { title: string; onEdit: () => void; note?: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3.5">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 t-body-bold text-ink-900">
-          {title}
-          {note && (
-            <span className="flex items-center gap-1 text-[12px] font-normal text-ink-500">
-              <Icon name="lock" size={12} /> {note}
-            </span>
-          )}
-        </h2>
-        <button type="button" onClick={onEdit} aria-label={`${title} 편집`} className="flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-ink-700 hover:bg-bg-100">
-          <Icon name="edit" size={14} /> 편집
-        </button>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ItemRow({ title, sub, meta }: { title: string; sub?: string; meta?: string }) {
-  return (
-    <li className="flex items-start gap-3.5">
-      <span className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-bg-100 text-ink-400">
-        <Icon name="image" size={18} />
-      </span>
-      <div className="flex flex-col gap-0.5">
-        <span className="t-label1 text-ink-900">{title}</span>
-        {sub && <span className="t-caption1 text-ink-700">{sub}</span>}
-        {meta && <span className="text-[12px] text-ink-400">{meta}</span>}
-      </div>
-    </li>
   );
 }

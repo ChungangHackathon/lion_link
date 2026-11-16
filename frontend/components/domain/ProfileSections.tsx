@@ -9,9 +9,9 @@ import { Glyph, Icon } from "@/components/ui/Icon";
 import { Card } from "@/components/ui/Misc";
 
 /**
- * Profile body blocks shared by P-01 (다른 동문) and P-02 (내 프로필).
+ * Profile body blocks shared by P-01 (다른 동문) and P-02 (내 프로필 — 같은 화면에 편집 버튼만 더한다).
  * Section order is unified (v2.5 §4-1): 소개 → 경력 → 멋사 활동 → 프로젝트 → 자격증·수상·대외활동·언어 → 외부 링크·연락처 (대표 기술은 상단 카드).
- * `onEdit(section)` turns on the 바로 고치기 pencil (P-02).
+ * `onEdit(section)` turns on the 바로 고치기 pencil (P-02). section: about · career · lion · project · certs · links · contact
  */
 /** 저장된 링크에 http(s)://가 없으면 붙인다 */
 const toHref = (url: string) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
@@ -121,15 +121,24 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
           </dl>
         )}
       </Section>
-      <Section title="외부 링크·연락처" onEdit={onEdit && (() => onEdit("contact"))}>
+      <Section
+        title="외부 링크·연락처"
+        actions={
+          onEdit && [
+            { label: "외부 링크", onClick: () => onEdit("links") },
+            { label: "연락처", onClick: () => onEdit("contact") },
+          ]
+        }
+      >
         <ul className="flex flex-col gap-3 text-[13px]">
+          {mine && detail.links.length === 0 && <li className="text-ink-400">아직 외부 링크가 없어요</li>}
           {detail.links.map((l) => (
             <li key={l.label} className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-ink-700">
                 <Glyph name="link" size={14} /> {l.label}
               </span>
               {canSee(l.visibility) ? (
-                <a href={`https://${l.url}`} target="_blank" rel="noreferrer" className="text-ink-900 hover:underline">
+                <a href={toHref(l.url)} target="_blank" rel="noreferrer" className="text-ink-900 hover:underline">
                   {l.url}
                 </a>
               ) : (
@@ -141,13 +150,13 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
             <span className="flex items-center gap-2 text-ink-700">
               <Glyph name="mail" size={14} /> 이메일
             </span>
-            {detail.email && canSee(detail.email.visibility) ? <span className="text-ink-900">{detail.email.value}</span> : <Locked />}
+            {detail.email && canSee(detail.email.visibility) ? <span className="text-ink-900">{detail.email.value}</span> : mine ? <span className="text-ink-400">아직 없어요</span> : <Locked />}
           </li>
           <li className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-ink-700">
               <Glyph name="comment" size={14} /> 전화번호
             </span>
-            {detail.phone && canSee(detail.phone.visibility) ? <span className="text-ink-900">{detail.phone.value}</span> : <Locked />}
+            {detail.phone && canSee(detail.phone.visibility) ? <span className="text-ink-900">{detail.phone.value}</span> : mine ? <span className="text-ink-400">아직 없어요</span> : <Locked />}
           </li>
         </ul>
       </Section>
@@ -155,7 +164,7 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
   );
 }
 
-function Section({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit?: () => void }) {
+function Section({ title, children, onEdit, actions }: { title: string; children: React.ReactNode; onEdit?: () => void; actions?: { label: string; onClick: () => void }[] }) {
   return (
     <Card as="section" className="flex flex-col gap-4 rounded-[10px] p-[30px]">
       <div className="flex items-center justify-between">
@@ -164,6 +173,15 @@ function Section({ title, children, onEdit }: { title: string; children: React.R
           <button type="button" aria-label={`${title} 편집`} onClick={onEdit} className="rounded p-1 text-ink-500 hover:bg-bg-100 hover:text-ink-900">
             <Glyph name="edit" size={18} />
           </button>
+        )}
+        {actions && (
+          <div className="flex gap-1">
+            {actions.map((a) => (
+              <button key={a.label} type="button" aria-label={`${a.label} 편집`} onClick={a.onClick} className="flex items-center gap-1 rounded px-1.5 py-1 text-[12px] text-ink-500 hover:bg-bg-100 hover:text-ink-900">
+                <Glyph name="edit" size={14} /> {a.label}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       <div>{children}</div>
