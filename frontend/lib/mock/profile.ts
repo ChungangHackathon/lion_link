@@ -14,6 +14,8 @@ export interface ProfileDetail {
   links: { label: string; url: string; visibility: "ALL" | "CONNECTED" | "ME" }[];
   email?: { value: string; visibility: "ALL" | "CONNECTED" | "ME" };
   phone?: { value: string; visibility: "ALL" | "CONNECTED" | "ME" };
+  /** 서버가 공개 범위 때문에 빼고 보낸 항목 (API 모드 다른 동문). 값은 그 공개 범위, 모르면 null */
+  hidden?: { links?: "CONNECTED" | "ME" | null; email?: "CONNECTED" | "ME" | null; phone?: "CONNECTED" | "ME" | null };
   coffeeTopics: string[];
   coffeeTimes: string;
   coffeeModes: string;

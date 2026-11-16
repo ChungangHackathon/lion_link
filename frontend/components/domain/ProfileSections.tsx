@@ -21,7 +21,7 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
   const [careersOpen, setCareersOpen] = useState(false);
   const [lionOpen, setLionOpen] = useState(false);
   const mine = !!onEdit;
-  const canSee = (v: "ALL" | "CONNECTED" | "ME") => mine || v === "ALL" || (v === "CONNECTED" && connected);
+  const canSee = (v: "ALL" | "CONNECTED" | "ME") => mine || v === "ALL" || (v === "CONNECTED" && !!connected);
 
   return (
     <>
@@ -130,34 +130,36 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
           ]
         }
       >
+        {/* 내 프로필: 값 옆에 고른 공개 범위를 그대로 적는다 · 다른 동문: 못 보는 값은 그 공개 범위에 맞는 문구 */}
         <ul className="flex flex-col gap-3 text-[13px]">
           {mine && detail.links.length === 0 && <li className="text-ink-400">아직 외부 링크가 없어요</li>}
+          {!mine && detail.hidden && "links" in detail.hidden && (
+            <li className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-ink-700">
+                <Glyph name="link" size={14} /> 외부 링크
+              </span>
+              <Locked scope={detail.hidden.links ?? null} />
+            </li>
+          )}
           {detail.links.map((l) => (
-            <li key={l.label} className="flex items-center justify-between">
+            <li key={l.label} className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-ink-700">
                 <Glyph name="link" size={14} /> {l.label}
               </span>
               {canSee(l.visibility) ? (
-                <a href={toHref(l.url)} target="_blank" rel="noreferrer" className="text-ink-900 hover:underline">
-                  {l.url}
-                </a>
+                <span className="flex min-w-0 items-center gap-2">
+                  <a href={toHref(l.url)} target="_blank" rel="noreferrer" className="truncate text-ink-900 hover:underline">
+                    {l.url}
+                  </a>
+                  {mine && <ScopeTag scope={l.visibility} />}
+                </span>
               ) : (
-                <Locked />
+                <Locked scope={l.visibility === "ALL" ? null : l.visibility} />
               )}
             </li>
           ))}
-          <li className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-ink-700">
-              <Glyph name="mail" size={14} /> 이메일
-            </span>
-            {detail.email && canSee(detail.email.visibility) ? <span className="text-ink-900">{detail.email.value}</span> : mine ? <span className="text-ink-400">아직 없어요</span> : <Locked />}
-          </li>
-          <li className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-ink-700">
-              <Glyph name="comment" size={14} /> 전화번호
-            </span>
-            {detail.phone && canSee(detail.phone.visibility) ? <span className="text-ink-900">{detail.phone.value}</span> : mine ? <span className="text-ink-400">아직 없어요</span> : <Locked />}
-          </li>
+          <ContactRow icon="mail" label="이메일" item={detail.email} hidden={detail.hidden && "email" in detail.hidden ? detail.hidden.email ?? null : undefined} mine={mine} canSee={canSee} />
+          <ContactRow icon="comment" label="전화번호" item={detail.phone} hidden={detail.hidden && "phone" in detail.hidden ? detail.hidden.phone ?? null : undefined} mine={mine} canSee={canSee} />
         </ul>
       </Section>
     </>
@@ -238,10 +240,47 @@ export function EducationList({ educations }: { educations: ProfileDetail["educa
   );
 }
 
-function Locked() {
+type Vis = "ALL" | "CONNECTED" | "ME";
+
+function ContactRow({ icon, label, item, hidden, mine, canSee }: { icon: "mail" | "comment"; label: string; item?: { value: string; visibility: Vis }; hidden?: "CONNECTED" | "ME" | null; mine: boolean; canSee: (v: Vis) => boolean }) {
   return (
-    <span className="flex items-center gap-1 text-[12px] text-ink-400">
-      <Icon name="lock" size={12} /> 연결된 동문에게만 보여요
+    <li className="flex items-center justify-between gap-3">
+      <span className="flex items-center gap-2 text-ink-700">
+        <Glyph name={icon} size={14} /> {label}
+      </span>
+      {item && canSee(item.visibility) ? (
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-ink-900">{item.value}</span>
+          {mine && <ScopeTag scope={item.visibility} />}
+        </span>
+      ) : mine ? (
+        <span className="text-ink-400">아직 없어요</span>
+      ) : item ? (
+        <Locked scope={item.visibility === "ALL" ? null : item.visibility} />
+      ) : hidden !== undefined ? (
+        <Locked scope={hidden} />
+      ) : (
+        <span className="text-ink-400">등록하지 않았어요</span>
+      )}
+    </li>
+  );
+}
+
+/** 내 프로필에서 값 옆에 붙는 공개 범위 */
+function ScopeTag({ scope }: { scope: Vis }) {
+  return (
+    <span className={cn("flex shrink-0 items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[11px] font-semibold", scope === "ALL" ? "bg-part-be-bg text-primary" : "bg-bg-100 text-ink-500")}>
+      {scope !== "ALL" && <Icon name="lock" size={11} />}
+      {scope === "ALL" ? "전체 공개" : scope === "CONNECTED" ? "연결된 동문만" : "비공개"}
+    </span>
+  );
+}
+
+/** 다른 동문이 못 보는 값. 공개 범위를 모르면(서버가 안 줌) 중립 문구 */
+function Locked({ scope }: { scope: "CONNECTED" | "ME" | null }) {
+  return (
+    <span className="flex shrink-0 items-center gap-1 text-[12px] text-ink-400">
+      <Icon name="lock" size={12} /> {scope === "CONNECTED" ? "연결된 동문에게만 보여요" : scope === "ME" ? "비공개예요" : "공개하지 않았어요"}
     </span>
   );
 }

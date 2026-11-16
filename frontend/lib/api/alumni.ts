@@ -85,6 +85,8 @@ export interface AlumniDetail {
   skills: string[];
   links?: { type: LinkType; url: string }[];
   contact: { email?: string | null; phone?: string | null };
+  /** 이메일·전화·링크 공개 범위. 가려진 항목이 왜 가려졌는지 보여줄 때 쓴다 (서버가 아직 안 주면 없다) */
+  visibility?: { email?: "PUBLIC" | "CONNECTED" | "PRIVATE"; phone?: "PUBLIC" | "CONNECTED" | "PRIVATE"; links?: "PUBLIC" | "CONNECTED" | "PRIVATE" };
   careers: (Period & { id: Id; company?: string; companyHidden?: boolean; jobTitle: string; employmentType: string | null; description: string | null })[];
   educations: (Period & { id: Id; school: string; major: string | null; degree: string | null; description?: string | null })[];
   /** isDefault: 가입 기수 항목. 역할·파트만 바꿀 수 있고 지울 수 없다 (내 프로필에서만 온다) */
