@@ -625,7 +625,8 @@ function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClos
   );
 }
 
-function ScheduleModal({ open, onClose, onConfirm, candidates, initial, initialPlace = "", initialLink = "", mode, busy }: { open: boolean; onClose: () => void; onConfirm: (at: string, mode: "ONLINE" | "OFFLINE", place: string, link: string) => void; candidates: string[]; initial?: string; initialPlace?: string; initialLink?: string; mode: string; busy?: boolean }) {
+/** D-15 일정 확정 · 변경 창. 채팅방에서도 바로 연다 */
+export function ScheduleModal({ open, onClose, onConfirm, candidates, initial, initialPlace = "", initialLink = "", mode, busy }: { open: boolean; onClose: () => void; onConfirm: (at: string, mode: "ONLINE" | "OFFLINE", place: string, link: string) => void; candidates: string[]; initial?: string; initialPlace?: string; initialLink?: string; mode: string; busy?: boolean }) {
   const days = nextDays(30);
   const [date, setDate] = useState(initial ? new Date(new Date(initial).setHours(0, 0, 0, 0)).toISOString() : candidates[0] ? new Date(new Date(candidates[0]).setHours(0, 0, 0, 0)).toISOString() : days[2].toISOString());
   const [time, setTime] = useState(initial ? new Date(initial).toTimeString().slice(0, 5) : candidates[0] ? new Date(candidates[0]).toTimeString().slice(0, 5) : "19:00");

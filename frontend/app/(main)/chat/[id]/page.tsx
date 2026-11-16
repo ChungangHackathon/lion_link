@@ -14,6 +14,9 @@ import { avatarPeople, myIdOf, newClientId, partOf } from "@/lib/api/chatView";
 import { addDays } from "@/lib/api/coffeeSettings";
 import type { Id } from "@/lib/api/posts";
 import { useApi } from "@/lib/api/useApi";
+import { scheduleCoffeeChat } from "@/lib/api/coffee";
+import { useCoffeeService } from "@/lib/api/useCoffeeService";
+import { useStore } from "@/lib/store";
 import { useChatRealtime, usePersonalEvents } from "@/lib/api/chatRealtime";
 import { useChatRefresh, useChatService, type ChatService } from "@/lib/api/useChatService";
 import { Avatar, AvatarGroup } from "@/components/ui/Avatar";
@@ -24,7 +27,7 @@ import { Glyph } from "@/components/ui/Icon";
 import { Switch, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal, Popover } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { statusTone } from "@/components/domain/CoffeeChatDetail";
+import { ScheduleModal, statusTone } from "@/components/domain/CoffeeChatDetail";
 
 /** 실시간 연결(WebSocket)이 안 될 때 새 메시지를 확인하는 간격 */
 const POLL_MS = 4_000;
@@ -88,6 +91,32 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   const partner = room.type === "DIRECT" ? room.members[0] : undefined;
   const pendingRequest = room.status === "REQUESTED" && room.requestedByMe;
   const ended = room.status === "DECLINED" || room.status === "CANCELED";
+
+  // 커피챗 방: 일정 확정·변경은 채팅 화면에서 바로 연다. 할 수 있는지(대표 신청자·받은 사람만)는 상세의 actions로 본다
+  const coffeeService = useCoffeeService();
+  const { scheduleCoffeeChat: mockSchedule } = useStore();
+  const coffeeId = room.coffeeChat?.id;
+  const coffeeDetail = useApi(() => coffeeService.get(coffeeId!), [coffeeService, coffeeId], coffeeId != null);
+  const canSchedule = !!coffeeDetail.data?.actions.includes("SCHEDULE");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const confirmSchedule = async (at: string, meetingMode: "ONLINE" | "OFFLINE", place: string, link: string) => {
+    if (coffeeId == null) return;
+    const changing = !!coffeeDetail.data?.scheduledAt;
+    setScheduling(true);
+    try {
+      if (API_ENABLED) await scheduleCoffeeChat(coffeeId, { scheduledAt: at, meetingMode, meetingPlace: meetingMode === "OFFLINE" ? place : undefined, meetingLink: meetingMode === "ONLINE" && link ? link : undefined });
+      else mockSchedule(String(coffeeId), at);
+      setScheduleOpen(false);
+      toast(changing ? "일정을 바꿨어요" : "일정을 확정했어요");
+      reloadRoom();
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+      coffeeDetail.reload();
+    } finally {
+      setScheduling(false);
+    }
+  };
 
   // 내가 보낸 요청이면 요청 정보(첫 메시지 · 거절 사유)를 불러온다 (CHAT-03)
   const request = useApi((signal) => service.getRequest(roomId, signal), [service, roomId], room.requestedByMe && room.status !== "ACTIVE");
@@ -352,9 +381,11 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
               📅 {formatDateTime(room.coffeeChat.scheduledAt)}
               {room.coffeeChat.meetingMode === "OFFLINE" && room.coffeeChat.meetingPlace && ` · ${room.coffeeChat.meetingPlace}`}
             </span>
-            <Link href={`/coffee?id=${room.coffeeChat.id}`} className="text-ink-700 hover:underline">
-              변경
-            </Link>
+            {canSchedule && (
+              <button type="button" onClick={() => setScheduleOpen(true)} className="text-ink-700 hover:underline">
+                변경
+              </button>
+            )}
           </div>
         )}
         {pendingRequest && <PendingRequestBanner service={service} roomId={roomId} request={request.data} onEdited={(m) => setMessages((ms) => ms.map((x) => (x.id === m.id ? m : x)))} />}
@@ -521,7 +552,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
           <div className="flex flex-col gap-3 border-b border-line-200 p-5">
             <p className="text-[13px] text-ink-500">이 대화의 커피챗</p>
             {room.coffeeChat ? (
-              <CoffeeCard chat={room.coffeeChat} open={questionsOpen} onToggle={() => setQuestionsOpen((o) => !o)} />
+              <CoffeeCard chat={room.coffeeChat} open={questionsOpen} onToggle={() => setQuestionsOpen((o) => !o)} onSchedule={canSchedule ? () => setScheduleOpen(true) : undefined} />
             ) : (
               <p className="text-[13px] text-ink-500">아직 커피챗이 없어요</p>
             )}
@@ -545,6 +576,20 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       </aside>
 
       {/* CF-9 / CF-9b 나가기 확인 */}
+      {/* D-15 일정 확정 · 변경 — 채팅 화면에서 바로 */}
+      {scheduleOpen && coffeeDetail.data && (
+        <ScheduleModal
+          open
+          onClose={() => setScheduleOpen(false)}
+          busy={scheduling}
+          candidates={coffeeDetail.data.proposedSlots}
+          initial={coffeeDetail.data.scheduledAt ?? undefined}
+          initialPlace={coffeeDetail.data.meetingPlace ?? ""}
+          initialLink={coffeeDetail.data.meetingLink ?? ""}
+          mode={coffeeDetail.data.meetingMode ?? coffeeDetail.data.preferredMode}
+          onConfirm={(at, m, place, link) => void confirmSchedule(at, m, place, link)}
+        />
+      )}
       {/* 내 메시지 수정 · 삭제 (CHAT-10) */}
       <Modal
         open={!!editingMsg}
@@ -685,7 +730,8 @@ function PendingRequestBanner({ service, roomId, request, onEdited }: { service:
   );
 }
 
-function CoffeeCard({ chat, open, onToggle }: { chat: NonNullable<RoomDetail["coffeeChat"]>; open: boolean; onToggle: () => void }) {
+/** onSchedule이 없으면(대표 신청자·받은 사람이 아니면) 일정 버튼 없이 상세 보기만 */
+function CoffeeCard({ chat, open, onToggle, onSchedule }: { chat: NonNullable<RoomDetail["coffeeChat"]>; open: boolean; onToggle: () => void; onSchedule?: () => void }) {
   const [now] = useState(() => Date.now());
   const dDay = chat.scheduledAt ? Math.max(0, Math.ceil((new Date(chat.scheduledAt).getTime() - now) / 86_400_000)) : null;
   return (
@@ -707,8 +753,8 @@ function CoffeeCard({ chat, open, onToggle }: { chat: NonNullable<RoomDetail["co
         <Button size="M" variant="secondary" className="flex-1" href={`/coffee?id=${chat.id}`}>
           상세 보기
         </Button>
-        {(chat.status === "ACCEPTED" || chat.status === "SCHEDULED") && (
-          <Button size="M" variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} className="flex-1" href={`/coffee?id=${chat.id}`}>
+        {onSchedule && (chat.status === "ACCEPTED" || chat.status === "SCHEDULED") && (
+          <Button size="M" variant={chat.status === "ACCEPTED" ? "primary" : "secondary"} className="flex-1" onClick={onSchedule}>
             {chat.status === "ACCEPTED" ? "일정 확정" : "일정 변경"}
           </Button>
         )}
