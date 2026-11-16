@@ -22,7 +22,7 @@ import { ProfileMenu } from "./ProfileMenu";
 
 /**
  * GNB (Figma 89:817 · GD Guide 공통 연결):
- * 로고 → 홈 / 동문 찾기 · 커뮤니티 · 내 커피챗 · 채팅 / 🔔 → 알림 드롭다운 / 프로필 → 프로필 메뉴.
+ * 로고 → 홈 / 동문 찾기 · 커뮤니티 · ☕커피챗 / 💬 채팅 · 🔔 → 알림 드롭다운 / 프로필 → 프로필 메뉴. (수정 화면 GNB 1011:25710)
  * Variants: 기본 / 승인 대기(메뉴 비활성) / 로고만.
  */
 export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
@@ -72,9 +72,9 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const NAV = [
     { href: "/alumni", label: "동문 찾기", count: 0 },
     { href: "/community", label: "커뮤니티", count: 0 },
-    { href: "/coffee", label: "내 커피챗", count: pendingCoffee },
-    { href: "/chat", label: "채팅", count: unreadChat },
+    { href: "/coffee", label: "커피챗", count: pendingCoffee, icon: true },
   ];
+  const chatActive = pathname.startsWith("/chat");
 
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-line-200 bg-white">
@@ -95,6 +95,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
                     onClick={(e) => disabled && e.preventDefault()}
                     className={cn("relative flex h-16 items-center gap-1 text-[16px] leading-6 tracking-[-0.01em]", disabled ? "cursor-not-allowed font-medium text-ink-400" : active ? "font-extrabold text-navy" : "font-semibold text-navy hover:opacity-80")}
                   >
+                    {"icon" in n && <Icon name="coffee" size={22} className="-mr-[1px]" />}
                     {n.label}
                     {!disabled && <CountBadge count={n.count} className="-ml-0.5 -mt-[14px]" />}
                     {active && !disabled && <span className="absolute inset-x-0 bottom-px h-0.5 bg-navy" />}
@@ -103,10 +104,23 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
               })}
             </nav>
 
-            <div className="ml-auto flex items-center gap-[5px]">
+            <div className="ml-auto flex items-center gap-3">
+              {/* 채팅은 메뉴 대신 종 옆 아이콘 (선택되면 아래 밑줄) */}
+              <Link
+                href={mode === "pending" ? "#" : "/chat"}
+                aria-label="채팅"
+                aria-disabled={mode === "pending"}
+                aria-current={chatActive ? "page" : undefined}
+                onClick={(e) => mode === "pending" && e.preventDefault()}
+                className={cn("relative grid size-10 place-items-center rounded-full", mode === "pending" ? "cursor-not-allowed text-ink-400" : "text-ink-900 hover:bg-bg-100")}
+              >
+                <Icon name="chat" size={24} />
+                {mode !== "pending" && <CountBadge count={unreadChat} className="absolute left-[22px] top-[4px]" />}
+                {chatActive && mode !== "pending" && <span className="absolute -bottom-[11px] left-2 h-0.5 w-6 bg-navy" />}
+              </Link>
               <div className="relative">
-                <button type="button" aria-label="알림" disabled={mode === "pending"} onClick={() => setOpen(open === "bell" ? null : "bell")} className={cn("relative grid size-10 place-items-center rounded-full hover:bg-bg-100", mode === "pending" && "opacity-60")}>
-                  <Icon name="bell" size={24} className="text-ink-700" />
+                <button type="button" aria-label="알림" disabled={mode === "pending"} onClick={() => setOpen(open === "bell" ? null : "bell")} className={cn("relative grid size-10 place-items-center rounded-full", mode === "pending" ? "cursor-not-allowed text-ink-400" : "text-ink-900 hover:bg-bg-100")}>
+                  <Icon name="bell" size={24} />
                   {mode !== "pending" && <CountBadge count={unreadNoti} className="absolute left-[22px] top-[4px]" />}
                 </button>
                 <Popover open={open === "bell"} onClose={() => setOpen(null)} className="w-[380px]">
@@ -122,7 +136,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
 
               <div className="relative">
                 <button type="button" aria-label="프로필 메뉴" onClick={() => setOpen(open === "me" ? null : "me")} className="flex items-center gap-1 rounded-full hover:bg-bg-100">
-                  {mode === "pending" ? <Avatar size={32} /> : <Avatar name={user?.name} part={user?.part} size={40} />}
+                  {mode === "pending" ? <Avatar size={40} /> : <Avatar name={user?.name} part={user?.part} size={40} />}
                   <Icon name="chevron-down" size={16} className="text-ink-700" />
                 </button>
                 <Popover open={open === "me"} onClose={() => setOpen(null)} className="w-[240px]">
