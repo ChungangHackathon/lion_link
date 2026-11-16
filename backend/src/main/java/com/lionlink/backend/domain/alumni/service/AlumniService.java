@@ -80,28 +80,29 @@ public class AlumniService {
 	private Function<AlumniSearchRepository.Row, AlumniResponse> toResponse(Long userId, List<AlumniSearchRepository.Row> rows) {
 		List<Long> userIds = rows.stream().map(AlumniSearchRepository.Row::id).toList();
 		if (userIds.isEmpty()) {
-			return row -> AlumniResponse.of(row, null, false, CoffeeAvailability.NOT_ACCEPTING);
+			return row -> AlumniResponse.of(row, null, null, false, CoffeeAvailability.NOT_ACCEPTING);
 		}
 
 		Set<Long> bookmarkedIds = bookmarkRepository.findTargetUserIds(userId, userIds);
 		Set<Long> connectedIds = relationQueryRepository.findConnectedIds(userId);
-		Map<Long, String> companies = currentCompanies(userIds);
+		Map<Long, Career> careers = currentCareers(userIds);
 		Map<Long, CoffeeAvailability> availabilities = coffeeAvailabilityReader.getAvailabilities(userIds);
 
 		return row -> {
-			boolean companyVisible = row.profile().getStatus().isWorking()
-					&& row.profile().getCompanyVisibility()
+			Career career = row.profile().getStatus().isWorking() ? careers.get(row.id()) : null;
+			boolean companyVisible = career != null && row.profile().getCompanyVisibility()
 					.isVisibleTo(row.id().equals(userId), connectedIds.contains(row.id()));
-			return AlumniResponse.of(row, companyVisible ? companies.get(row.id()) : null, bookmarkedIds.contains(row.id()),
+			return AlumniResponse.of(row, companyVisible ? career.getCompany() : null,
+					career == null ? null : career.getTitle(), bookmarkedIds.contains(row.id()),
 					availabilities.get(row.id()));
 		};
 	}
 
-	private Map<Long, String> currentCompanies(List<Long> userIds) {
-		Map<Long, String> companies = new HashMap<>();
+	private Map<Long, Career> currentCareers(List<Long> userIds) {
+		Map<Long, Career> careers = new HashMap<>();
 		for (Career career : careerRepository.findByUserIdInAndIsCurrentTrueOrderByStartYmDescIdDesc(userIds)) {
-			companies.putIfAbsent(career.getUserId(), career.getCompany());
+			careers.putIfAbsent(career.getUserId(), career);
 		}
-		return companies;
+		return careers;
 	}
 }

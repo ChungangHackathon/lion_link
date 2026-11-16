@@ -18,13 +18,14 @@ public record AlumniResponse(
 		String bio,
 		String photoUrl,
 		String company,
+		String jobTitle,
 		List<String> interests,
 		List<String> skills,
 		boolean bookmarked,
 		CoffeeAvailability coffeeChat
 ) {
 
-	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, boolean bookmarked,
+	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, String jobTitle, boolean bookmarked,
 			CoffeeAvailability coffeeChat) {
 		Profile profile = row.profile();
 		return new AlumniResponse(
@@ -37,6 +38,7 @@ public record AlumniResponse(
 				profile.getBio(),
 				profile.getPhotoUrl(),
 				company,
+				jobTitle,
 				profile.getInterests(),
 				Objects.requireNonNullElse(profile.getSkills(), List.of()),
 				bookmarked,

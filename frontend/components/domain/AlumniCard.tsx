@@ -100,7 +100,7 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
             <PartTag part={part} generation={person.generation} className="min-w-0 truncate" />
           </div>
           {/* 이름 아래: 재직 중이면 회사, 아니면 현재 상태 · 줄 아래: 한 줄 소개 */}
-          <p className="truncate text-[13px] leading-4 text-ink-700">{person.company ?? PROFILE_STATUS_LABEL[person.status]}</p>
+          <p className="truncate text-[13px] leading-4 text-ink-700">{[person.company, person.jobTitle].filter(Boolean).join(" · ") || PROFILE_STATUS_LABEL[person.status]}</p>
           <hr className="border-line-200" />
           <p className="line-clamp-2 h-[36px] text-[14px] leading-[18px] text-ink-500">{person.headline}</p>
           <div className="flex h-[17px] items-center gap-2">
