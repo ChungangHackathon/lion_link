@@ -60,7 +60,7 @@ public class ChatMessageWriter {
 	public ChatMessageResponse publishUpdated(ChatRoom room, ChatMessage message) {
 		List<ChatRoomMember> members = chatRoomMemberRepository.findByRoomId(room.getId());
 		ChatMessageResponse response = ChatMessageResponse.of(message, unreadCount(message, members));
-		eventPublisher.publishEvent(new ChatMessageUpdatedEvent(room.getId(), response, recipients(members)));
+		eventPublisher.publishEvent(new ChatMessageUpdatedEvent(room.getId(), response, recipients(room, members)));
 		return response;
 	}
 
@@ -74,12 +74,16 @@ public class ChatMessageWriter {
 					.ifPresent(sender -> sender.read(message.getId()));
 		}
 		ChatMessageResponse response = ChatMessageResponse.of(message, unreadCount(message, members));
+		eventPublisher.publishEvent(new ChatMessageSentEvent(room.getId(), response, recipients(room, members)));
+		return response;
+	}
+
+	private Map<Long, Boolean> recipients(ChatRoom room, List<ChatRoomMember> members) {
 		Map<Long, Boolean> recipients = recipients(members);
 		if (room.getStatus() == ChatRoomStatus.REQUESTED) {
 			recipients.keySet().removeIf(userId -> !room.isRequestedBy(userId));
 		}
-		eventPublisher.publishEvent(new ChatMessageSentEvent(room.getId(), response, recipients));
-		return response;
+		return recipients;
 	}
 
 	static Map<Long, Boolean> recipients(List<ChatRoomMember> members) {
