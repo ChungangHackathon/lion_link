@@ -98,6 +98,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
   }, [messages]);
 
   // 남이 보낸 메시지가 마지막이면 읽음 처리 (CHAT-12). 내가 보낸 메시지는 서버가 이미 읽은 것으로 친다
+  const unreadMine = confirmed.some((m) => isMine(m) && m.unreadCount > 0);
   const lastFromOther = confirmed.length > 0 && !isMine(confirmed[confirmed.length - 1]);
   useEffect(() => {
     if (lastId == null || lastRead.current === lastId) return;
@@ -118,7 +119,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
     live.current = { status: room.status, type: room.type, myId, lastId };
   });
   const countsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** 단체방에서 누가 읽으면 최근 메시지들의 '안 읽은 사람 수'를 서버 값으로 다시 맞춘다 */
+  /** 상대가 읽으면 최근 메시지들의 '안 읽은 사람 수'를 서버 값으로 다시 맞춘다 (1:1 방의 '1'도 이걸로 사라진다) */
   const refreshCounts = () => {
     if (countsTimer.current) clearTimeout(countsTimer.current);
     countsTimer.current = setTimeout(async () => {
@@ -142,7 +143,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
           setMessages((ms) => mergeNew(ms, [e.message]));
           // 수락 대기 중이던 방에 안내 메시지가 오면 방 상태가 바뀐 것이다
           if (live.current.status !== "ACTIVE" && e.message.type === "SYSTEM") reloadRoom();
-        } else if (e.type === "READ" && live.current.type === "GROUP" && String(e.userId) !== live.current.myId) refreshCountsRef.current();
+        } else if (e.type === "READ" && String(e.userId) !== live.current.myId) refreshCountsRef.current();
       }),
     [subscribeRoom, roomId, reloadRoom],
   );
@@ -173,12 +174,14 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
         if (lastId == null) return;
         const page = await service.listMessages(roomId, { after: lastId });
         if (page.items.length) setMessages((ms) => mergeNew(ms, page.items));
+        // 실시간 읽음 소식을 못 받으니, 안 읽힌 내 메시지가 있으면 숫자도 다시 맞춘다
+        if (unreadMine) refreshCountsRef.current();
       } catch {
         // 다음 주기에 다시 시도한다
       }
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [service, roomId, lastId, room.status, ended, reloadRoom, connected]);
+  }, [service, roomId, lastId, room.status, ended, reloadRoom, connected, unreadMine]);
 
   const loadOlder = async () => {
     const first = confirmed[0];
