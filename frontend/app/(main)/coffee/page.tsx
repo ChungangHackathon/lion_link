@@ -54,7 +54,10 @@ function CoffeeList() {
     if (linked.data.myRole !== "RECEIVER" && tab === "received") setTab("sent");
   }
 
-  const first = useApi((signal) => service.list(box, filter, 0, SIZE, signal), [service, box, filter]);
+  // 응답에 어느 탭·필터 것인지 붙여 둔다. 탭을 바꾼 직후 이전 탭 목록·상세가 잠깐 떴다 사라지지 않게, 지금 탭 것이 아니면 버린다
+  const loaded = useApi(async (signal) => ({ box, filter, page: await service.list(box, filter, 0, SIZE, signal) }), [service, box, filter]);
+  const fresh = loaded.data && loaded.data.box === box && loaded.data.filter === filter ? loaded.data.page : undefined;
+  const first = { ...loaded, data: fresh };
   const [more, setMore] = useState<{ items: CoffeeChatItem[]; page: number; hasNext: boolean } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [seen, setSeen] = useState(first.data);
@@ -124,7 +127,7 @@ function CoffeeList() {
               ))}
             </div>
           ) : list.length === 0 ? (
-            <EmptyState compact title={tab === "received" ? "받은 신청이 없어요" : "보낸 신청이 없어요"} description={tab === "received" ? "커피챗 받기를 켜두면 사자들이 신청할 수 있어요" : "동문 찾기에서 사자에게 커피챗을 신청해보세요"} action={tab === "received" ? { label: "커피챗 설정", href: "/me/coffee-settings" } : { label: "동문 찾기", href: "/alumni" }} />
+            <EmptyState compact title={emptyTitle(tab, filter)} action={tab === "received" ? { label: "커피챗 설정", href: "/me/coffee-settings" } : { label: "동문 찾기", href: "/alumni" }} />
           ) : (
             <ul className={cn(first.loading && "opacity-60")}>
               {list.map((c) => (
@@ -141,8 +144,9 @@ function CoffeeList() {
           )}
         </Card>
 
-        <Card className="h-fit rounded-[10px] p-7">
-          {detailId !== null && detailId !== undefined ? (
+        {/* 고른 신청이 없으면(목록이 비었거나 불러오는 중) 오른쪽은 비워 둔다 */}
+        {detailId !== null && detailId !== undefined && first.data && (
+          <Card className="h-fit rounded-[10px] p-7">
             <DetailPane
               key={String(detailId)}
               id={detailId}
@@ -153,13 +157,19 @@ function CoffeeList() {
                 first.reload();
               }}
             />
-          ) : (
-            <EmptyState title="신청을 선택해주세요" />
-          )}
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );
+}
+
+/** 목록이 비었을 때 문구. 고른 필터에 맞춘다 */
+function emptyTitle(tab: Tab, filter: CoffeeFilter) {
+  if (filter === "PENDING") return "대기 중인 신청이 없어요";
+  if (filter === "ACTIVE") return "만남 준비 중인 커피챗이 없어요";
+  if (filter === "ENDED") return "종료된 커피챗이 없어요";
+  return tab === "received" ? "받은 신청이 없어요" : "보낸 신청이 없어요";
 }
 
 /** 오른쪽 상세 (COFFEE-03). 상태가 바뀌면 목록도 다시 불러온다 */
