@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { ME_ID } from "@/lib/mock/users";
 import type { Alumni, ChatMessage as MockMessage, ChatRoom } from "@/lib/types";
-import { API_ENABLED, ApiError } from "./client";
+import { API_ENABLED, ApiError, isApiError } from "./client";
 import * as chat from "./chat";
 import type { ChatMessage, ChatUser, DeclineReason, RequestDetail, RequestItem, RoomDetail, RoomStatus, RoomSummary, SliceOf } from "./chat";
 import type { ApiLionPart } from "./profile";
@@ -29,6 +29,8 @@ export interface ChatService {
   editMessage: (roomId: Id, messageId: Id, content: string) => Promise<ChatMessage>;
   deleteMessage: (roomId: Id, messageId: Id) => Promise<ChatMessage>;
   invite: (roomId: Id, userIds: Id[]) => Promise<{ invitedCount: number; skippedUserIds: Id[] }>;
+  /** 이미 쓰고 있는 1:1 방 id. 없으면 null */
+  findDirect: (userId: Id) => Promise<Id | null>;
   read: (roomId: Id, lastMessageId?: Id) => Promise<void>;
   setPreferences: (roomId: Id, patch: { pinned?: boolean; muted?: boolean }) => Promise<{ pinned: boolean; muted: boolean }>;
   leave: (roomId: Id) => Promise<void>;
@@ -54,6 +56,14 @@ const apiService: ChatService = {
   editMessage: chat.editMessage,
   deleteMessage: chat.deleteMessage,
   invite: chat.inviteToRoom,
+  findDirect: async (userId) => {
+    try {
+      return (await chat.getDirectRoom(userId)).roomId;
+    } catch (e) {
+      if (isApiError(e) && e.status === 404) return null;
+      throw e;
+    }
+  },
   read: async (roomId, lastMessageId) => {
     await chat.readRoom(roomId, lastMessageId);
   },
@@ -235,6 +245,7 @@ export function useChatService(): ChatService {
       },
       // 프로토타입: 초대는 결과만 돌려준다 (mock 방 인원은 그대로)
       invite: (_roomId, userIds) => delay({ invitedCount: userIds.length, skippedUserIds: [] }),
+      findDirect: (userId) => delay(rooms.find((r) => r.type === "DIRECT" && r.memberIds.includes(String(userId)) && r.memberIds.includes(ME_ID))?.id ?? null),
       read: (roomId) => {
         // 이미 읽은 방이면 store를 건드리지 않는다 (불필요한 다시 그리기 방지)
         if (find(roomId)?.unread) store.markRoomRead(String(roomId));
