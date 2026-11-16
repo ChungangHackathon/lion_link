@@ -139,9 +139,14 @@ export function educationRows(d: Pick<AlumniDetail, "educations">) {
 // 동문 상세 API → 화면
 // ---------------------------------------------------------------------------
 
+/** 이름 옆 운영진 태그. 운영진·회장·파트장 활동 중 가장 최근 기수로 적는다 (서버 isStaff와 같은 규칙). 없으면 null */
+export function staffLabelOf(activities: AlumniDetail["lionActivities"]): string | null {
+  const staff = [...activities].filter((a) => a.role !== "LION" && a.role !== "ETC").sort((a, b) => b.generation - a.generation)[0];
+  return staff ? `${staff.generation}기 ${staff.parts.map((p) => LION_PART_LABEL[p]).join("·")} ${LION_ROLE_LABEL[staff.role]}`.replace(/\s+/g, " ") : null;
+}
+
 export function viewFromApi(d: AlumniDetail): AlumniProfileView {
   const part: LionPart = d.lionParts[0] ?? "ETC";
-  const staff = [...d.lionActivities].filter((a) => a.role !== "LION" && a.role !== "ETC").sort((a, b) => b.generation - a.generation)[0];
   const current = d.careers.find((c) => c.isCurrent);
   const badge = receiveBadge(d.coffeeChat);
 
@@ -167,7 +172,7 @@ export function viewFromApi(d: AlumniDetail): AlumniProfileView {
     generation: d.generation,
     part,
     photoUrl: d.photoUrl,
-    staffLabel: d.isStaff ? (staff ? `${staff.generation}기 ${staff.parts.map((p) => LION_PART_LABEL[p]).join("·")} ${LION_ROLE_LABEL[staff.role]}` : "운영진") : null,
+    staffLabel: d.isStaff ? staffLabelOf(d.lionActivities) ?? "운영진" : null,
     headline: d.headline ?? (current ? [current.companyHidden ? null : current.company, current.jobTitle].filter(Boolean).join(" · ") : ""),
     intro: d.bio ?? "",
     region: d.region,

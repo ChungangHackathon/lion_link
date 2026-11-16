@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { INTEREST_OPTIONS, INTEREST_CODE, LION_PART_LABEL, PROFILE_STATUS_LABEL, type InterestCode, type ProfileStatus } from "@/lib/types";
 import { errorMessage } from "@/lib/api/client";
 import { receiveBadge, type LinkType } from "@/lib/api/alumni";
-import { detailFromMine } from "@/lib/api/alumniView";
+import { detailFromMine, staffLabelOf } from "@/lib/api/alumniView";
 import { completionOf, isEmail, isPhone, isWorking, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, workLine, workOf, type BasicInfoRequest, type MyProfile, type Scope } from "@/lib/api/myProfile";
 import { isHttpUrl, normalizeLink, type ApiLionPart } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
@@ -71,6 +71,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
   const nextStep = !p.bio ? { text: `자기소개를 쓰면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.careers.length ? { text: `경력을 추가하면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.projects.length ? { text: `프로젝트를 추가하면 ${Math.min(100, completion + 7)}%가 돼요` } : null;
   const badge = coffee ? receiveBadge(coffee.status) : null;
   const subline = workLine(workOf(p), p.status);
+  const staffLabel = p.isStaff ? staffLabelOf(p.lionActivities) ?? "운영진" : null;
 
   const done = (label: string) => {
     setEdit(null);
@@ -194,6 +195,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-[28px] font-bold leading-[34px] text-ink-900">{p.name}</h1>
                 <PartTag part={part} generation={p.generation} />
+                {staffLabel && <span className="rounded-[5px] bg-orange-back px-2 py-[3px] text-[12px] font-semibold text-orange-badge">{staffLabel}</span>}
               </div>
               <button type="button" onClick={() => setEdit("basic")} className="flex h-[34px] shrink-0 items-center gap-1.5 rounded-[6px] bg-part-be-bg px-3 t-label2 text-primary-strong hover:bg-part-be-line">
                 <Icon name="edit" size={16} /> 프로필 편집
