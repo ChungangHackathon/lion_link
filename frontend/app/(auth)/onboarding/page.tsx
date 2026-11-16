@@ -28,7 +28,6 @@ export default function OnboardingPage() {
   const [intro, setIntro] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
-  const [staff, setStaff] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // 로그인 전이거나 이미 입력했으면 맞는 화면으로 (API 모드)
@@ -60,7 +59,6 @@ export default function OnboardingPage() {
       return;
     }
 
-    const generation = me?.generation ?? user?.generation;
     const body: OnboardingRequest = {
       lionParts: parts,
       status,
@@ -69,8 +67,6 @@ export default function OnboardingPage() {
       jobTitle: needsCompany && role.trim() ? role.trim() : undefined,
       link: linkValue,
       headline: intro.trim() || undefined,
-      // "운영진으로 활동했어요" → 가입 기수에 운영진 활동 1줄 (다른 기수는 프로필 편집에서 추가)
-      staffActivities: staff && generation ? [{ generation, parts }] : undefined,
     };
 
     try {
@@ -133,15 +129,6 @@ export default function OnboardingPage() {
 
       <Input label="외부 링크 (선택)" placeholder="링크드인 · 깃허브 · 포트폴리오 등" value={link} onChange={(e) => setLink(e.target.value)} error={!linkOk ? "올바른 주소를 입력해주세요 (예: github.com/아이디)" : undefined} />
       <Input label="한 줄 소개 (선택)" placeholder="예) 핀테크 스타트업 3년 차 백엔드 개발자, 사이드 프로젝트 같이 할 사람 찾아요" value={intro} onChange={(e) => setIntro(e.target.value)} counter={{ value: intro.length, max: 100 }} error={intro.length > 100 ? "100자 이내로 적어주세요" : undefined} />
-
-      {/* 운영진 활동 (v2.9 §3) */}
-      <label className="flex items-center justify-between rounded-[8px] border border-line-200 px-4 py-3">
-        <span className="flex flex-col">
-          <span className="t-label1 text-ink-900">운영진으로 활동했어요</span>
-          <span className="t-caption1 text-ink-500">운영진 이력은 프로필에 배지로 표시돼요. 승인 시 운영진이 확인해요.</span>
-        </span>
-        <input type="checkbox" checked={staff} onChange={(e) => setStaff(e.target.checked)} className="size-[18px] accent-primary" />
-      </label>
 
       <Button size="L" full disabled={!valid} loading={loading} onClick={submit}>
         시작하기
