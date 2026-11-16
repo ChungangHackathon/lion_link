@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { INTEREST_LABEL, LION_PART_LABEL, POST_CATEGORY_LABEL, type LionPart, type PostCategory } from "@/lib/types";
+import { INTEREST_LABEL, LION_PART_LABEL, POST_CATEGORY_LABEL, type InterestCode, type LionPart, type PostCategory } from "@/lib/types";
 import { daysLeft, formatDateTime } from "@/lib/format";
 import { errorMessage, isApiError } from "@/lib/api/client";
-import type { AlumniSummary } from "@/lib/api/alumni";
+import type { AlumniQuery, AlumniSummary } from "@/lib/api/alumni";
 import { slotsText } from "@/lib/api/alumniView";
 import { COFFEE_TOPIC_LABEL } from "@/lib/api/coffee";
 import { addDays, todayKst, type CoffeeSettings } from "@/lib/api/coffeeSettings";
 import type { HomeData, RestFor, SwitchRequest } from "@/lib/api/home";
 import { completionOf, SCOPE_LABEL } from "@/lib/api/myProfile";
 import type { PostSummary } from "@/lib/api/posts";
+import type { ApiLionPart } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
+import { useAlumniService } from "@/lib/api/useAlumniService";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
 import { useHomeService } from "@/lib/api/useHomeService";
 import { useMyProfileService } from "@/lib/api/useMyProfileService";
@@ -40,6 +42,36 @@ const DAY = ["일", "월", "화", "수", "목", "금", "토"];
 const firstPart = (parts: string[] | null | undefined): LionPart => (parts?.[0] as LionPart) ?? "ETC";
 const monthDay = (date: string) => `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
 
+const RECOMMEND_COUNT = 4;
+
+const shuffle = <T,>(items: T[]) => {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+/**
+ * 홈 추천 사자. 같은 파트이면서 관심 분야가 겹치는 사자 → 같은 파트 → 관심 분야가 겹치는 사자 → 아무 사자 순으로 채운다.
+ * 같은 단계 안에서는 섞어서, 들어올 때마다 다른 사자가 보이게 한다. (동문 목록은 나를 빼고 준다)
+ */
+async function recommendLions(list: (q: AlumniQuery, signal?: AbortSignal) => Promise<{ items: AlumniSummary[] }>, parts: ApiLionPart[], interests: InterestCode[], signal?: AbortSignal) {
+  const steps: AlumniQuery[] = [];
+  if (parts.length && interests.length) steps.push({ parts, interests });
+  if (parts.length) steps.push({ parts });
+  if (interests.length) steps.push({ interests });
+  steps.push({});
+  const picked = new Map<string, AlumniSummary>();
+  for (const q of steps) {
+    if (picked.size >= RECOMMEND_COUNT) break;
+    const { items } = await list({ ...q, size: 30 }, signal);
+    for (const a of shuffle(items)) if (picked.size < RECOMMEND_COUNT && !picked.has(String(a.id))) picked.set(String(a.id), a);
+  }
+  return [...picked.values()];
+}
+
 /** ★ H-01 홈 / 전체 — 3단 300 / 576 / 312. ◇ H-04 승인 후 첫 방문 (첫 커피챗 가이드). (HOME-01 · 02, PROFILE-14) */
 export default function HomePage() {
   const service = useHomeService();
@@ -58,6 +90,10 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
   const [tab, setTab] = useState(0);
   const news = useApi((signal) => postService.list({ category: NEWS_TABS[tab].category, size: 4 }, signal), [postService, tab]).data;
   const recruits = useApi((signal) => postService.list({ recruiting: true, size: 3 }, signal), [postService]).data;
+
+  const alumniService = useAlumniService();
+  // 추천 사자: 나와 같은 파트·관심 분야 사자부터, 모자라면 아무 사자로 채운다
+  const recommended = useApi((signal) => recommendLions(alumniService.list, profile!.lionParts, profile!.interests, signal), [alumniService, profile?.lionParts.join(), profile?.interests.join()], !!profile).data;
 
   const { me, counts } = home;
   const part = firstPart(me.lionParts);
@@ -144,19 +180,24 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
 
         <div className="flex flex-col gap-3 pt-2">
           <div className="flex items-center justify-between">
-            <h2 className="t-title3 text-ink-900">사자</h2>
+            <h2 className="t-title3 text-ink-900">추천 사자</h2>
             <Link href="/alumni" className="text-[13px] text-ink-500 hover:underline">
               전체보기 →
             </Link>
           </div>
-          {home.recommendedSeniors.length ? (
-            <div className="flex gap-5 py-5">
-              {home.recommendedSeniors.map((a) => (
+          {!recommended ? (
+            <div className="grid grid-cols-2 gap-5 py-5">
+              <Skeleton className="h-[300px] w-full" />
+              <Skeleton className="h-[300px] w-full" />
+            </div>
+          ) : recommended.length ? (
+            <div className="grid grid-cols-2 justify-items-center gap-5 py-5">
+              {recommended.map((a) => (
                 <AlumniCard key={a.id} person={a} onRequest={onRequest} onMessage={onMessage} />
               ))}
             </div>
           ) : (
-            <p className="py-6 text-center text-[14px] text-ink-500">지금 커피챗을 받는 선배 사자가 없어요</p>
+            <p className="py-6 text-center text-[14px] text-ink-500">아직 추천할 사자가 없어요</p>
           )}
         </div>
 
