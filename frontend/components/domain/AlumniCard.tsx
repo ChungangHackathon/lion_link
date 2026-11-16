@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { errorMessage } from "@/lib/api/client";
-import { alumniHeadline, cannotRequestReason, type AlumniSummary } from "@/lib/api/alumni";
+import { cannotRequestReason, type AlumniSummary } from "@/lib/api/alumni";
+import { PROFILE_STATUS_LABEL } from "@/lib/types";
 import { useAlumniService } from "@/lib/api/useAlumniService";
 import { Avatar } from "@/components/ui/Avatar";
 import { PART_STYLE, PartTag, Tag } from "@/components/ui/Badge";
@@ -76,9 +77,10 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
             </h3>
             <PartTag part={part} generation={person.generation} className="min-w-0 truncate" />
           </div>
-          <p className="line-clamp-2 min-h-4 text-[13px] leading-4 text-ink-700">{alumniHeadline(person)}</p>
+          {/* 이름 아래: 재직 중이면 회사, 아니면 현재 상태 · 줄 아래: 한 줄 소개 */}
+          <p className="truncate text-[13px] leading-4 text-ink-700">{person.company ?? PROFILE_STATUS_LABEL[person.status]}</p>
           <hr className="border-line-200" />
-          <p className="line-clamp-2 h-[36px] text-[14px] leading-[18px] text-ink-500">{person.bio}</p>
+          <p className="line-clamp-2 h-[36px] text-[14px] leading-[18px] text-ink-500">{person.headline}</p>
           <div className="flex h-[17px] items-center gap-2 overflow-hidden">
             {person.skills.slice(0, 3).map((s) => (
               <Tag key={s}>{s}</Tag>
