@@ -8,7 +8,18 @@ import type { Id } from "./posts";
 import { api } from "./client";
 
 export interface HomeData {
-  me: { id: Id; name: string; generation: number; lionParts: ApiLionPart[]; headline: string | null; bio: string | null; photoUrl: string | null };
+  me: {
+    id: Id;
+    name: string;
+    generation: number;
+    lionParts: ApiLionPart[];
+    headline: string | null;
+    bio: string | null;
+    photoUrl: string | null;
+    /** 현재 재직 중인 경력의 회사·직무 (없으면 null) */
+    company: string | null;
+    jobTitle: string | null;
+  };
   /** 승인 후 첫 방문 환영 배너(첫 커피챗 가이드)를 보여줄지 */
   welcomeBannerVisible: boolean;
   counts: { pendingCoffeeChats: number; activeCoffeeChats: number; unreadMessages: number; messageRequests: number; bookmarks: number };

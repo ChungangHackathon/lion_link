@@ -23,7 +23,9 @@ public record HomeResponse(
 			List<LionPart> lionParts,
 			String headline,
 			String bio,
-			String photoUrl
+			String photoUrl,
+			String company,
+			String jobTitle
 	) {
 	}
 
