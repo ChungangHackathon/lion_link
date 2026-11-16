@@ -126,8 +126,28 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
           : "지금은 커피챗을 받지 않아요";
   const receiving = baseDirty ? base === "OPEN" : status.availability === "AVAILABLE";
   const resting = !baseDirty && status.availability === "RESTING";
+  // 쉬는 기간 중이면 기본 상태가 '받기'여도 오늘은 안 받으니 '안 받기'에 불을 켠다
+  const shownBase = resting ? "CLOSED" : base;
+  const [confirmResume, setConfirmResume] = useState(false);
+  const today = todayKst();
+  const activeRests = saved.periodKind === "REST" ? periods.filter((p) => p.startDate <= today && today <= p.endDate) : [];
+
+  /** 쉬는 중에 [받기]: 오늘 걸린 쉬는 기간을 지우고 바로 다시 받는다 */
+  const resume = async () => {
+    setConfirmResume(false);
+    try {
+      for (const p of activeRests) await service.removePeriod(p.id);
+      setPeriods((s) => s.filter((x) => !activeRests.some((a) => String(a.id) === String(x.id))));
+      toast("쉬는 기간을 지우고 다시 받기 시작했어요");
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    }
+  };
 
   const changeBase = (v: "OPEN" | "CLOSED") => {
+    if (v === shownBase) return;
+    if (resting && v === "OPEN") return setConfirmResume(true);
     if (v === base) return;
     if (v === savedBase) {
       setBase(v);
@@ -233,7 +253,7 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
             </div>
             <div role="radiogroup" aria-label="기본 상태" className="grid grid-cols-2 gap-2">
               {(["OPEN", "CLOSED"] as const).map((v) => (
-                <button key={v} type="button" role="radio" aria-checked={base === v} onClick={() => changeBase(v)} className={cn("h-11 rounded-full border t-label1 transition-colors", base === v ? "border-light-text bg-blue-100/60 text-navy shadow-[inset_0_0_0_1px_rgba(79,111,168,0.35)]" : "border-line-200 bg-white text-ink-900 hover:bg-bg-50")}>
+                <button key={v} type="button" role="radio" aria-checked={shownBase === v} onClick={() => changeBase(v)} className={cn("h-11 rounded-full border t-label1 transition-colors", shownBase === v ? "border-light-text bg-blue-100/60 text-navy shadow-[inset_0_0_0_1px_rgba(79,111,168,0.35)]" : "border-line-200 bg-white text-ink-900 hover:bg-bg-50")}>
                   {v === "OPEN" ? "받기" : "안 받기"}
                 </button>
               ))}
@@ -245,13 +265,24 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
               <p className="t-body-bold text-ink-900">
                 {kind === "REST" ? "쉬는 기간" : "커피챗 받는 기간"} <span className="t-caption1 text-ink-400">({shownPeriods.length}/{PERIOD_LIMIT})</span>
               </p>
-              <button type="button" disabled={shownPeriods.length >= PERIOD_LIMIT || baseDirty} onClick={() => setAddOpen(true)} className="t-label2 text-ink-900 underline underline-offset-2 disabled:text-ink-400 disabled:no-underline">
+              {/* 안 받기면 기간을 추가하지 않는다. 받기로 바꾸고 아직 저장 전이면 [기간 추가]가 먼저 저장한다 */}
+              <button
+                type="button"
+                disabled={shownPeriods.length >= PERIOD_LIMIT || base === "CLOSED" || saving}
+                onClick={async () => {
+                  if (baseDirty && !(await save())) return;
+                  setAddOpen(true);
+                }}
+                className="t-label2 text-ink-900 underline underline-offset-2 disabled:text-ink-400 disabled:no-underline"
+              >
                 + 기간 추가
               </button>
             </div>
             <p className="t-caption1 text-ink-500">
-              {baseDirty
-                ? "기본 상태를 바꾼 뒤에는 저장하고 나서 기간을 추가할 수 있어요."
+              {base === "CLOSED"
+                ? "커피챗을 안 받는 중이에요. [받기]로 바꾸면 쉬는 기간을 정할 수 있어요."
+                : baseDirty
+                ? "[기간 추가]를 누르면 바꾼 설정을 먼저 저장해요."
                 : shownPeriods.length >= PERIOD_LIMIT
                   ? "기간은 5개까지 등록할 수 있어요. 지난 기간을 지우고 추가해주세요."
                   : kind === "REST"
@@ -418,6 +449,14 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
         title="등록한 기간이 모두 지워져요. 바꿀까요?"
         description="기본 상태를 바꾸면 쉬는 기간·커피챗 받는 기간이 모두 삭제돼요. [저장]을 눌러야 반영돼요."
         confirmLabel="바꾸기"
+      />
+      <ConfirmModal
+        open={confirmResume}
+        onClose={() => setConfirmResume(false)}
+        onConfirm={() => void resume()}
+        title="쉬는 기간을 끝내고 다시 받을까요?"
+        description="오늘이 들어간 쉬는 기간을 지우고, 지금부터 커피챗을 받아요."
+        confirmLabel="다시 받기"
       />
       {/* 저장했는데 서버가 기간 삭제 확인을 요구할 때 (다른 기기에서 기간을 추가한 경우 등) */}
       <ConfirmModal
