@@ -12,14 +12,11 @@ import com.lionlink.backend.domain.profile.CoffeeAvailabilityReader;
 import com.lionlink.backend.domain.profile.LionPart;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
-import com.lionlink.backend.domain.profile.section.career.Career;
-import com.lionlink.backend.domain.profile.section.career.CareerRepository;
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import com.lionlink.backend.global.response.PageResponse;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +36,6 @@ public class AlumniService {
 	private final BookmarkRepository bookmarkRepository;
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final CareerRepository careerRepository;
 	private final CoffeeAvailabilityReader coffeeAvailabilityReader;
 	private final RelationQueryRepository relationQueryRepository;
 
@@ -85,24 +81,16 @@ public class AlumniService {
 
 		Set<Long> bookmarkedIds = bookmarkRepository.findTargetUserIds(userId, userIds);
 		Set<Long> connectedIds = relationQueryRepository.findConnectedIds(userId);
-		Map<Long, Career> careers = currentCareers(userIds);
 		Map<Long, CoffeeAvailability> availabilities = coffeeAvailabilityReader.getAvailabilities(userIds);
 
+		// 회사는 프로필에 저장된 값이고 공개 범위를 적용한다. 직무는 항상 보여 준다.
 		return row -> {
-			Career career = row.profile().getStatus().isWorking() ? careers.get(row.id()) : null;
-			boolean companyVisible = career != null && row.profile().getCompanyVisibility()
+			Profile profile = row.profile();
+			boolean companyVisible = profile.getStatus().isWorking()
+					&& profile.getCompanyVisibility()
 					.isVisibleTo(row.id().equals(userId), connectedIds.contains(row.id()));
-			return AlumniResponse.of(row, companyVisible ? career.getCompany() : null,
-					career == null ? null : career.getTitle(), bookmarkedIds.contains(row.id()),
-					availabilities.get(row.id()));
+			return AlumniResponse.of(row, companyVisible ? profile.getCompany() : null, profile.getJobTitle(),
+					bookmarkedIds.contains(row.id()), availabilities.get(row.id()));
 		};
-	}
-
-	private Map<Long, Career> currentCareers(List<Long> userIds) {
-		Map<Long, Career> careers = new HashMap<>();
-		for (Career career : careerRepository.findByUserIdInAndIsCurrentTrueOrderByStartYmDescIdDesc(userIds)) {
-			careers.putIfAbsent(career.getUserId(), career);
-		}
-		return careers;
 	}
 }

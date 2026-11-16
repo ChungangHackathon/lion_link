@@ -132,10 +132,8 @@ public class AlumniSearchRepository {
 					 and (lower(u.name) like :q escape '!'
 					  or lower(p.headline) like :q escape '!'
 					  or lower(cast(p.skills as String)) like :q escape '!'
-					  or exists (select 1 from Career c
-					             where c.userId = u.id and c.isCurrent = true
-					               and (lower(c.title) like :q escape '!'
-					                 or (p.companyVisibility = :publicVisibility and lower(c.company) like :q escape '!'))))
+					  or lower(p.jobTitle) like :q escape '!'
+					  or (p.companyVisibility = :publicVisibility and lower(p.company) like :q escape '!'))
 					""");
 			params.put("q", "%" + escapeLike(condition.q().trim().toLowerCase(Locale.ROOT)) + "%");
 			params.put("publicVisibility", Visibility.PUBLIC);

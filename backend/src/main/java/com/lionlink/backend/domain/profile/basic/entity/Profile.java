@@ -61,6 +61,13 @@ public class Profile extends BaseTimeEntity {
 	@Column(length = 20)
 	private String region;
 
+	/** 재직·창업일 때만 값이 있다. 경력(careers)과 연동되지 않는다. */
+	@Column(length = 30)
+	private String company;
+
+	@Column(length = 30)
+	private String jobTitle;
+
 	@JdbcTypeCode(SqlTypes.JSON)
 	private List<ProfileLink> links;
 
@@ -92,7 +99,8 @@ public class Profile extends BaseTimeEntity {
 	@Builder
 	private Profile(Long userId, LionPart lionPart, ProfileStatus status,
 			List<String> interests, List<String> skills, String photoUrl, String headline, String bio,
-			String major, String minor, String region, List<ProfileLink> links, String contactEmail, String phone) {
+			String major, String minor, String region, String company, String jobTitle,
+			List<ProfileLink> links, String contactEmail, String phone) {
 		this.userId = userId;
 		this.lionPart = lionPart;
 		this.status = status;
@@ -104,6 +112,8 @@ public class Profile extends BaseTimeEntity {
 		this.major = major;
 		this.minor = minor;
 		this.region = region;
+		this.company = company;
+		this.jobTitle = jobTitle;
 		this.links = links;
 		this.contactEmail = contactEmail;
 		this.phone = phone;
@@ -117,14 +127,19 @@ public class Profile extends BaseTimeEntity {
 		return List.of(lionPart);
 	}
 
-	/** PROFILE-04: 기본 정보를 받은 값으로 통째로 바꾼다. 경력·멋사 활동 같은 다른 테이블은 건드리지 않는다. */
+	/**
+	 * PROFILE-04: 기본 정보를 받은 값으로 통째로 바꾼다. 경력·멋사 활동 같은 다른 테이블은 건드리지 않는다.
+	 * 재직·창업이 아닌 상태면 company·jobTitle은 null로 저장한다.
+	 */
 	public void updateBasic(String headline, String major, String minor, String region, ProfileStatus status,
-			LionPart lionPart, List<String> interests) {
+			String company, String jobTitle, LionPart lionPart, List<String> interests) {
 		this.headline = headline;
 		this.major = major;
 		this.minor = minor;
 		this.region = region;
 		this.status = status;
+		this.company = status.isWorking() ? company : null;
+		this.jobTitle = status.isWorking() ? jobTitle : null;
 		this.lionPart = lionPart;
 		this.interests = interests;
 	}

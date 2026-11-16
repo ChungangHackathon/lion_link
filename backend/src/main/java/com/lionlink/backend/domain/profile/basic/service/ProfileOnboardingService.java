@@ -9,7 +9,6 @@ import com.lionlink.backend.domain.notification.entity.NotificationSetting;
 import com.lionlink.backend.domain.notification.repository.NotificationSettingRepository;
 import com.lionlink.backend.domain.profile.Interest;
 import com.lionlink.backend.domain.profile.LionPart;
-import com.lionlink.backend.domain.profile.ProfileStatus;
 import com.lionlink.backend.domain.profile.basic.dto.request.OnboardingRequest;
 import com.lionlink.backend.domain.profile.basic.dto.request.OnboardingRequest.StaffActivity;
 import com.lionlink.backend.domain.profile.basic.entity.LinkType;
@@ -17,7 +16,6 @@ import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
 import com.lionlink.backend.domain.profile.exception.ProfileErrorCode;
-import com.lionlink.backend.domain.profile.section.career.CurrentCareerCreator;
 import com.lionlink.backend.domain.profile.section.education.Education;
 import com.lionlink.backend.domain.profile.section.education.EducationRepository;
 import com.lionlink.backend.domain.profile.section.lionactivity.LionActivity;
@@ -42,7 +40,6 @@ public class ProfileOnboardingService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final CurrentCareerCreator currentCareerCreator;
 	private final EducationRepository educationRepository;
 	private final LionActivityRepository lionActivityRepository;
 	private final CoffeeSettingRepository coffeeSettingRepository;
@@ -65,9 +62,6 @@ public class ProfileOnboardingService {
 		profileRepository.save(buildProfile(user, request));
 		user.completeProfile();
 
-		if (request.status() == ProfileStatus.EMPLOYED) {
-			currentCareerCreator.create(userId, request.company(), request.jobTitle());
-		}
 		educationRepository.save(Education.builder().userId(userId).school(DEFAULT_SCHOOL).build());
 		lionActivityRepository.saveAll(buildLionActivities(user, request));
 
@@ -86,12 +80,15 @@ public class ProfileOnboardingService {
 	private Profile buildProfile(User user, OnboardingRequest request) {
 		List<LionPart> parts = request.lionParts();
 		List<ProfileLink> links = request.link() == null ? null : List.of(toLink(request.link().trim()));
+		boolean working = request.status().isWorking();
 		return Profile.builder()
 				.userId(user.getId())
 				.lionPart(parts.get(0))
 				.status(request.status())
 				.interests(request.interests().stream().map(Interest::name).toList())
 				.headline(request.headline())
+				.company(working ? request.company().strip() : null)
+				.jobTitle(working ? request.jobTitle().strip() : null)
 				.links(links)
 				.contactEmail(user.getEmail())
 				.build();
