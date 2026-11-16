@@ -28,7 +28,7 @@ import { ProfileMenu } from "./ProfileMenu";
 export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, user } = useSession();
+  const { session, user, me } = useSession();
   const toast = useToast();
   const [open, setOpen] = useState<"bell" | "me" | null>(null);
 
@@ -136,7 +136,7 @@ export function Gnb({ variant }: { variant?: "default" | "pending" | "logo" }) {
 
               <div className="relative">
                 <button type="button" aria-label="프로필 메뉴" onClick={() => setOpen(open === "me" ? null : "me")} className="flex items-center gap-1 rounded-full hover:bg-bg-100">
-                  {mode === "pending" ? <Avatar size={40} /> : <Avatar name={user?.name} part={user?.part} size={40} />}
+                  {mode === "pending" ? <Avatar size={40} /> : <Avatar name={user?.name} part={user?.part} photoUrl={me?.photoUrl} size={40} />}
                   <Icon name="chevron-down" size={16} className="text-ink-700" />
                 </button>
                 <Popover open={open === "me"} onClose={() => setOpen(null)} className="w-[240px]">
