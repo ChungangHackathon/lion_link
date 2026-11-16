@@ -47,10 +47,7 @@ public class RelationQueryRepository {
 						from CoffeeChat c
 						where c.openFlag = 1
 						  and ((c.requesterId = :userId and c.receiverId = :targetUserId)
-						    or (c.requesterId = :targetUserId and c.receiverId = :userId)
-						    or (c.receiverId = :targetUserId and exists (
-						          select 1 from CoffeeChatMember m
-						          where m.coffeeChat = c and m.userId = :userId and m.leftAt is null)))
+						    or (c.requesterId = :targetUserId and c.receiverId = :userId))
 						""", Boolean.class)
 				.setParameter("userId", userId)
 				.setParameter("targetUserId", targetUserId)

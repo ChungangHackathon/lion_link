@@ -61,7 +61,7 @@ public class RecruitService {
 		if (recruitMemberRepository.countByRecruitPostId(postId) >= recruit.getCapacity()) {
 			throw new BusinessException(CommunityErrorCode.RECRUIT_FULL);
 		}
-		if (coffeeChatRepository.existsOpenChatWithAny(recruit.getSeniorId(), List.of(userId))) {
+		if (coffeeChatRepository.existsOpenChat(userId, recruit.getSeniorId())) {
 			throw new BusinessException(CommunityErrorCode.OPEN_COFFEE_CHAT_EXISTS);
 		}
 

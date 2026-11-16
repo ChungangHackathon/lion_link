@@ -4,7 +4,6 @@ import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatStatus;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,18 +23,6 @@ public interface CoffeeChatRepository extends JpaRepository<CoffeeChat, Long> {
 
 	@Query("select c.id from CoffeeChat c where c.openFlag = 1 and (c.requesterId = :userId or c.receiverId = :userId) order by c.id")
 	List<Long> findOpenIdsOf(Long userId);
-
-	@Query("""
-			select count(c) > 0
-			from CoffeeChat c
-			where c.openFlag = 1
-			  and ((c.requesterId in :userIds and c.receiverId = :receiverId)
-			    or (c.requesterId = :receiverId and c.receiverId in :userIds)
-			    or (c.receiverId = :receiverId and exists (
-			          select 1 from CoffeeChatMember m
-			          where m.coffeeChat = c and m.userId in :userIds and m.leftAt is null)))
-			""")
-	boolean existsOpenChatWithAny(Long receiverId, Collection<Long> userIds);
 
 	@Query("""
 			select max(case when c.status = :rejected then c.rejectedAt else c.expiresAt end)
