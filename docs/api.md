@@ -422,8 +422,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `lionParts` | string\[\] | O | `lionPart` **정확히 1개**(배열 모양은 유지). 0개·2개 이상이면 400 |
 | `status` | string | O | `status` 1개 |
 | `interests` | string\[\] | O | `interest` 1\~3개 |
-| `company` | string | `EMPLOYED`일 때 O | 1\~30자 |
-| `jobTitle` | string | `EMPLOYED`일 때 O | 1\~30자 |
+| `company` | string | `EMPLOYED`·`FOUNDER`일 때 O | 1\~30자. 다른 상태면 보내도 무시하고 `null`로 저장 |
+| `jobTitle` | string | `EMPLOYED`·`FOUNDER`일 때 O | 1\~30자. `company`와 같음 |
 | `link` | string | X | http(s) URL 1개. 종류는 주소를 보고 자동 지정(linkedin.com은 `LINKEDIN`, github.com은 `GITHUB`, notion.site·notion.so는 `NOTION`, 그 밖은 `ETC`) |
 | `headline` | string | X | 0\~100자 |
 | `staffActivities` | object\[\] | X | 운영진 활동 최대 5줄. `{ generation(1~14, 중복 불가, 가입 기수 포함), parts(1~2개) }` |
@@ -453,7 +453,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
   "userId": 12, "name": "김사자", "generation": 13,
   "photoUrl": null, "headline": "핀테크 백엔드 개발자",
   "bio": "...", "major": "컴퓨터공학", "minor": null, "region": "서울 강남",
-  "status": "EMPLOYED", "isStaff": false, "lionParts": ["FRONTEND"], "interests": ["BACKEND", "DATA_AI"],
+  "status": "EMPLOYED", "company": "핀테크A", "jobTitle": "백엔드 개발자", "isStaff": false, "lionParts": ["FRONTEND"], "interests": ["BACKEND", "DATA_AI"],
   "skills": ["Spring", "MySQL"],
   "links": [{ "type": "GITHUB", "url": "https://github.com/lion" }],
   "contact": { "email": "lion@gmail.com", "phone": null },
@@ -507,15 +507,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `status` | string | O | `status` 1개 |
 | `lionParts` | string\[\] | O | `lionPart` **정확히 1개**(배열 모양은 유지). 0개·2개 이상이면 400 |
 | `interests` | string\[\] | O | `interest` 1\~3개, 중복 불가 |
-| `company` | string | 조건부 | 회사명 1\~30자. `status`가 `EMPLOYED`이고 '현재 재직 중' 경력이 하나도 없을 때만 필수 |
+| `company` | string | 조건부 | 회사명 1\~30자. `status`가 `EMPLOYED`·`FOUNDER`일 때 필수 |
 | `jobTitle` | string | 조건부 | 직무 1\~30자. `company`와 같은 조건 |
 
-`200`이고 응답은 `company`·`jobTitle`을 뺀 위 필드를 그대로 돌려줘. `status`가 `EMPLOYED`인데 '현재 재직 중' 경력이 하나도 없으면 `company`·`jobTitle`로 현재 재직 경력 1개를 만들어(온보딩과 같아. 고용 형태·시작 년월은 비어 있고 경력 PROFILE-11에서 채워). 이때 둘 중 하나라도 비어 있으면 `400`이고 `fieldErrors`의 `field`가 `company`·`jobTitle`로 와. 이미 재직 중 경력이 있으면 `company`·`jobTitle`은 무시하고 기존 경력은 바꾸지 않아. `EMPLOYED`에서 다른 상태로 바꿔도 경력은 그대로야.
+`200`이고 응답은 저장된 값(`company`·`jobTitle` 포함)을 그대로 돌려줘. 회사·직무는 프로필에만 저장하고 경력(PROFILE-11)과는 연동되지 않아. 경력을 자동으로 만들지도, 바꾸지도 않아. `status`가 `EMPLOYED`·`FOUNDER`가 아니면 보낸 `company`·`jobTitle`은 무시하고 `null`로 저장해(재직에서 다른 상태로 바꾸면 비워져). 재직·창업인데 둘 중 하나라도 비어 있으면 `400`이야.
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트(1개)·관심 분야 개수 오류, 없는 열거값, 재직 경력을 만들어야 하는데 `company`·`jobTitle` 누락 |
-| 409 | `LIMIT_EXCEEDED` | 재직 경력을 만들어야 하는데 경력이 이미 10개(PROFILE-11과 같은 코드) |
+| 400 | `VALIDATION_ERROR` | 글자 수 초과, 파트(1개)·관심 분야 개수 오류, 없는 열거값, 재직·창업인데 `company`·`jobTitle` 누락 |
 
 ### PROFILE-05 프로필 사진 변경·삭제
 
@@ -772,7 +771,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | --- | --- |
 | `name`, `generation` | 가입할 때 본인이 입력한 값 |
 | `googleName` | 구글 계정 이름. 입력 이름과 대조하는 용도 |
-| `lionParts`, `currentStatus`, `company` | 온보딩(PROFILE-01)에서 입력한 값. 아직 입력 전이면 각각 `[]`, `null`, `null`. `company`는 현재 재직 중 경력의 회사명이고 비공개 설정과 상관없이 관리자에게 보여줘 |
+| `lionParts`, `currentStatus`, `company` | 온보딩(PROFILE-01)에서 입력한 값. 아직 입력 전이면 각각 `[]`, `null`, `null`. `company`는 프로필에 저장된 회사명(재직·창업)이고 비공개 설정과 상관없이 관리자에게 보여줘 |
 | `sameNameGeneration` | 이미 승인된 회원 중 이름·기수가 같은 사람이 있으면 `true`(주황 '같은 이름·기수 있음') |
 | `reapplied` | 반려된 뒤 다시 신청했으면 `true`(회색 '재신청'). `reapplyAt`은 그 시각 |
 | `rejectReason` | 반려됨 탭이거나 재신청한 사람이면 이전 반려 사유, 아니면 `null` |
@@ -928,7 +927,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 쿼리 | 타입 | 설명 |
 | --- | --- | --- |
-| `q` | string | 0\~50자. 이름, 한 줄 소개, 대표 기술, 현재 경력의 직무·회사(회사 공개인 사람만)에서 대소문자 없이 찾아 |
+| `q` | string | 0\~50자. 이름, 한 줄 소개, 대표 기술, 프로필의 직무·회사(회사 공개인 사람만)에서 대소문자 없이 찾아 |
 | `generations` | number\[\] | 기수. 여러 개는 쉼표로 (`13,14`) |
 | `parts` | string\[\] | `lionPart`. 프로필 대표 파트가 일치하는 사람 |
 | `statuses` | string\[\] | 현재 상태(`status` 열거값) |
@@ -955,8 +954,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 | 필드 | 설명 |
 | --- | --- |
-| `company` | 현재 경력의 회사. **재직 중(`EMPLOYED`)이거나 창업(`FOUNDER`)일 때만 보여줘.** 그 밖의 상태(재학·휴학·졸업·대학원·기타)는 현재 경력이 있어도 `null`이야. 회사 공개 범위로 가려져도 `null` |
-| `jobTitle` | 현재 경력의 직무(`careers.title`). `company`와 같은 경력에서 읽어. 재직·창업일 때만 보여주고, 회사가 공개 범위로 가려져도 직무는 그대로 보여줘(동문 상세의 경력도 같은 규칙) |
+| `company` | 프로필에 저장된 회사(PROFILE-04). **재직 중(`EMPLOYED`)이거나 창업(`FOUNDER`)일 때만 보여줘.** 그 밖의 상태는 `null`이야. 회사 공개 범위로 가려져도 `null` |
+| `jobTitle` | 프로필에 저장된 직무. 재직·창업이 아니면 `null`. 회사 공개 범위와 상관없이 보여줘 |
 | `bio` | 카드에 2줄로 보여주는 소개 |
 | `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 규칙으로 오늘 기준으로 정해. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중. 커피챗 설정이 없으면 `NOT_ACCEPTING` |
 | `coffeeChat.nextAvailableDate` | 다시 받는 날. 카드의 '11/20부터 받아요'에 써. `RESTING`이면 쉬는 기간이 끝난 다음 날(바로 이어지는 쉬는 기간이 있으면 마지막 기간 기준), `NOT_ACCEPTING`이면 곧 시작하는 받는 기간의 시작일, 그 밖에는 `null` |
@@ -1515,7 +1514,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 {
   "me": {
     "id": 12, "name": "김사자", "generation": 14, "lionParts": ["BACKEND"], "headline": "백엔드 지망생", "bio": "...",
-    "photoUrl": null, "company": "라이온컴퍼니", "jobTitle": "백엔드 개발자"
+    "photoUrl": null, "company": "핀테크A", "jobTitle": "백엔드 개발자"
   },
   "welcomeBannerVisible": true,
   "counts": { "pendingCoffeeChats": 1, "activeCoffeeChats": 2, "unreadMessages": 3, "messageRequests": 1, "bookmarks": 5 },
@@ -1530,7 +1529,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 | 필드 | 기준 |
 | --- | --- |
-| `me` | 동문 카드(ALUMNI-01)와 같은 정보를 보여줘. `company`·`jobTitle`은 지금 다니는 경력(`careers.is_current`) 하나에서 읽고, 없으면 둘 다 `null`이야. 내 카드라서 회사 공개 범위는 따지지 않아 |
+| `me.company`, `me.jobTitle` | 내 프로필(PROFILE-04)의 값. 재직·창업이 아니면 `null`. 내 정보라 회사 공개 범위와 상관없이 보여줘 |
 | `welcomeBannerVisible` | `users.guide_dismissed_at`이 없으면 `true` |
 | `counts.pendingCoffeeChats` | 내가 받은 `PENDING` 커피챗 |
 | `counts.activeCoffeeChats` | 내가 신청자·받는 사자·함께 신청자인 `ACCEPTED`·`SCHEDULED` 커피챗 |
