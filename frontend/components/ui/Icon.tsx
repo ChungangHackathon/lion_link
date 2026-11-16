@@ -24,7 +24,7 @@ const ALIAS: Record<string, { icon: FigmaIconName; rotate?: number }> = {
   info: { icon: "alert" },
 };
 
-type InlineName = "heart" | "eye" | "logout" | "block" | "settings" | "flash";
+type InlineName = "heart" | "eye" | "logout" | "block" | "settings" | "flash" | "building" | "school";
 export type IconName = FigmaIconName | keyof typeof ALIAS | InlineName;
 export type GlyphName = IconName;
 
@@ -50,6 +50,15 @@ const INLINE: Record<InlineName, React.ReactNode> = {
     </>
   ),
   flash: <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />,
+  /** 회사 기본 아이콘 */
+  building: <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M15 9h2a2 2 0 0 1 2 2v10M9 7h2M9 11h2M9 15h2" />,
+  /** 학교 기본 아이콘 */
+  school: (
+    <>
+      <path d="M22 9 12 4 2 9l10 5 10-5Z" />
+      <path d="M6 11v5c3.5 2.5 8.5 2.5 12 0v-5M22 9v6" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 20, className, label }: { name: IconName; size?: number; className?: string; label?: string }) {

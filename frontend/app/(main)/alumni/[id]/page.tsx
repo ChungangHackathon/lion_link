@@ -19,7 +19,7 @@ import { Card, EmptyState, Tooltip } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
 import { CoffeeRequestModal } from "@/components/domain/CoffeeRequestModal";
 import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
-import { ProfileSections } from "@/components/domain/ProfileSections";
+import { EducationList, ProfileSections } from "@/components/domain/ProfileSections";
 import { useBookmarkToggle } from "@/components/domain/AlumniCard";
 
 
@@ -113,19 +113,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
               {!!person.mutualCount && <p className="text-ink-500">함께 아는 동문 {person.mutualCount}명</p>}
             </div>
             <div className="flex flex-col gap-4">
-              {person.educations.map((e, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-part-be-bg text-[11px] font-bold text-primary">{e.school.slice(0, 2)}</span>
-                  <div className="flex flex-col text-[12px] text-ink-500">
-                    <span className="text-[14px] font-semibold text-ink-900">{e.school}</span>
-                    <span>{[e.major, e.degree].filter(Boolean).join(" · ")}</span>
-                    <span>
-                      {e.from} ~ {e.to}
-                      {e.gpa && <span className="ml-2 text-primary">GPA : {e.gpa}</span>}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <EducationList educations={person.educations} />
             </div>
           </div>
         </Card>
