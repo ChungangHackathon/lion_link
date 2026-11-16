@@ -15,6 +15,7 @@ import * as coffeeApi from "@/lib/api/coffee";
 import { personName, topicText, type CoffeeAction, type CoffeeChatDetail as CoffeeChatData } from "@/lib/api/coffee";
 import { isHttpUrl } from "@/lib/api/profile";
 import { useCoffeeService } from "@/lib/api/useCoffeeService";
+import { useChatService } from "@/lib/api/useChatService";
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
@@ -46,6 +47,7 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
   const router = useRouter();
   const toast = useToast();
   const service = useCoffeeService();
+  const chatService = useChatService();
   const { alumni, acceptCoffeeChat, rejectCoffeeChat, cancelCoffeeChat, scheduleCoffeeChat, completeCoffeeChat } = useStore();
   const isReceiver = chat.myRole === "RECEIVER";
   const other = isReceiver ? chat.requester : chat.receiver;
@@ -340,14 +342,17 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
         group={group}
         busy={busy}
         onConfirm={(cands, note) => {
+          const message = note.trim();
           if (!API_ENABLED) {
             const roomId = acceptCoffeeChat(mockId, cands);
+            if (message) void chatService.send(roomId, message).catch(() => undefined);
             setModal(null);
             toast("수락했어요. 채팅방이 열렸어요.");
             router.push(`/chat/${roomId}`);
             return;
           }
-          void run(() => coffeeApi.acceptCoffeeChat(chat.id, { proposedSlots: cands, responseMessage: note.trim() || undefined }), "수락했어요. 채팅방이 열렸어요.");
+          // 한마디는 서버가 열린 채팅방에 내 메시지로 보낸다
+          void run(() => coffeeApi.acceptCoffeeChat(chat.id, { proposedSlots: cands, responseMessage: message || undefined }), "수락했어요. 채팅방이 열렸어요.");
         }}
       />
       {/* ★[O] D-11 사유 선택 모달 / 커피챗 거절 (COFFEE-05 + PROFILE-15) */}
