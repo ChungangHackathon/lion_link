@@ -48,7 +48,11 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <div className="flex flex-col items-center gap-2 pb-4 pt-2 text-center">
-        <h1 className="t-title text-ink-900">LION:LINK</h1>
+        <h1 className="pb-1">
+          {/* 워드마크 "멋사동네" (GNB 로고와 같은 SVG) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.svg" alt="멋사동네" width={171} height={48} draggable={false} />
+        </h1>
         <p className="t-body-bold text-ink-500">1기부터 지금까지, 멋사 중앙대 사자와 사자를 잇는 동문 네트워크</p>
       </div>
       <Button size="L" variant="secondary" full loading={loading} onClick={google} className="border-ink-500" leading={<GoogleMark />}>
