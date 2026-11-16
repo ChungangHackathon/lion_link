@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Card } from "@/components/ui/Misc";
 
+/** "2026-10-21T…" → "2026년 10월 21일" (한국 시간) */
+const joinedDate = (iso: string) => new Date(iso).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Seoul" });
+
 /** ◇ X-03 설정 / 기본 · ◇[O] CF-3 탈퇴 확인 → A-04c 구글 본인 확인 → 로그인 */
 export default function SettingsPage() {
   const router = useRouter();
@@ -23,7 +26,7 @@ export default function SettingsPage() {
         </div>
         <div className="flex items-center justify-between py-4 text-[14px]">
           <span className="text-ink-500">가입일</span>
-          <span className="text-ink-900">2026년 10월 21일</span>
+          <span className="text-ink-900">{me?.createdAt ? joinedDate(me.createdAt) : "—"}</span>
         </div>
       </Card>
       <div>
