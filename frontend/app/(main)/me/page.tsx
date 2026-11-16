@@ -6,7 +6,7 @@ import { INTEREST_OPTIONS, INTEREST_CODE, LION_PART_LABEL, PROFILE_STATUS_LABEL,
 import { errorMessage } from "@/lib/api/client";
 import { receiveBadge, type LinkType } from "@/lib/api/alumni";
 import { detailFromMine } from "@/lib/api/alumniView";
-import { completionOf, isEmail, isPhone, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, type BasicInfo, type MyProfile, type Scope } from "@/lib/api/myProfile";
+import { completionOf, isEmail, isPhone, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, type BasicInfoRequest, type MyProfile, type Scope } from "@/lib/api/myProfile";
 import { isHttpUrl, normalizeLink, type ApiLionPart } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
@@ -363,16 +363,23 @@ function TextModal({ onClose, title, label, value, max, rows, placeholder, onSav
 }
 
 /** ◇[O] E-12 섹션 편집 팝업 / 상단 소개 카드 (PROFILE-04). 이름·기수는 여기서 바꿀 수 없다 */
-function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyProfile; onClose: () => void; onPhoto: () => void; onSave: (body: BasicInfo) => Promise<unknown> }) {
+function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyProfile; onClose: () => void; onPhoto: () => void; onSave: (body: BasicInfoRequest) => Promise<unknown> }) {
   const toast = useToast();
   const [status, setStatus] = useState<ProfileStatus>(p.status);
   const [parts, setParts] = useState<ApiLionPart[]>(p.lionParts);
   const [interests, setInterests] = useState<InterestCode[]>(p.interests);
   const [headline, setHeadline] = useState(p.headline ?? "");
   const [region, setRegion] = useState(p.region ?? "");
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const { busy, run } = useSaving();
+  // 재직으로 바꾸는데 재직 중인 경력이 없으면 회사·직무를 받아 경력을 만든다 (이미 있으면 서버가 무시한다)
+  const needsCompany = status === "EMPLOYED" && !p.careers.some((c) => c.isCurrent);
+  const companyError = company.trim().length > 30 ? "30자 이내로 적어주세요" : undefined;
+  const jobTitleError = jobTitle.trim().length > 30 ? "30자 이내로 적어주세요" : undefined;
+  const companyOk = !needsCompany || (!!company.trim() && !!jobTitle.trim() && !companyError && !jobTitleError);
   const toggleInterest = (code: InterestCode) => setInterests((s) => (s.includes(code) ? s.filter((x) => x !== code) : s.length >= 3 ? (toast("관심 분야는 최대 3개까지 고를 수 있어요", { kind: "error" }), s) : [...s, code]));
-  const valid = parts.length === 1 && interests.length >= 1 && headline.trim().length <= 100 && region.trim().length <= 20;
+  const valid = parts.length === 1 && interests.length >= 1 && headline.trim().length <= 100 && region.trim().length <= 20 && companyOk;
   return (
     <Modal
       open
@@ -398,6 +405,7 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
                   status,
                   lionParts: parts,
                   interests,
+                  ...(needsCompany ? { company: company.trim(), jobTitle: jobTitle.trim() } : {}),
                 }),
               )
             }
@@ -431,6 +439,15 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
             </option>
           ))}
         </Select>
+        {needsCompany && (
+          <div className="flex flex-col gap-2 rounded-[8px] bg-bg-50 p-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="회사" required value={company} onChange={(e) => setCompany(e.target.value)} placeholder="예) 멋사컴퍼니" error={companyError} />
+              <Input label="직무" required value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="예) 백엔드 개발자" error={jobTitleError} />
+            </div>
+            <p className="text-[12px] text-ink-500">저장하면 경력에 재직 중인 회사로 추가돼요.</p>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <p className="t-body-bold text-ink-700">
             멋사 파트 <span className="text-[12px] font-normal text-ink-400">(1개 · 가입 기수 멋사 활동 파트도 같이 바뀌어요)</span>
