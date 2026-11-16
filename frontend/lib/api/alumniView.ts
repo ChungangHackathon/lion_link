@@ -139,7 +139,7 @@ export function educationRows(d: Pick<AlumniDetail, "educations">) {
 // 동문 상세 API → 화면
 // ---------------------------------------------------------------------------
 
-const hiddenScope = (s?: "PUBLIC" | "CONNECTED" | "PRIVATE") => (s === "CONNECTED" ? ("CONNECTED" as const) : s === "PRIVATE" ? ("ME" as const) : null);
+const hiddenScope = (s?: "PUBLIC" | "CONNECTED" | "PRIVATE" | null) => (s === "CONNECTED" ? ("CONNECTED" as const) : s === "PRIVATE" ? ("ME" as const) : null);
 
 /** 이름 옆 운영진 태그. 운영진·회장·파트장 활동 중 가장 최근 기수로 적는다 (서버 isStaff와 같은 규칙). 없으면 null */
 export function staffLabelOf(activities: AlumniDetail["lionActivities"]): string | null {
@@ -162,11 +162,11 @@ export function viewFromApi(d: AlumniDetail): AlumniProfileView {
     links: (d.links ?? []).map((l) => ({ label: LINK_LABEL[l.type] ?? "링크", url: stripScheme(l.url), visibility: "ALL" as const })),
     email: d.contact.email ? { value: d.contact.email, visibility: "ALL" } : undefined,
     phone: d.contact.phone ? { value: d.contact.phone, visibility: "ALL" } : undefined,
-    // 이메일은 꼭 있는 값이라 비어 있으면 가려진 것. 링크는 가려지면 키째 빠진다. 전화는 안 적은 것과 구분하려면 공개 범위가 있어야 한다
+    // 값이 없으면 contactVisibility로 '가려진 것'과 '안 적은 것(null)'을 나눈다. 가려졌으면 그 공개 범위에 맞는 문구를 보여준다
     hidden: {
-      ...(!d.contact.email ? { email: hiddenScope(d.visibility?.email) } : {}),
-      ...(!d.links ? { links: hiddenScope(d.visibility?.links) } : {}),
-      ...(!d.contact.phone && d.visibility?.phone && d.visibility.phone !== "PUBLIC" ? { phone: hiddenScope(d.visibility.phone) } : {}),
+      ...(!d.contact.email && d.contactVisibility?.email !== null ? { email: hiddenScope(d.contactVisibility?.email) } : {}),
+      ...(!d.links && d.contactVisibility?.links !== null ? { links: hiddenScope(d.contactVisibility?.links) } : {}),
+      ...(!d.contact.phone && d.contactVisibility?.phone ? { phone: hiddenScope(d.contactVisibility.phone) } : {}),
     },
     coffeeTopics: d.coffeeChat.topics.map((t) => TOPIC_LABEL[t]),
     coffeeTimes: slotsText(d.coffeeChat.availableSlots),
