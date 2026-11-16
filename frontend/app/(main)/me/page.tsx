@@ -471,13 +471,11 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
   const [parts, setParts] = useState<ApiLionPart[]>(p.lionParts);
   const [interests, setInterests] = useState<InterestCode[]>(p.interests);
   const [headline, setHeadline] = useState(p.headline ?? "");
-  const [major, setMajor] = useState(p.major ?? "");
-  const [minor, setMinor] = useState(p.minor ?? "");
   const [region, setRegion] = useState(p.region ?? "");
   const { busy, run } = useSaving();
   const togglePart = (x: ApiLionPart) => setParts((s) => (s.includes(x) ? s.filter((y) => y !== x) : s.length >= 2 ? (toast("멋사 파트는 최대 2개까지 고를 수 있어요", { kind: "error" }), s) : [...s, x]));
   const toggleInterest = (code: InterestCode) => setInterests((s) => (s.includes(code) ? s.filter((x) => x !== code) : s.length >= 3 ? (toast("관심 분야는 최대 3개까지 고를 수 있어요", { kind: "error" }), s) : [...s, code]));
-  const valid = parts.length >= 1 && interests.length >= 1 && headline.trim().length <= 100 && major.trim().length <= 30 && minor.trim().length <= 30 && region.trim().length <= 20;
+  const valid = parts.length >= 1 && interests.length >= 1 && headline.trim().length <= 100 && region.trim().length <= 20;
   return (
     <Modal
       open
@@ -496,8 +494,9 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
               run(() =>
                 onSave({
                   headline: headline.trim() || null,
-                  major: major.trim() || null,
-                  minor: minor.trim() || null,
+                  // 전공은 학력 항목에서만 입력한다. 기본 정보 저장 때는 원래 값을 그대로 보낸다
+                  major: p.major,
+                  minor: p.minor,
                   region: region.trim() || null,
                   status,
                   lionParts: parts,
@@ -560,10 +559,6 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
           </div>
         </div>
         <Input label="한 줄 소개" value={headline} onChange={(e) => setHeadline(e.target.value)} counter={{ value: headline.length, max: 100 }} error={headline.trim().length > 100 ? "100자 이내로 적어주세요" : undefined} />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="주전공" value={major} onChange={(e) => setMajor(e.target.value)} placeholder="선택" error={major.trim().length > 30 ? "30자 이내" : undefined} />
-          <Input label="복수·부전공" value={minor} onChange={(e) => setMinor(e.target.value)} placeholder="선택" error={minor.trim().length > 30 ? "30자 이내" : undefined} />
-        </div>
         <Input label="활동 지역" value={region} onChange={(e) => setRegion(e.target.value)} placeholder="예) 서울 동작" counter={{ value: region.length, max: 20 }} error={region.trim().length > 20 ? "20자 이내로 적어주세요" : undefined} />
       </div>
     </Modal>
