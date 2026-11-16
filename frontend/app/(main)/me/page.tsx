@@ -432,20 +432,26 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
           <Input label="이름" value={p.name} readOnly help="이름·기수는 운영진에게 고쳐달라고 해주세요" />
           <Input label="기수" value={`${p.generation}기`} readOnly />
         </div>
-        <Select label="현재 상태" value={status} onChange={(e) => setStatus(e.target.value as ProfileStatus)}>
-          {(Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {PROFILE_STATUS_LABEL[s]}
-            </option>
-          ))}
-        </Select>
+        {/* 가입 때 정보 입력 화면(온보딩)과 같은 모양: 상태 칩 → 재직이면 아래에 회사 입력 상자 */}
+        <div className="flex flex-col gap-2">
+          <p className="t-body-bold text-ink-700">
+            현재 상태 <span className="text-[12px] font-normal text-ink-400">(1개)</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(PROFILE_STATUS_LABEL) as ProfileStatus[]).map((s) => (
+              <Chip key={s} selected={status === s} onClick={() => setStatus(s)}>
+                {PROFILE_STATUS_LABEL[s]}
+              </Chip>
+            ))}
+          </div>
+        </div>
         {needsCompany && (
-          <div className="flex flex-col gap-2 rounded-[8px] bg-bg-50 p-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="회사" required value={company} onChange={(e) => setCompany(e.target.value)} placeholder="예) 멋사컴퍼니" error={companyError} />
-              <Input label="직무" required value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="예) 백엔드 개발자" error={jobTitleError} />
+          <div className="flex flex-col gap-3 rounded-[8px] border border-line-200 bg-bg-50 p-4">
+            <div className="flex gap-3">
+              <Input label="회사명" placeholder="예) 핀테크 스타트업" value={company} onChange={(e) => setCompany(e.target.value)} required error={companyError} />
+              <Input label="직무" placeholder="예) 백엔드 개발자" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required error={jobTitleError} />
             </div>
-            <p className="text-[12px] text-ink-500">저장하면 경력에 재직 중인 회사로 추가돼요.</p>
+            <p className="t-caption1 text-ink-500">저장하면 경력에 재직 중인 회사로 추가돼요. 회사명 공개 범위는 경력 편집에서 바꿀 수 있어요.</p>
           </div>
         )}
         <div className="flex flex-col gap-2">
