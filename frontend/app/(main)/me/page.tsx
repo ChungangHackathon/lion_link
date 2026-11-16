@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "@/lib/session";
 import { cn } from "@/lib/cn";
 import { INTEREST_OPTIONS, INTEREST_CODE, LION_PART_LABEL, PROFILE_STATUS_LABEL, type InterestCode, type ProfileStatus } from "@/lib/types";
 import { errorMessage } from "@/lib/api/client";
@@ -59,6 +60,12 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
   const photoInput = useRef<HTMLInputElement>(null);
 
   const part = p.lionParts[0] ?? "ETC";
+  // 파트를 바꾸면 상단바 아바타·프로필 메뉴도 따라 바꾼다
+  const { setMyParts, refreshMe } = useSession();
+  const partsKey = p.lionParts.join();
+  useEffect(() => {
+    if (partsKey) setMyParts(partsKey.split(",") as typeof p.lionParts);
+  }, [partsKey, setMyParts]);
   const detail = detailFromMine(p);
   const completion = completionOf(p);
   const nextStep = !p.bio ? { text: `자기소개를 쓰면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.careers.length ? { text: `경력을 추가하면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.projects.length ? { text: `프로젝트를 추가하면 ${Math.min(100, completion + 7)}%가 돼요` } : null;
@@ -99,6 +106,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
     try {
       const { photoUrl } = await service.uploadPhoto(file);
       update({ photoUrl });
+      void refreshMe(); // 상단바 사진도 바꾼다
       toast("프로필 사진을 바꿨어요");
     } catch (e) {
       toast(errorMessage(e), { kind: "error" });
@@ -112,6 +120,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
     try {
       await service.deletePhoto();
       update({ photoUrl: null });
+      void refreshMe();
       toast("기본 사진으로 바꿨어요");
     } catch (e) {
       toast(errorMessage(e), { kind: "error" });

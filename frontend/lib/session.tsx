@@ -5,6 +5,7 @@ import type { UserRole, UserStatus } from "@/lib/types";
 import { ADMIN_ID, ME_ID, byId } from "@/lib/mock/users";
 import { API_ENABLED, refreshAccessToken, setUnauthenticatedHandler, tokenStore } from "@/lib/api/client";
 import { getMe, logout as logoutApi, type Me } from "@/lib/api/auth";
+import { getMyProfileParts, type ApiLionPart } from "@/lib/api/profile";
 
 /**
  * 로그인 상태.
@@ -41,6 +42,8 @@ interface SessionContextValue {
   update: (patch: Partial<Session>) => void;
   /** 가입 신청·정보 수정처럼 서버가 내 정보를 돌려줬을 때 반영한다 */
   setMe: (me: Me) => void;
+  /** 내 멋사 파트가 바뀌면 알려 준다 (GNB 아바타·프로필 메뉴가 따라 바뀐다) */
+  setMyParts: (parts: ApiLionPart[]) => void;
   /** GET /me를 다시 불러온다. 로그인이 풀렸으면 null */
   refreshMe: () => Promise<Me | null>;
 }
@@ -66,6 +69,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session>(API_ENABLED ? LOGGED_OUT : DEFAULT);
   const [me, setMeState] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  // /auth/me에는 파트가 없어서 프로필에서 따로 읽는다 (온보딩을 마친 뒤부터)
+  const [myParts, setMyParts] = useState<ApiLionPart[] | null>(null);
+  const profileReady = !!me?.profileCompleted;
+  useEffect(() => {
+    if (!API_ENABLED || !profileReady) return;
+    let alive = true;
+    getMyProfileParts()
+      .then((p) => alive && setMyParts(p.lionParts))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [profileReady, me?.id]);
 
   const applyMe = useCallback((next: Me | null) => {
     setMeState(next);
@@ -124,7 +140,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const mockUser = byId(session.userId);
     return {
       session,
-      user: me && mockUser ? { ...mockUser, name: me.name, generation: me.generation } : mockUser,
+      // API 모드: 이름·기수·파트는 내 실제 값으로 덮는다 (나머지 필드는 아직 mock을 쓰는 화면용)
+      user: me && mockUser ? { ...mockUser, name: me.name, generation: me.generation, part: myParts?.[0] ?? "ETC", parts: myParts ?? [] } : mockUser,
       me,
       ready,
       login: (opts) =>
@@ -144,9 +161,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       },
       update: (patch) => persist({ ...session, ...patch }),
       setMe: applyMe,
+      setMyParts,
       refreshMe,
     };
-  }, [session, me, ready, applyMe, refreshMe]);
+  }, [session, me, ready, applyMe, refreshMe, myParts]);
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
