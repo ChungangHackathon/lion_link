@@ -47,7 +47,7 @@ export function useHomeService(): HomeService {
       .slice(0, 2);
     const old = posts.find((p) => p.id === "p-5");
     const data: HomeData = {
-      me: { id: me.id, name: me.name, generation: me.generation, lionParts: (me.parts ?? [me.part]).filter((p): p is ApiLionPart => p !== "ETC"), headline: me.headline || null, bio: me.intro || null, photoUrl: null },
+      me: { id: me.id, name: me.name, generation: me.generation, lionParts: (me.parts ?? [me.part]).filter((p): p is ApiLionPart => p !== "ETC"), headline: me.headline || null, bio: me.intro || null, photoUrl: null, company: me.company ?? null, jobTitle: me.role ?? null },
       welcomeBannerVisible: firstVisit,
       counts: {
         pendingCoffeeChats: coffeeChats.filter((c) => c.receiverId === ME_ID && c.status === "PENDING").length,

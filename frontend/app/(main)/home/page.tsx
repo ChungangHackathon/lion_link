@@ -130,7 +130,10 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
                 {me.generation}기 · {me.lionParts.map((x) => LION_PART_LABEL[x]).join("·") || LION_PART_LABEL.ETC}
               </span>
             </div>
-            <p className="text-[13px] leading-4 text-ink-700">{me.headline ?? <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
+            <p className="truncate text-[13px] leading-4 text-ink-700">
+              {[me.company, me.jobTitle].filter(Boolean).join(" · ") || <span className="text-ink-400">경력을 추가해보세요</span>}
+            </p>
+            <p className="truncate text-[13px] leading-4 text-ink-700">{me.headline ?? <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
             <hr className="border-line-200" />
             <p className="line-clamp-3 text-[13px] leading-[18px] text-ink-700">{me.bio ?? <span className="text-ink-400">아직 자기소개가 없어요</span>}</p>
           </div>

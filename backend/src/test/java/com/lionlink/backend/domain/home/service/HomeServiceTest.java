@@ -70,9 +70,22 @@ class HomeServiceTest {
 		assertThat(home.me().lionParts()).containsExactly(LionPart.BACKEND);
 		assertThat(home.me().headline()).isEqualTo("백엔드 지망생");
 		assertThat(home.me().bio()).isEqualTo("반가워요");
+		assertThat(home.me().company()).isNull();
+		assertThat(home.me().jobTitle()).isNull();
 		assertThat(home.welcomeBannerVisible()).isTrue();
 		assertThat(home.upcomingCoffeeChat()).isNull();
 		assertThat(home.onThisDay()).isNull();
+	}
+
+	@Test
+	void 내_카드에_지금_다니는_회사와_직무를_담는다() {
+		TestProfiles.currentCareer(entityManager, me, "라이온컴퍼니", "백엔드 개발자");
+		entityManager.flush();
+
+		HomeResponse.Me card = homeService.getHome(me).me();
+
+		assertThat(card.company()).isEqualTo("라이온컴퍼니");
+		assertThat(card.jobTitle()).isEqualTo("백엔드 개발자");
 	}
 
 	@Test

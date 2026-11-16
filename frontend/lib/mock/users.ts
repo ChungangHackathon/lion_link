@@ -12,7 +12,7 @@ export const alumni: Alumni[] = [
     part: "FRONTEND",
     parts: ["FRONTEND"],
     status: "EMPLOYED",
-    headline: "커머스 스타트업 · 프론트엔드 인턴",
+    headline: "첫 회사 고르는 이야기 나눠요",
     intro: "React로 커머스 화면 만들고 있어요. 취업 준비 얘기 편하게 나눠요.",
     skills: ["React", "TypeScript", "Next.js"],
     interests: ["프론트엔드", "앱"],
