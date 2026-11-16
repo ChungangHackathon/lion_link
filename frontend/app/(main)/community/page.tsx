@@ -12,6 +12,7 @@ import { usePostService } from "@/lib/api/usePostService";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { Select } from "@/components/ui/Input";
 import { Card, EmptyState, Skeleton } from "@/components/ui/Misc";
 import { PostRow } from "@/components/domain/PostRow";
 
@@ -97,10 +98,10 @@ function Community() {
             <Icon name="search" size={18} className="text-ink-400" />
             <input value={q} onChange={(e) => search(e.target.value)} placeholder={`${cat === "ALL" ? "전체" : POST_CATEGORY_LABEL[cat]} 카테고리에서 제목·본문 검색`} className="min-w-0 flex-1 text-[14px] outline-none placeholder:text-ink-400" />
           </label>
-          <select aria-label="정렬" value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }} className="h-9 rounded-[6px] border-0 bg-transparent t-label2 text-ink-900">
+          <Select aria-label="정렬" value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }} className="w-auto" triggerClassName="h-9 w-auto gap-1.5 border-0 bg-transparent pl-2 pr-8 t-label2 hover:bg-bg-50">
             <option value="LATEST">최신순</option>
             <option value="VIEWS">조회순</option>
-          </select>
+          </Select>
         </div>
         {searching && list && <p className="px-6 pb-2 text-[13px] text-ink-500">‘{query}’ 검색 결과 {total}개</p>}
         {listState.error && !list ? (

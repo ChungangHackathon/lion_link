@@ -2,10 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Checkbox } from "@/components/ui/Input";
+import { Checkbox, Select } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Icon } from "@/components/ui/Icon";
 import { useToast } from "@/components/ui/Toast";
 import { useSession } from "@/lib/session";
 import { VillageHero } from "@/components/brand/VillageHero";
@@ -123,22 +122,19 @@ export default function SignupPage() {
               <span className="t-label1 text-bg-100">이름</span>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="박중앙" autoComplete="name" aria-invalid={touched && !nameOk} className={`${field} ${touched && !nameOk ? "border-orange" : "border-line-300"}`} />
             </label>
-            <label className="flex flex-1 flex-col gap-1.5">
+            <div className="flex flex-1 flex-col gap-1.5">
               <span className="t-label1 text-bg-100">기수</span>
-              <span className="relative">
-                <select value={gen} onChange={(e) => setGen(e.target.value)} aria-invalid={touched && !genOk} className={`${field} appearance-none pr-9 ${gen ? "" : "text-ink-400"} ${touched && !genOk ? "border-orange" : "border-line-300"}`}>
-                  <option value="" disabled>
-                    기수 선택
+              <Select aria-label="기수" value={gen} onChange={(e) => setGen(e.target.value)} invalid={touched && !genOk}>
+                <option value="" disabled>
+                  기수 선택
+                </option>
+                {GENERATIONS.map((g) => (
+                  <option key={g} value={String(g)}>
+                    {g}기
                   </option>
-                  {GENERATIONS.map((g) => (
-                    <option key={g} value={g} className="text-ink-900">
-                      {g}기
-                    </option>
-                  ))}
-                </select>
-                <Icon name="chevron-down" size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-500" />
-              </span>
-            </label>
+                ))}
+              </Select>
+            </div>
           </div>
           <p className="t-label2 text-bg-100">{touched && !nameOk ? "이름은 2~20글자로 입력해주세요." : touched && !genOk ? "기수를 선택해주세요." : "이름·기수는 승인 전까지 고칠 수 있어요."}</p>
         </div>
