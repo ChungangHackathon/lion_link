@@ -64,9 +64,10 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
   const style = PART_STYLE[part];
 
   return (
-    <article className={cn("group relative flex w-[264px] flex-col overflow-hidden rounded-[11px] border border-light-layout bg-bg-50 transition-shadow hover:shadow-[0_4px_16px_rgba(17,24,39,0.08)]", className)}>
+    <article className={cn("group relative flex w-[264px] flex-col rounded-[11px] border border-light-layout bg-bg-50 transition-shadow hover:shadow-[0_4px_16px_rgba(17,24,39,0.08)]", className)}>
       <Link href={`/alumni/${person.id}`} className="block">
-        <div className={cn("h-[60px] w-full", style.ring)} />
+        {/* 카드에 overflow-hidden을 두지 않는다: 커피챗 신청 버튼 툴팁이 카드 밖으로 나와야 잘리지 않는다 */}
+        <div className={cn("h-[60px] w-full rounded-t-[10px]", style.ring)} />
         <div className="absolute left-[7px] top-[18px]">
           <Avatar name={person.name} part={part} size={90} online={canRequest} className="border-[6px] border-bg-50" />
         </div>
