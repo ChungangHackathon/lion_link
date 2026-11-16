@@ -1,5 +1,6 @@
 package com.lionlink.backend.domain.auth.controller;
 
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,7 +46,8 @@ class MeControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.profileCompleted").value(false))
 				.andExpect(jsonPath("$.rejectReason").value(nullValue()))
 				.andExpect(jsonPath("$.signupInfoEditable").value(true))
-				.andExpect(jsonPath("$.photoUrl").value(nullValue()));
+				.andExpect(jsonPath("$.photoUrl").value(nullValue()))
+				.andExpect(jsonPath("$.createdAt").value(endsWith("+09:00")));
 	}
 
 	@Test
@@ -98,7 +100,8 @@ class MeControllerTest extends AuthIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("이사자"))
 				.andExpect(jsonPath("$.generation").value(12))
-				.andExpect(jsonPath("$.status").value("PENDING"));
+				.andExpect(jsonPath("$.status").value("PENDING"))
+				.andExpect(jsonPath("$.createdAt").value(endsWith("+09:00")));
 
 		User user = entityManager.find(User.class, lion.userId());
 		assertEquals("이사자", user.getName());

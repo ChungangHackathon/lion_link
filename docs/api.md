@@ -300,12 +300,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `rejectReason` | string / null | `REJECTED`일 때만 값이 있어. 반려 안내 화면에 그대로 보여줘 |
 | `signupInfoEditable` | boolean | 이름·기수를 고칠 수 있으면 `true`. `PENDING`일 때만 |
 | `photoUrl` | string / null | 프로필 사진. 없으면 FE가 기본 사자 이미지를 써 |
+| `createdAt` (추가) | string | 가입한 시각. `2026-11-10T09:30:00+09:00` 형식. 가입일 표시에 써 |
 
 ```json
 {
   "id": 12, "name": "김사자", "generation": 13, "email": "lion@gmail.com",
   "role": "MEMBER", "status": "PENDING", "profileCompleted": true,
-  "rejectReason": null, "signupInfoEditable": true, "photoUrl": null
+  "rejectReason": null, "signupInfoEditable": true, "photoUrl": null,
+  "createdAt": "2026-11-10T09:30:00+09:00"
 }
 ```
 
@@ -444,14 +446,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 
 `GET /me/profile` · 승인 대기·승인 회원
 
-마이페이지 첫 화면이야. 내 프로필은 공개 범위를 적용하지 않고 모든 내용과 현재 공개 범위 설정을 함께 내려줘. 내용이 없는 섹션은 빈 배열이나 `null`로 오고 FE가 숨겨. 목록형 섹션은 날짜 최신순으로 정렬해서 주고, 진행 중인 항목이 맨 위야.
+마이페이지 첫 화면이야. 내 프로필은 공개 범위를 적용하지 않고 모든 내용과 현재 공개 범위 설정을 함께 내려줘. 내용이 없는 섹션은 빈 배열이나 `null`로 오고 FE가 숨겨. 목록형 섹션은 날짜 최신순으로 정렬해서 주고, 학력·프로젝트는 진행 중인 항목이 맨 위야. 경력은 진행 중이어도 위로 올리지 않고 시작일 최신순으로만 정렬해(시작일이 없는 경력은 맨 아래). `isStaff`는 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`야(PROFILE-03과 같은 규칙).
 
 ```json
 {
   "userId": 12, "name": "김사자", "generation": 13,
   "photoUrl": null, "headline": "핀테크 백엔드 개발자",
   "bio": "...", "major": "컴퓨터공학", "minor": null, "region": "서울 강남",
-  "status": "EMPLOYED", "lionParts": ["FRONTEND"], "interests": ["BACKEND", "DATA_AI"],
+  "status": "EMPLOYED", "isStaff": false, "lionParts": ["FRONTEND"], "interests": ["BACKEND", "DATA_AI"],
   "skills": ["Spring", "MySQL"],
   "links": [{ "type": "GITHUB", "url": "https://github.com/lion" }],
   "contact": { "email": "lion@gmail.com", "phone": null },
@@ -572,7 +574,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `PUT /me/{section}/{itemId}` | 항목 1개를 통째로 수정 | `200`과 바뀐 항목 |
 | `DELETE /me/{section}/{itemId}` | 항목 1개 삭제 | `204` |
 
-마지막 항목을 지우면 그 섹션은 프로필에서 사라지고, 따로 API는 없어. 조회할 때는 날짜 최신순으로 정렬하고 진행 중인 항목을 맨 위에 둬. 기간은 `"2024-03"` 형식의 `yearMonth` 문자열이야.
+마지막 항목을 지우면 그 섹션은 프로필에서 사라지고, 따로 API는 없어. 조회할 때는 날짜 최신순으로 정렬하고 진행 중인 항목을 맨 위에 둬(경력은 시작일 최신순만 적용하고 진행 중이어도 위로 올리지 않아). 기간은 `"2024-03"` 형식의 `yearMonth` 문자열이야.
 
 | 섹션 | `{section}` | 최대 | 요청 필드 (필수는 O 표시) |
 | --- | --- | --- | --- |
@@ -994,7 +996,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 가려진 값 | `contact.email`, `contact.phone`, `links`는 키째 빠져. 둘 다 가려지면 `contact`는 `{}` |
 | `careers[].companyHidden` | 회사명이 비공개면 경력마다 `company` 키가 빠지고 `companyHidden: true`. 직무(`jobTitle`)는 그대로 |
 | 섹션 항목 필드 | PROFILE-11 이름을 써. 자격증 `issuer`·`acquiredYm`, 수상 `host`·`awardedYm` |
-| 섹션 순서 | 경력·학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |
+| 섹션 순서 | 경력은 시작일 최신순, 학력·프로젝트는 진행 중 먼저 최신순, 멋사 활동·멋사 프로젝트는 기수 최신순, 자격증·수상·대외활동은 날짜 최신순, 어학은 추가한 순 |
 | `isStaff` (추가) | 멋사 활동 중 운영진(`STAFF`)·대표(`PRESIDENT`)·파트장(`PART_LEAD`)이 있으면 `true`. 이름 옆 '운영진' 태그 |
 | `coffeeChat.availability` | ALUMNI-01의 수신 상태에 `IN_PROGRESS`가 더해져. 나와 이 사자 사이에 진행 중(`PENDING` `ACCEPTED` `SCHEDULED`)인 커피챗이 있거나, 이 사자가 받는 여러 명 커피챗에 내가 함께 신청자로 남아 있으면 `IN_PROGRESS`. 거절되거나 만료된 지 7일이 안 됐으면 `COOLDOWN`이고 `nextAvailableDate`는 다시 신청할 수 있는 날이야(COFFEE-01과 같은 규칙) |
 | `coffeeChat.pendingCoffeeChatId` (추가) | 내가 이 사자에게 보낸 대기 중(`PENDING`) 신청 ID. '신청 대기 중 · 내 신청 보기' 링크에 써 |

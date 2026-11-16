@@ -47,6 +47,7 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.headline").value("핀테크 백엔드 개발자"))
 				.andExpect(jsonPath("$.bio").value(nullValue()))
 				.andExpect(jsonPath("$.status").value("EMPLOYED"))
+				.andExpect(jsonPath("$.isStaff").value(false))
 				.andExpect(jsonPath("$.lionParts[0]").value("FRONTEND"))
 				.andExpect(jsonPath("$.interests", hasSize(2)))
 				.andExpect(jsonPath("$.skills", hasSize(0)))
@@ -86,7 +87,7 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 섹션은_진행_중인_항목이_맨_위고_나머지는_최신순이다() throws Exception {
+	void 경력은_시작일_최신순이고_학력은_진행_중이_맨_위다() throws Exception {
 		Session lion = signup("lion", "김사자", 13);
 		onboard(lion, """
 				{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND'],
@@ -108,10 +109,11 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 
 		getMyProfile(lion)
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.careers[0].company").value("현재회사"))
-				.andExpect(jsonPath("$.careers[1].company").value("최근회사"))
-				.andExpect(jsonPath("$.careers[1].startYm").value("2022-01"))
-				.andExpect(jsonPath("$.careers[2].company").value("오래된회사"))
+				.andExpect(jsonPath("$.careers[0].company").value("최근회사"))
+				.andExpect(jsonPath("$.careers[0].startYm").value("2022-01"))
+				.andExpect(jsonPath("$.careers[1].company").value("오래된회사"))
+				.andExpect(jsonPath("$.careers[2].company").value("현재회사"))
+				.andExpect(jsonPath("$.careers[2].isCurrent").value(true))
 				.andExpect(jsonPath("$.educations[0].school").value("대학원"))
 				.andExpect(jsonPath("$.educations[1].school").value("중앙대학교"))
 				.andExpect(jsonPath("$.lionActivities[0].generation").value(13))
@@ -122,6 +124,18 @@ class MyProfileControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.certifications[1].name").value("정보처리기사"))
 				.andExpect(jsonPath("$.languages[0].language").value("영어"))
 				.andExpect(jsonPath("$.languages[1].language").value("일본어"));
+	}
+
+	@Test
+	void 운영진_활동이_있으면_isStaff가_true다() throws Exception {
+		Session lion = signup("lion", "김사자", 13);
+		onboard(lion, "{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND'],"
+				+ "'staffActivities':[{'generation':12,'parts':['PLANNING']}]}")
+				.andExpect(status().isOk());
+
+		getMyProfile(lion)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.isStaff").value(true));
 	}
 
 	@Test

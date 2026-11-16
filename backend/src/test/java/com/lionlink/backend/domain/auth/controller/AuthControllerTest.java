@@ -1,6 +1,7 @@
 package com.lionlink.backend.domain.auth.controller;
 
 import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +54,7 @@ class AuthControllerTest extends AuthIntegrationTest {
 				.andExpect(jsonPath("$.user.status").value("PENDING"))
 				.andExpect(jsonPath("$.user.profileCompleted").value(false))
 				.andExpect(jsonPath("$.user.signupInfoEditable").value(true))
+				.andExpect(jsonPath("$.user.createdAt").value(endsWith("+09:00")))
 				.andExpect(cookie().httpOnly(REFRESH_COOKIE, true))
 				.andExpect(cookie().maxAge(SIGNUP_COOKIE, 0));
 	}
