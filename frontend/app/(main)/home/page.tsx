@@ -287,7 +287,7 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
             </Card>
           </Link>
         )}
-        <p className="text-[11px] leading-[18px] text-ink-400">이용약관 · 개인정보처리방침 · 피드백 보내기 · © 2026 LION:LINK</p>
+        <p className="text-[11px] leading-[18px] text-ink-400">이용약관 · 개인정보처리방침 · 피드백 보내기 · © 2026 멋사동네</p>
       </aside>
 
       {modals}
