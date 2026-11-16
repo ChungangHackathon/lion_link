@@ -55,7 +55,7 @@ export type Field =
 
 export const EMPLOYMENT_OPTIONS = [["FULL_TIME", "정규직"], ["CONTRACT", "계약직"], ["INTERN", "인턴"], ["FREELANCE", "프리랜서"], ["FOUNDER", "창업"], ["ETC", "기타"]] as const;
 const DEGREE_OPTIONS = [["BACHELOR", "학사"], ["MASTER", "석사"], ["DOCTOR", "박사"], ["EXCHANGE_ETC", "교환·기타"]] as const;
-const LION_ROLE_OPTIONS = [["LION", "아기사자"], ["STAFF", "운영진"], ["PRESIDENT", "대표·부대표"], ["PART_LEAD", "파트장"], ["ETC", "기타"]] as const;
+const LION_ROLE_OPTIONS = [["LION", "아기사자"], ["STAFF", "운영진"], ["PRESIDENT", "회장·부회장"], ["PART_LEAD", "파트장"], ["ETC", "기타"]] as const;
 const EVENT_OPTIONS = [["REGULAR", "정기 프로젝트"], ["JUNGKATHON", "중커톤"], ["UNION_HACKATHON", "연합 해커톤"], ["ETC", "기타"]] as const;
 const LEVEL_OPTIONS = [["BASIC", "기초"], ["DAILY", "일상 회화"], ["BUSINESS", "비즈니스"], ["NATIVE", "원어민"]] as const;
 export const LION_PARTS: ApiLionPart[] = ["PLANNING", "DESIGN", "FRONTEND", "BACKEND"];

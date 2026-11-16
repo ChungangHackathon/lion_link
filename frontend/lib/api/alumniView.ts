@@ -50,7 +50,7 @@ const TIME_LABEL: Record<TimeSlot, string> = { MORNING: "오전", AFTERNOON: "�
 const LINK_LABEL: Record<LinkType, string> = { LINKEDIN: "링크드인", GITHUB: "깃허브", PORTFOLIO: "포트폴리오", BLOG: "블로그", REMEMBER: "리멤버", NOTION: "노션", ETC: "링크" };
 const EMPLOYMENT_LABEL: Record<string, string> = { FULL_TIME: "정규직", CONTRACT: "계약직", INTERN: "인턴", FREELANCE: "프리랜서", FOUNDER: "창업", ETC: "기타" };
 const DEGREE_LABEL: Record<string, string> = { BACHELOR: "학사", MASTER: "석사", DOCTOR: "박사", EXCHANGE_ETC: "교환·기타" };
-const LION_ROLE_LABEL: Record<string, string> = { LION: "아기사자", STAFF: "운영진", PRESIDENT: "대표", PART_LEAD: "파트장", ETC: "기타" };
+const LION_ROLE_LABEL: Record<string, string> = { LION: "아기사자", STAFF: "운영진", PRESIDENT: "회장", PART_LEAD: "파트장", ETC: "기타" };
 const EVENT_LABEL: Record<string, string> = { REGULAR: "정기 프로젝트", JUNGKATHON: "중커톤", UNION_HACKATHON: "연합 해커톤", ETC: "기타" };
 const LEVEL_LABEL: Record<string, string> = { BASIC: "기초", DAILY: "일상 회화", BUSINESS: "비즈니스", NATIVE: "원어민" };
 

@@ -100,7 +100,7 @@ export const alumni: Alumni[] = [
     receive: "OPEN",
     allowGroup: true,
     company: "에듀테크 스타트업",
-    role: "대표",
+    role: "회장",
   },
   {
     id: "u-5",
