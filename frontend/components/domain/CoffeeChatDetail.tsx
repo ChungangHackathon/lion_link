@@ -13,13 +13,13 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
 import * as coffeeApi from "@/lib/api/coffee";
 import { personName, topicText, type CoffeeAction, type CoffeeChatDetail as CoffeeChatData } from "@/lib/api/coffee";
-import { addCoffeePeriod, getCoffeeDefaultMode, isHttpUrl } from "@/lib/api/profile";
+import { isHttpUrl } from "@/lib/api/profile";
 import { useCoffeeService } from "@/lib/api/useCoffeeService";
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Button, Chip } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { Checkbox, Input, Radio, Select, Textarea } from "@/components/ui/Input";
+import { Input, Radio, Select, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { ProtoButton, Tooltip } from "@/components/ui/Misc";
 import { useToast } from "@/components/ui/Toast";
@@ -32,8 +32,6 @@ const STEPS: { key: CoffeeChatStatus | "REQUEST"; label: string }[] = [
 ];
 const STEP_INDEX: Record<CoffeeChatStatus, number> = { PENDING: 0, ACCEPTED: 1, SCHEDULED: 2, COMPLETED: 3, REJECTED: 0, CANCELED: 0, EXPIRED: 0 };
 const PENDING_TIP = "프로토타입 모드에서는 쓸 수 없어요";
-const todayKst = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
-const addDaysKst = (days: number) => new Date(Date.now() + 9 * 3_600_000 + days * 86_400_000).toISOString().slice(0, 10);
 
 export const statusTone = (s: CoffeeChatStatus) => (s === "PENDING" ? "outline" : s === "SCHEDULED" || s === "COMPLETED" ? "filled" : "gray");
 
@@ -48,7 +46,7 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
   const router = useRouter();
   const toast = useToast();
   const service = useCoffeeService();
-  const { alumni, acceptCoffeeChat, rejectCoffeeChat, cancelCoffeeChat, scheduleCoffeeChat, completeCoffeeChat, setSettings } = useStore();
+  const { alumni, acceptCoffeeChat, rejectCoffeeChat, cancelCoffeeChat, scheduleCoffeeChat, completeCoffeeChat } = useStore();
   const isReceiver = chat.myRole === "RECEIVER";
   const other = isReceiver ? chat.requester : chat.receiver;
   const members = chat.members;
@@ -120,18 +118,6 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
       onChanged?.();
     } finally {
       setBusy(false);
-    }
-  };
-
-  /** 거절 창의 '당분간 커피챗 쉬기' (PROFILE-15). 기본이 '안 받기'면 이미 받지 않으니 건너뛴다 */
-  const rest = async (until: string) => {
-    try {
-      const { defaultMode } = await getCoffeeDefaultMode();
-      if (defaultMode !== "ON") return;
-      const p = await addCoffeePeriod({ startDate: todayKst(), endDate: until, mergeOverlap: true });
-      toast(`${p.endDate.slice(5).replace("-", "/")}까지 커피챗을 쉬어요`);
-    } catch (e) {
-      toast(`쉬는 기간을 저장하지 못했어요. ${errorMessage(e)}`, { kind: "error" });
     }
   };
 
@@ -369,16 +355,14 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
         open={modal === "reject"}
         onClose={() => setModal(null)}
         busy={busy}
-        onConfirm={async (reason, note, restUntil) => {
+        onConfirm={(reason, note) => {
           if (!API_ENABLED) {
             rejectCoffeeChat(mockId, reason, note);
-            if (restUntil) setSettings({ mode: "RESTING", restUntil });
             setModal(null);
             toast("거절했어요. 신청자에게 안내가 전달돼요.");
             return;
           }
-          const ok = await run(() => coffeeApi.rejectCoffeeChat(chat.id, { rejectReason: reason, responseMessage: note.trim() || undefined }), "거절했어요. 신청자에게 안내가 전달돼요.");
-          if (ok && restUntil) await rest(restUntil);
+          void run(() => coffeeApi.rejectCoffeeChat(chat.id, { rejectReason: reason, responseMessage: note.trim() || undefined }), "거절했어요. 신청자에게 안내가 전달돼요.");
         }}
       />
       {/* ◇[O] D-15 일정 확정 · 변경 (COFFEE-07) */}
@@ -561,18 +545,9 @@ function AcceptModal({ open, onClose, onConfirm, group, busy }: { open: boolean;
   );
 }
 
-function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClose: () => void; onConfirm: (reason: CoffeeChatRejectReason, note: string, restUntil?: string) => void; busy?: boolean }) {
+function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClose: () => void; onConfirm: (reason: CoffeeChatRejectReason, note: string) => void; busy?: boolean }) {
   const [reason, setReason] = useState<CoffeeChatRejectReason>("NO_TIME");
   const [note, setNote] = useState("");
-  const [rest, setRest] = useState(true);
-  const [period, setPeriod] = useState<"1w" | "2w" | "1m" | "custom">("1w");
-  const [custom, setCustom] = useState("");
-  const until = () => {
-    if (!rest) return undefined;
-    if (period === "custom") return custom || undefined;
-    return addDaysKst(period === "1w" ? 6 : period === "2w" ? 13 : 29);
-  };
-  const customError = rest && period === "custom" && custom ? (custom < todayKst() ? "오늘 이후로 골라주세요" : custom > addDaysKst(179) ? "최대 180일까지 쉴 수 있어요" : undefined) : undefined;
   return (
     <Modal
       open={open}
@@ -584,7 +559,7 @@ function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClos
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
-          <Button onClick={() => onConfirm(reason, note, until())} loading={busy} disabled={note.length > 200 || (rest && period === "custom" && (!custom || !!customError))}>
+          <Button onClick={() => onConfirm(reason, note)} loading={busy} disabled={note.length > 200}>
             거절하기
           </Button>
         </>
@@ -598,28 +573,6 @@ function RejectModal({ open, onClose, onConfirm, busy }: { open: boolean; onClos
           ))}
         </div>
         <Textarea label="메시지 (선택)" rows={3} placeholder="예) 다음에 꼭 이야기 나눠요!" value={note} onChange={(e) => setNote(e.target.value)} counter={{ value: note.length, max: 200 }} />
-        <div className="flex flex-col gap-3 rounded-[8px] border border-line-200 bg-bg-50 p-4">
-          <Checkbox label="당분간 커피챗 쉬기" checked={rest} onChange={(e) => setRest(e.target.checked)} />
-          {rest && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip selected={period === "1w"} onClick={() => setPeriod("1w")}>
-                오늘부터 1주
-              </Chip>
-              <Chip selected={period === "2w"} onClick={() => setPeriod("2w")}>
-                2주
-              </Chip>
-              <Chip selected={period === "1m"} onClick={() => setPeriod("1m")}>
-                1달
-              </Chip>
-              <Chip selected={period === "custom"} onClick={() => setPeriod("custom")}>
-                직접 선택
-              </Chip>
-              {period === "custom" && <input type="date" aria-label="쉬는 마지막 날" min={todayKst()} max={addDaysKst(179)} value={custom} onChange={(e) => setCustom(e.target.value)} className="h-8 rounded-[6px] border border-line-300 px-2 text-[13px]" />}
-            </div>
-          )}
-          {customError && <p className="t-caption2 text-orange">{customError}</p>}
-          <p className="text-[12px] text-ink-500">쉬는 기간은 최대 5개까지 등록할 수 있어요.</p>
-        </div>
       </div>
     </Modal>
   );
