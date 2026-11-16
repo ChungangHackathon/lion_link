@@ -259,13 +259,20 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
             </ul>
           </MySection>
         )}
-        {educations.length > 0 && (
+        {(educations.length > 0 || p.minor) && (
           <MySection title="학력" onEdit={() => openSection("education")}>
             <ul className="flex flex-col gap-4">
               {educations.map((e, i) => (
                 <ItemRow key={i} title={e.school} sub={[e.major, e.degree].filter(Boolean).join(" · ")} meta={e.from ? `${e.from} ~ ${e.to}` : undefined} />
               ))}
             </ul>
+            {/* 복수·부전공은 마이페이지에서만 보여준다 (프로필 기본 정보 minor, 학력 편집에서 저장) */}
+            {p.minor && (
+              <p className="flex items-center gap-2 text-[13px] text-ink-700">
+                <span className="rounded-[4px] bg-bg-100 px-1.5 py-0.5 text-[12px] font-semibold text-ink-500">복수·부전공</span>
+                {p.minor}
+              </p>
+            )}
           </MySection>
         )}
         {sections.lion.length > 0 && (

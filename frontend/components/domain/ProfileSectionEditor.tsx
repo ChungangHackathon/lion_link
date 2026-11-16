@@ -86,6 +86,27 @@ export function SectionListModal({
     }
   };
 
+  // 복수·부전공은 학교별이 아니라 프로필 기본 정보(minor) 한 칸이다. 학력 편집 안에서 따로 저장한다
+  const [minor, setMinor] = useState(profile.minor ?? "");
+  const [savingMinor, setSavingMinor] = useState(false);
+  const minorChanged = minor.trim() !== (profile.minor ?? "");
+  const minorError = minor.trim().length > 30 ? "30자 이내로 적어주세요" : undefined;
+  const saveMinor = async () => {
+    if (!minorChanged || minorError) return;
+    setSavingMinor(true);
+    try {
+      const p = profile;
+      const basic = await service.updateBasic({ headline: p.headline, major: p.major, minor: minor.trim() || null, region: p.region, status: p.status, lionParts: p.lionParts, interests: p.interests });
+      onChanged({ minor: basic.minor });
+      setMinor(basic.minor ?? "");
+      toast("복수·부전공을 저장했어요");
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    } finally {
+      setSavingMinor(false);
+    }
+  };
+
   if (form)
     return (
       <SectionFormModal
@@ -117,6 +138,23 @@ export function SectionListModal({
               <option value="PUBLIC">전체 공개</option>
               <option value="PRIVATE">비공개 (다른 동문에게 &apos;비공개 회사&apos;로 보여요)</option>
             </Select>
+          )}
+          {sections.includes("educations") && (
+            <div className="flex items-start gap-2">
+              <Input
+                label="복수·부전공"
+                hint="(선택 · 프로필에 하나)"
+                className="flex-1"
+                placeholder="예) 경영학 복수전공"
+                value={minor}
+                onChange={(e) => setMinor(e.target.value)}
+                counter={{ value: minor.trim().length, max: 30 }}
+                error={minorError}
+              />
+              <Button className="mt-[30px]" variant="secondary" disabled={!minorChanged || !!minorError} loading={savingMinor} onClick={() => void saveMinor()}>
+                저장
+              </Button>
+            </div>
           )}
           {sections.map((s) => {
             const schema = SECTION_SCHEMA[s];
