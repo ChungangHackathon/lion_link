@@ -303,14 +303,25 @@ public class ChatRoomService {
 			member.hide(chatMessageRepository.findLastMessageId(roomId), now);
 			return;
 		}
-		if (room.isMeetupRoom() && meetupRepository.findById(room.getMeetupId())
-				.filter(meetup -> !meetup.isCanceled() && !meetup.isEnded(now))
-				.isPresent()) {
-			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS, "번개가 끝나기 전에는 나갈 수 없어요. 번개 참여를 취소하면 방에서도 나가요.");
+		if (room.isMeetupRoom()) {
+			leaveMeetup(userId, room.getMeetupId(), now);
 		}
 		member.leave(now);
 		String name = userSummaryReader.getSummary(userId).filter(summary -> !summary.deleted()).map(UserSummary::name).orElse("동문");
 		chatMessageWriter.writeSystem(room, name + "님이 나갔어요.", now);
+	}
+
+	private void leaveMeetup(Long userId, Long postId, LocalDateTime now) {
+		Meetup meetup = meetupRepository.findById(postId)
+				.filter(found -> !found.isCanceled() && !found.isEnded(now))
+				.orElse(null);
+		if (meetup == null) {
+			return;
+		}
+		if (meetup.getPost().isWrittenBy(userId)) {
+			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS, "번개를 만든 사자는 나갈 수 없어요. 번개를 취소하면 방도 닫혀요.");
+		}
+		meetupMemberRepository.deleteById(new MeetupMemberId(postId, userId));
 	}
 
 	@EventListener

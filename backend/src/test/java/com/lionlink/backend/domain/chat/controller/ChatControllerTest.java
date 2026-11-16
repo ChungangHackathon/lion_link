@@ -74,6 +74,9 @@ class ChatControllerTest {
 				.andExpect(jsonPath("$.canSend").value(true));
 
 		mockMvc.perform(delete("/api/v1/chat-rooms/{roomId}/members/me", roomId).header(USER_HEADER, kim))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(delete("/api/v1/chat-rooms/{roomId}/members/me", roomId).header(USER_HEADER, me))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("INVALID_ROOM_STATUS"));
 	}
