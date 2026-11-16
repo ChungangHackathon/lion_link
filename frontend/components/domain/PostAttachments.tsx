@@ -99,7 +99,7 @@ export function usePostAttachments(initial: PostFile[] = []) {
         })}
         {images.length < UPLOAD_RULES.IMAGE.maxCount && (
           <button type="button" onClick={pickImage} aria-label="사진 추가" className="grid size-[64px] place-items-center rounded-[8px] border border-line-200 bg-white text-ink-500 hover:bg-bg-50">
-            <Icon name="plus" size={22} />
+            <Icon name="image" size={22} />
           </button>
         )}
       </div>
