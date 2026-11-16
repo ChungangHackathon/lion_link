@@ -265,6 +265,7 @@ function toComment(state: MockPostState, post: Post, c: Post["comments"][number]
   return {
     id: c.id,
     postId: post.id,
+    parentId: null,
     content: deleted ? DELETED_COMMENT : c.text,
     isAnonymous: anonymous,
     author: deleted || anonymous ? null : a ? { id: a.id, name: a.name, generation: a.generation, lionParts: parts(a), photoUrl: null, headline: a.headline, isDeleted: false } : { id: null, name: null, generation: null, lionParts: null, photoUrl: null, headline: null, isDeleted: true },
@@ -281,13 +282,14 @@ export function mockListComments(state: MockPostState, postId: Id, page: number,
   return delay({ items, page, size, hasNext: (page + 1) * size < post.comments.length });
 }
 
-export function mockAddComment(state: MockPostState, actions: MockPostActions & { addComment: (postId: string, text: string, anonymous?: boolean) => void }, postId: Id, content: string): Promise<PostComment> {
+export function mockAddComment(state: MockPostState, actions: MockPostActions & { addComment: (postId: string, text: string, anonymous?: boolean) => void }, postId: Id, content: string, parentId?: Id): Promise<PostComment> {
   const post = state.posts.find((p) => p.id === String(postId));
   if (!post) return Promise.reject(notFound());
   const anonymous = !!post.anonymous && post.authorId === ME_ID;
   actions.addComment(post.id, content, anonymous);
   const created = { id: `c-${Date.now()}`, authorId: ME_ID, text: content, anonymous, at: new Date().toISOString() };
-  return delay(toComment(state, post, created));
+  // 프로토타입: 답글 관계는 이번 화면에서만 유지한다 (mock 댓글 기록에는 parent가 없다)
+  return delay({ ...toComment(state, post, created), parentId: parentId ?? null });
 }
 
 export function mockRemoveComment(state: MockPostState, actions: MockPostActions, postId: Id, commentId: Id): Promise<void> {
