@@ -61,8 +61,9 @@ export const PART_STYLE: Record<LionPart, { bg: string; text: string; ring: stri
 export function PartTag({ part, generation, className }: { part: LionPart; generation?: number; className?: string }) {
   return (
     <span className={cn("inline-flex items-center rounded-[5px] px-2.5 py-[3px] t-label2 text-ink-900 whitespace-nowrap", PART_STYLE[part].bg, className)}>
+      {/* 기수가 먼저: "14기 · 디자인" */}
+      {generation !== undefined && `${generation}기 · `}
       {LION_PART_LABEL[part]}
-      {generation !== undefined && ` ・${generation}기`}
     </span>
   );
 }
