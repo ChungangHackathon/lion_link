@@ -147,7 +147,7 @@ public class PostService {
 		}
 
 		LocalDate deadline = category.allowsDeadline()
-				? Objects.requireNonNullElse(request.deadline(), post.getDeadline())
+				? (request.deadline() != null ? request.deadline() : post.getDeadline())
 				: null;
 		post.update(
 				category,
