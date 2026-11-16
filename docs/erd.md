@@ -123,6 +123,8 @@ erDiagram
     varchar major
     varchar minor
     varchar region
+    varchar company "재직·창업 회사(경력과 별개)"
+    varchar job_title "재직·창업 직무"
     json links "JSON 배열"
     varchar contact_email
     varchar phone
