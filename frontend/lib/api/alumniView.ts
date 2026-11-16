@@ -105,7 +105,7 @@ export function sectionsToDetail(d: SectionSource): Pick<ProfileDetail, "careers
           .filter((p) => p.generation === a.generation)
           .map((p) => ({ event: `${EVENT_LABEL[p.eventType] ?? ""} · ${p.generation}기`, name: p.name, desc: p.description ?? "", role: p.myRole ?? "", link: p.link ? stripScheme(p.link) : undefined })),
       })),
-    projects: d.projects.map((p) => ({ name: p.name, type: p.role ?? "", from: ym(p.startYm), to: p.isCurrent ? "현재" : ym(p.endYm), skills: p.tags ?? [] })),
+    projects: d.projects.map((p) => ({ name: p.name, type: p.role ?? "", from: ym(p.startYm), to: p.isCurrent ? "현재" : ym(p.endYm), skills: p.tags ?? [], link: p.link ?? undefined })),
     certs: [
       ...d.certifications.map((c) => ({ kind: "자격증" as const, text: [c.name, c.issuer, ym(c.acquiredYm)].filter(Boolean).join(" · ") })),
       ...d.awards.map((a) => ({ kind: "수상" as const, text: [a.name, a.host, ym(a.awardedYm)].filter(Boolean).join(" · ") })),
