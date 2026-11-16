@@ -128,10 +128,12 @@ class AlumniServiceTest {
 		AlumniResponse kimItem = find(items, kim);
 		assertThat(kimItem.bookmarked()).isTrue();
 		assertThat(kimItem.company()).isEqualTo("라이온컴퍼니");
+		assertThat(kimItem.jobTitle()).isEqualTo("백엔드 개발자");
 		assertThat(kimItem.lionParts()).containsExactly(LionPart.BACKEND);
 		AlumniResponse leeItem = find(items, lee);
 		assertThat(leeItem.bookmarked()).isFalse();
 		assertThat(leeItem.company()).isNull();
+		assertThat(leeItem.jobTitle()).isEqualTo("백엔드 개발자");
 
 		TestProfiles.coffeeChat(entityManager, me, lee, CoffeeChatStatus.COMPLETED);
 		assertThat(find(search(ALL).items(), lee).company()).isEqualTo("비밀회사");

@@ -47,6 +47,7 @@ export function summaryFromMock(a: Alumni, bookmarks: string[]): AlumniSummary {
     bio: a.intro,
     photoUrl: null,
     company: a.company ?? null,
+    jobTitle: a.role ?? null,
     interests: a.interests.map((i) => INTEREST_CODE[i as InterestLabel]).filter(Boolean),
     skills: a.skills,
     bookmarked: bookmarks.includes(a.id),

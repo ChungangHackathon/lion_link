@@ -29,6 +29,8 @@ export interface AlumniSummary {
   photoUrl: string | null;
   /** 회사 공개 범위로 가려지면 null */
   company: string | null;
+  /** 현재 재직 중인 경력의 직무 */
+  jobTitle: string | null;
   interests: InterestCode[];
   skills: string[];
   bookmarked: boolean;
