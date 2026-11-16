@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { INTEREST_LABEL, LION_PART_LABEL, POST_CATEGORY_LABEL, type InterestCode, type LionPart, type PostCategory } from "@/lib/types";
+import { INTEREST_LABEL, LION_PART_LABEL, POST_CATEGORY_LABEL, PROFILE_STATUS_LABEL, type InterestCode, type LionPart, type PostCategory } from "@/lib/types";
 import { daysLeft, formatDateTime } from "@/lib/format";
 import { errorMessage, isApiError } from "@/lib/api/client";
 import type { AlumniQuery, AlumniSummary } from "@/lib/api/alumni";
@@ -130,12 +130,10 @@ function HomeView({ home, onDismissed, dismiss }: { home: HomeData; onDismissed:
                 {me.generation}기 · {me.lionParts.map((x) => LION_PART_LABEL[x]).join("·") || LION_PART_LABEL.ETC}
               </span>
             </div>
-            <p className="truncate text-[13px] leading-4 text-ink-700">
-              {[me.company, me.jobTitle].filter(Boolean).join(" · ") || <span className="text-ink-400">경력을 추가해보세요</span>}
-            </p>
-            <p className="truncate text-[13px] leading-4 text-ink-700">{me.headline ?? <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
+            {/* 동문 찾기 카드와 같은 순서: 이름 아래 회사 · 직무(재직·창업이 아니면 현재 상태), 줄 아래 한 줄 소개 */}
+            <p className="truncate text-[13px] leading-4 text-ink-700">{[me.company, me.jobTitle].filter(Boolean).join(" · ") || (profile ? PROFILE_STATUS_LABEL[profile.status] : " ")}</p>
             <hr className="border-line-200" />
-            <p className="line-clamp-3 text-[13px] leading-[18px] text-ink-700">{me.bio ?? <span className="text-ink-400">아직 자기소개가 없어요</span>}</p>
+            <p className="line-clamp-3 text-[13px] leading-[18px] text-ink-700">{me.headline ?? <span className="text-ink-400">한 줄 소개를 적어보세요</span>}</p>
           </div>
         </Link>
 

@@ -20,7 +20,7 @@ import type { BasicInfo, BasicInfoRequest, MyProfile, Visibility } from "./myPro
  */
 export interface MyProfileService {
   get: () => Promise<MyProfile>;
-  updateBasic: (body: BasicInfoRequest) => Promise<BasicInfo>;
+  updateBasic: (body: BasicInfoRequest) => Promise<BasicInfo & { company: string | null; jobTitle: string | null }>;
   uploadPhoto: (file: File) => Promise<{ photoUrl: string }>;
   deletePhoto: () => Promise<void>;
   updateBio: (bio: string | null) => Promise<{ bio: string | null }>;
@@ -91,6 +91,9 @@ function buildMock(me: Alumni): MyProfile {
     awards: d.certs.filter((c) => c.kind === "수상").map((c) => ({ id: seq++, name: c.text, host: null, awardedYm: null })),
     activities: d.certs.filter((c) => c.kind === "대외활동").map((c) => ({ id: seq++, name: c.text, organization: null, startYm: null, endYm: null })),
     languages: [],
+    company: me.company ?? d.careers.find((c) => c.to === "현재")?.company ?? null,
+    jobTitle: me.role ?? d.careers.find((c) => c.to === "현재")?.role ?? null,
+    isStaff: !!me.isStaff || d.lion.some((l) => l.role.includes("운영진")),
   };
 }
 
@@ -107,10 +110,13 @@ export function useMyProfileService(): MyProfileService {
     return {
       get: () => delay(structuredClone(current())),
       updateBasic: (body) => {
-        patch(body);
+        // 서버처럼: 재직·창업이 아니면 회사·직무를 비운다
+        const working = body.status === "EMPLOYED" || body.status === "FOUNDER";
+        const work = { company: working ? body.company ?? current().company : null, jobTitle: working ? body.jobTitle ?? current().jobTitle : null };
+        patch({ ...body, ...work });
         // 아직 mock 동문 데이터를 쓰는 다른 화면(카드·홈)에도 반영한다
         store.updateMe({ intro: body.headline ?? "", status: body.status, part: body.lionParts[0], parts: body.lionParts, interests: body.interests.map((i) => INTEREST_LABEL[i]) });
-        return delay(body);
+        return delay({ ...body, ...work });
       },
       uploadPhoto: (file) => {
         const photoUrl = URL.createObjectURL(file);

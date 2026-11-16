@@ -1,6 +1,6 @@
 /** 내 프로필 (docs/api.md PROFILE-02, 04 ~ 10) */
 
-import type { InterestCode, ProfileStatus } from "@/lib/types";
+import { PROFILE_STATUS_LABEL, type InterestCode, type ProfileStatus } from "@/lib/types";
 import type { AlumniDetail, LinkType } from "./alumni";
 import type { ApiLionPart } from "./profile";
 import { api } from "./client";
@@ -35,7 +35,24 @@ export interface MyProfile extends Sections {
   links: { type: LinkType; url: string }[];
   contact: { email: string | null; phone: string | null };
   visibility: Visibility;
+  /** 재직·창업일 때 이름 아래에 보이는 회사·직무. 경력과 따로 저장한다 (기본 정보 편집에서 입력). 다른 상태면 null */
+  company: string | null;
+  jobTitle: string | null;
+  /** 운영진·회장·파트장 활동이 있으면 true (이름 옆 운영진 배지) */
+  isStaff: boolean;
 }
+
+/** 회사·직무를 적는 상태 (온보딩·기본 정보 편집에서 회사 입력 상자가 열린다) */
+export const isWorking = (s: ProfileStatus) => s === "EMPLOYED" || s === "FOUNDER";
+
+/** 내 프로필의 회사·직무. 재직·창업이 아니면 비운다 */
+export function workOf(p: Pick<MyProfile, "status" | "company" | "jobTitle">): { company: string | null; jobTitle: string | null } {
+  return isWorking(p.status) ? { company: p.company, jobTitle: p.jobTitle } : { company: null, jobTitle: null };
+}
+
+/** 이름 아래 줄: 재직·창업이면 "회사 · 직무", 아니면(또는 비어 있으면) 현재 상태 */
+export const workLine = (w: { company?: string | null; jobTitle?: string | null }, status: ProfileStatus) =>
+  (isWorking(status) ? [w.company, w.jobTitle].filter(Boolean).join(" · ") : "") || PROFILE_STATUS_LABEL[status];
 
 export interface BasicInfo {
   headline: string | null;
@@ -54,8 +71,8 @@ export function getMyProfile() {
 
 /** PROFILE-04 기본 정보 (통째로 바꾼다. 안 바꾼 칸도 현재 값을 보낸다) */
 /**
- * PROFILE-04 요청. company·jobTitle은 재직으로 바꾸는데 재직 중인 경력이 없을 때만 필수다(경력이 자동으로 생긴다).
- * 그 외에는 서버가 무시한다. 빈 문자열은 400이라 안 쓸 때는 빼고 보낸다. 경력이 이미 10개면 409 LIMIT_EXCEEDED
+ * PROFILE-04 요청. company·jobTitle은 재직·창업이면 필수(각 1~30자)인 프로필 회사·직무다. 경력은 생기지 않는다.
+ * 다른 상태면 서버가 비운다. 빈 문자열은 400이라 안 쓸 때는 빼고 보낸다.
  */
 export interface BasicInfoRequest extends BasicInfo {
   company?: string;
@@ -63,7 +80,7 @@ export interface BasicInfoRequest extends BasicInfo {
 }
 
 export function updateBasic(body: BasicInfoRequest) {
-  return api<BasicInfo>("/me/profile/basic", { method: "PUT", body });
+  return api<BasicInfo & { company: string | null; jobTitle: string | null }>("/me/profile/basic", { method: "PUT", body });
 }
 
 /** PROFILE-05 사진 변경 (jpg·png·webp, 5MB 이하) */
