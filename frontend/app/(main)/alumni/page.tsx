@@ -64,6 +64,7 @@ function AlumniList() {
 
   const [q, setQ] = useState(params.get("q") ?? "");
   const [onlyOpen, setOnlyOpen] = useState(params.get("open") === "1");
+  const [onlyBookmarked, setOnlyBookmarked] = useState(params.get("bookmarked") === "1");
   const [gens, setGens] = useState<number[]>(params.get("gen") ? params.get("gen")!.split(",").map(Number) : []);
   const [parts, setParts] = useState<ApiLionPart[]>(params.get("part") ? (params.get("part")!.split(",").filter((p) => PARTS.includes(p as ApiLionPart)) as ApiLionPart[]) : []);
   const [statuses, setStatuses] = useState<ProfileStatus[]>([]);
@@ -77,19 +78,20 @@ function AlumniList() {
   const reset = () => {
     setQ("");
     setOnlyOpen(false);
+    setOnlyBookmarked(false);
     setGens([]);
     setParts([]);
     setStatuses([]);
     setInterests([]);
     router.replace("/alumni");
   };
-  const appliedCount = Number(onlyOpen) + Number(gens.length > 0) + parts.length + statuses.length + interests.length + Number(q.trim().length > 0);
+  const appliedCount = Number(onlyOpen) + Number(onlyBookmarked) + Number(gens.length > 0) + parts.length + statuses.length + interests.length + Number(q.trim().length > 0);
   const applied = appliedCount > 0;
   const sortedGens = [...gens].sort((a, b) => a - b);
   const contiguous = sortedGens.length > 1 && sortedGens[sortedGens.length - 1] - sortedGens[0] === sortedGens.length - 1;
   const genLabel = contiguous ? `${sortedGens[0]}~${sortedGens[sortedGens.length - 1]}기` : sortedGens.map((g) => `${g}기`).join(", ");
 
-  const filters = { q: query || undefined, generations: gens, parts, statuses, interests: interests.map((i) => INTEREST_CODE[i]), available: onlyOpen, sort };
+  const filters = { q: query || undefined, generations: gens, parts, statuses, interests: interests.map((i) => INTEREST_CODE[i]), available: onlyOpen, bookmarked: onlyBookmarked, sort };
   const filterKey = JSON.stringify(filters);
   const first = useApi((signal) => service.list({ ...filters, page: 0, size: SIZE }, signal), [service, filterKey]);
   const [more, setMore] = useState<{ items: AlumniSummary[]; page: number; hasNext: boolean } | null>(null);
@@ -203,6 +205,9 @@ function AlumniList() {
             <QuickChip icon="user" selected={quick.employed} onClick={() => setStatuses(quick.employed ? [] : ["EMPLOYED"])}>
               재직 중
             </QuickChip>
+            <QuickChip icon="star" selected={onlyBookmarked} onClick={() => setOnlyBookmarked((b) => !b)}>
+              즐겨찾기
+            </QuickChip>
           </div>
           <div className="relative shrink-0">
             <button type="button" aria-haspopup="listbox" aria-expanded={sortOpen} onClick={() => setSortOpen((o) => !o)} className="flex h-9 items-center gap-1.5 rounded-[8px] border border-line-300 bg-white px-3 t-label2 text-ink-900 hover:bg-bg-50">
@@ -267,6 +272,7 @@ function AlumniList() {
                 </AppliedTag>
               ))}
               {onlyOpen && <AppliedTag onRemove={() => setOnlyOpen(false)}>지금 받는 동문</AppliedTag>}
+              {onlyBookmarked && <AppliedTag onRemove={() => setOnlyBookmarked(false)}>즐겨찾기</AppliedTag>}
             </div>
             <button type="button" onClick={reset} className="shrink-0 t-caption1 text-primary hover:underline">
               모두 지우기
@@ -314,7 +320,7 @@ function FilterGroup({ title, children, small }: { title: string; children: Reac
 }
 
 /** 빠른 필터 칩 — 선택되면 연한 파랑 + 체크 */
-function QuickChip({ icon, selected, onClick, children }: { icon: "users" | "coffee" | "user"; selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function QuickChip({ icon, selected, onClick, children }: { icon: "users" | "coffee" | "user" | "star"; selected: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" aria-pressed={selected} onClick={onClick} className={cn("flex h-9 items-center gap-1.5 rounded-full border px-[14px] t-label2 transition-colors", selected ? "border-blue-100 bg-part-be-bg text-primary" : "border-line-200 bg-white text-ink-900 hover:bg-bg-50")}>
       <Icon name={selected ? "check" : icon} size={15} className={selected ? "text-primary" : "text-ink-700"} />

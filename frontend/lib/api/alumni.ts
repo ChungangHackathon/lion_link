@@ -47,6 +47,8 @@ export interface AlumniQuery {
   interests?: InterestCode[];
   /** true면 오늘 커피챗을 받는 사자만 */
   available?: boolean;
+  /** true면 내가 관심 동문(즐겨찾기)으로 저장한 사람만 */
+  bookmarked?: boolean;
   sort?: AlumniSort;
   page?: number;
   size?: number;
@@ -117,6 +119,7 @@ export function listAlumni(query: AlumniQuery = {}, signal?: AbortSignal) {
       statuses: join(query.statuses),
       interests: join(query.interests),
       available: query.available || undefined,
+      bookmarked: query.bookmarked || undefined,
       sort: query.sort,
       page: query.page,
       size: query.size,
