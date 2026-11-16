@@ -126,7 +126,7 @@ function PickerModal({ onClose, onConfirm, title = "동문 선택", description,
               const part = a.lionParts[0] ?? "ETC";
               return (
                 <button key={a.id} type="button" disabled={full} onClick={() => toggle(a)} className={cn("flex w-full items-center gap-3 border-b border-line-200 px-3 py-2.5 text-left last:border-b-0 hover:bg-bg-50 disabled:cursor-not-allowed disabled:opacity-50", on && "bg-part-be-bg/60")}>
-                  <Avatar name={a.name} part={part} size={40} />
+                  <Avatar name={a.name} part={part} photoUrl={a.photoUrl} size={40} />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="t-label1 text-ink-900">
                       {a.name} <span className="ml-1 text-[12px] font-normal text-ink-500">{a.generation}기 · {LION_PART_LABEL[part]}</span>

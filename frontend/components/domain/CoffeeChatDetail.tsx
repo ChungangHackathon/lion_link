@@ -149,7 +149,7 @@ export function CoffeeChatDetail({ chat, initialAction, onChanged, onRemoved }: 
           <Avatar size={48} withdrawn />
         ) : (
           <Link href={`/alumni/${other.id}`} className="shrink-0">
-            <Avatar name={other.name ?? undefined} part={part} size={48} />
+            <Avatar name={other.name ?? undefined} part={part} photoUrl={other.photoUrl} size={48} />
           </Link>
         )}
         <div className="flex min-w-0 flex-col gap-1.5">

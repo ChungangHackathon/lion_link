@@ -181,7 +181,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
               </div>
               <h1 className="t-title text-ink-900">{post.title}</h1>
               <div className="flex items-center gap-3">
-                {kind !== "post" && <Avatar name={author && !author.isDeleted ? author.name ?? undefined : undefined} part={firstPart(author)} photoUrl={kind === "meetup" ? author?.photoUrl : undefined} size={40} withdrawn={!!author?.isDeleted} />}
+                {kind !== "post" && <Avatar name={author && !author.isDeleted ? author.name ?? undefined : undefined} part={firstPart(author)} photoUrl={author?.photoUrl} size={40} withdrawn={!!author?.isDeleted} />}
                 <p className="text-[13px] text-ink-500">
                   {kind !== "post" ? <span className="block text-[14px] font-semibold text-ink-900">{authorLabel(author)}</span> : null}
                   {new Date(post.createdAt).getMonth() + 1}월 {new Date(post.createdAt).getDate()}일
@@ -299,7 +299,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           <Card className="flex flex-col gap-3 rounded-[10px] p-5">
             <p className="text-[13px] text-ink-500">작성자</p>
             <div className="flex items-center gap-3">
-              <Avatar name={author.name ?? undefined} part={firstPart(author)} size={48} />
+              <Avatar name={author.name ?? undefined} part={firstPart(author)} photoUrl={author.photoUrl} size={48} />
               <div>
                 <p className="text-[16px] font-bold text-ink-900">{authorLabel(author)}</p>
                 <p className="text-[12px] text-ink-500">{[firstPart(author) && LION_PART_LABEL[firstPart(author)!], author.status && PROFILE_STATUS_LABEL[author.status]].filter(Boolean).join(" · ")}</p>
@@ -536,7 +536,7 @@ function Comments({ postId, canModerate, onCountChange }: { postId: Id; canModer
 function CommentItem({ c, canModerate, onDelete, onReply }: { c: PostComment; canModerate: boolean; onDelete: () => void; onReply?: () => void }) {
   return (
     <div className="flex gap-3">
-      <Avatar name={c.author && !c.author.isDeleted ? c.author.name ?? undefined : undefined} part={firstPart(c.author)} size={32} withdrawn={!c.deleted && !c.isAnonymous && (!c.author || c.author.isDeleted)} />
+      <Avatar name={c.author && !c.author.isDeleted ? c.author.name ?? undefined : undefined} part={firstPart(c.author)} photoUrl={c.author?.isDeleted ? undefined : c.author?.photoUrl} size={32} withdrawn={!c.deleted && !c.isAnonymous && (!c.author || c.author.isDeleted)} />
       <div className="flex flex-col gap-1">
         <p className="text-[13px]">
           <span className="font-bold text-ink-900">{c.deleted ? "" : c.isAnonymous ? "익명의 사자" : c.author && !c.author.isDeleted ? c.author.name : "알 수 없음"}</span>

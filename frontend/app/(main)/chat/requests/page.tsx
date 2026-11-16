@@ -118,7 +118,7 @@ function Requests() {
               <li key={String(r.roomId)} className="border-b border-line-200">
                 <button type="button" onClick={() => setSelectedId(String(r.roomId))} className={cn("flex w-full flex-col gap-2 px-4 py-4 text-left hover:bg-bg-50", active && "bg-blue-100 hover:bg-blue-100")}>
                   <span className="flex items-center gap-2.5">
-                    <Avatar name={userName(a)} part={partOf(a)} size={32} />
+                    <Avatar name={userName(a)} part={partOf(a)} photoUrl={a.photoUrl} size={32} />
                     <span>
                       <span className="text-[14px] font-bold text-ink-900">{userName(a)}</span>
                       {!a.isDeleted && (
@@ -165,7 +165,7 @@ function RequestView({ request, busy, onAccept, onDecline }: { request: RequestI
   return (
     <section className="flex flex-col">
       <header className="flex h-16 items-center gap-3 border-b border-line-200 px-6">
-        <Avatar name={name} part={partOf(from)} size={40} />
+        <Avatar name={name} part={partOf(from)} photoUrl={from.photoUrl} size={40} />
         <div className="flex flex-col">
           <span className="t-body-bold text-ink-900">{name}</span>
           {!from.isDeleted && (
@@ -194,7 +194,7 @@ function RequestView({ request, busy, onAccept, onDecline }: { request: RequestI
           {common.length === 0 && <span className="text-ink-400">{profile ? "아직 없어요" : "…"}</span>}
         </p>
         <div className="flex items-start gap-2.5">
-          <Avatar name={name} part={partOf(from)} size={40} />
+          <Avatar name={name} part={partOf(from)} photoUrl={from.photoUrl} size={40} />
           <div className="flex flex-col gap-1">
             <span className="text-[13px] text-ink-700">{name}</span>
             <p className="max-w-[480px] whitespace-pre-line rounded-[8px] border border-line-200 bg-white px-3.5 py-2.5 text-[14px] leading-5 text-ink-900">{request.firstMessage.content}</p>

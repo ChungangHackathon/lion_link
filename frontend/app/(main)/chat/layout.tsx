@@ -146,7 +146,7 @@ function RoomRow({ room: r, meId, active, onHide }: { room: RoomSummary; meId: s
   return (
     <li className="border-b border-line-200">
       <Link href={`/chat/${r.roomId}`} className={cn("flex items-center gap-3 px-4 py-3.5 hover:bg-bg-50", active && "bg-blue-100 hover:bg-blue-100")}>
-        {r.type === "GROUP" ? <AvatarGroup people={avatarPeople(r.members)} size={32} /> : <Avatar name={userName(r.partner)} part={partOf(r.partner)} size={48} />}
+        {r.type === "GROUP" ? <AvatarGroup people={avatarPeople(r.members)} size={32} /> : <Avatar name={userName(r.partner)} part={partOf(r.partner)} photoUrl={r.partner?.photoUrl} size={48} />}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-baseline justify-between gap-2">
             <p className={cn("flex min-w-0 items-center gap-1 truncate", ended && "text-ink-400")}>
