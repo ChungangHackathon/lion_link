@@ -48,8 +48,8 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
             <ul className="flex flex-col gap-5">
               {(careersOpen ? detail.careers : detail.careers.slice(0, 3)).map((c, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-[6px] bg-bg-100 text-ink-400">
-                    <Glyph name="image" size={16} />
+                  <span className="grid size-10 shrink-0 place-items-center rounded-[6px] bg-bg-100 text-ink-500">
+                    <Glyph name="building" size={18} />
                   </span>
                   <div className="flex flex-col gap-0.5 text-[12px] text-ink-500">
                     <span className="text-[14px] font-semibold text-ink-900">{c.company}</span>
@@ -192,6 +192,31 @@ function ProjectCard({ tag, name, desc, role, skills, link }: { tag?: string; na
         </a>
       )}
     </div>
+  );
+}
+
+/** 학력 목록 (프로필 상단 카드 오른쪽). 학교 로고 대신 기본 학교 아이콘 */
+export function EducationList({ educations }: { educations: ProfileDetail["educations"] }) {
+  return (
+    <>
+      {educations.map((e, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-part-be-bg text-primary">
+            <Glyph name="school" size={20} />
+          </span>
+          <div className="flex flex-col text-[12px] text-ink-500">
+            <span className="text-[14px] font-semibold text-ink-900">{e.school}</span>
+            <span>{[e.major, e.degree].filter(Boolean).join(" · ")}</span>
+            {e.from && (
+              <span>
+                {e.from} ~ {e.to}
+                {e.gpa && <span className="ml-2 text-primary">GPA : {e.gpa}</span>}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
 
