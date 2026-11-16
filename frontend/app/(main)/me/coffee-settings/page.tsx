@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/format";
 import { errorMessage, isApiError } from "@/lib/api/client";
 import type { CoffeeTopic, TimeSlot, Weekday } from "@/lib/api/alumni";
 import { COFFEE_TOPIC_LABEL } from "@/lib/api/coffee";
-import { addDays, PERIOD_LIMIT, periodError, todayKst, type CoffeePeriod, type CoffeeSettings } from "@/lib/api/coffeeSettings";
+import { addDays, PERIOD_LIMIT, periodError, periodStarted, todayKst, type CoffeePeriod, type CoffeeSettings } from "@/lib/api/coffeeSettings";
 import { useApi } from "@/lib/api/useApi";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
 import { Button, Chip } from "@/components/ui/Button";
@@ -78,6 +78,7 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
   const [periods, setPeriods] = useState<CoffeePeriod[]>(initial.periods);
   const [clearPending, setClearPending] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<CoffeePeriod | null>(null);
   const [confirmBase, setConfirmBase] = useState<"OPEN" | "CLOSED" | null>(null);
   const [confirmSave, setConfirmSave] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -165,6 +166,18 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
     }
   };
 
+  const updatePeriod = async (id: CoffeePeriod["id"], startDate: string, endDate: string) => {
+    try {
+      const p = await service.updatePeriod(id, { startDate, endDate });
+      setPeriods((s) => s.map((x) => (String(x.id) === String(id) ? p : x)).sort((a, b) => a.startDate.localeCompare(b.startDate)));
+      setEditing(null);
+      toast("기간을 바꿨어요");
+      setRefreshTick((t) => t + 1);
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
+    }
+  };
+
   const removePeriod = async (id: CoffeePeriod["id"]) => {
     try {
       await service.removePeriod(id);
@@ -239,9 +252,14 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
                     <Icon name="calendar" size={16} className="text-ink-700" />
                     {formatDate(p.startDate)}({DAY(p.startDate)}) ~ {formatDate(p.endDate)}({DAY(p.endDate)})
                   </span>
-                  <button type="button" onClick={() => void removePeriod(p.id)} className="t-caption1 text-ink-500 hover:text-orange">
-                    삭제
-                  </button>
+                  <span className="flex gap-3">
+                    <button type="button" disabled={baseDirty} onClick={() => setEditing(p)} className="t-caption1 text-ink-500 hover:text-ink-900 disabled:text-ink-400">
+                      수정
+                    </button>
+                    <button type="button" onClick={() => void removePeriod(p.id)} className="t-caption1 text-ink-500 hover:text-orange">
+                      삭제
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -355,6 +373,7 @@ function SettingsForm({ initial }: { initial: CoffeeSettings }) {
 
       {/* CS-03 기간 추가 (PROFILE-15) */}
       {addOpen && <PeriodModal open onClose={() => setAddOpen(false)} kind={kind} existing={periods} onConfirm={addPeriod} />}
+      {editing && <PeriodModal open onClose={() => setEditing(null)} kind={kind} existing={periods} editing={editing} onConfirm={(from, to) => updatePeriod(editing.id, from, to)} />}
       {/* CF-5: 기본 상태를 바꾸면 저장할 때 기간이 모두 지워진다 (confirmClearPeriods) */}
       <ConfirmModal
         open={!!confirmBase}
@@ -463,13 +482,20 @@ function MiniCalendar({ periods, large }: { periods: { from: string; to: string;
   );
 }
 
-/** ◇[O] CS-03 기간 추가 모달 */
-function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boolean; onClose: () => void; kind: "REST" | "OPEN"; existing: CoffeePeriod[]; onConfirm: (from: string, to: string) => Promise<void> }) {
+/** ◇[O] CS-03 기간 추가 모달. editing을 주면 그 기간을 수정한다 (진행 중인 기간은 종료일만) */
+function PeriodModal({ open, onClose, kind, existing, editing, onConfirm }: { open: boolean; onClose: () => void; kind: "REST" | "OPEN"; existing: CoffeePeriod[]; editing?: CoffeePeriod; onConfirm: (from: string, to: string) => Promise<void> }) {
   const today = todayKst();
   const plus = (n: number) => addDays(today, n);
-  const [preset, setPreset] = useState<"1w" | "2w" | "1m" | "custom">("1w");
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(plus(6));
+  const started = !!editing && periodStarted(editing);
+  const [preset, setPreset] = useState<"1w" | "2w" | "1m" | "custom">(editing ? "custom" : "1w");
+  const [from, setFrom] = useState(editing?.startDate ?? today);
+  const [to, setTo] = useState(editing?.endDate ?? plus(6));
+  const others = editing ? existing.filter((e) => String(e.id) !== String(editing.id)) : existing;
+  // 고를 수 있는 날짜. 지금 값이 목록 밖이면(예: 진행 중인 기간의 시작일) 앞에 넣어 둔다
+  const days = (n: number, keep: string) => {
+    const list = Array.from({ length: n }, (_, i) => plus(i));
+    return list.includes(keep) ? list : [keep, ...list].sort();
+  };
   const [busy, setBusy] = useState(false);
   const apply = (p: typeof preset) => {
     setPreset(p);
@@ -478,12 +504,12 @@ function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boole
       setTo(plus(p === "1w" ? 6 : p === "2w" ? 13 : 29));
     }
   };
-  const error = periodError(from, to, existing) ?? undefined;
+  const error = periodError(from, to, existing, editing) ?? undefined;
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={kind === "REST" ? "쉬는 기간 추가" : "커피챗 받는 기간 추가"}
+      title={`${kind === "REST" ? "쉬는 기간" : "커피챗 받는 기간"} ${editing ? "수정" : "추가"}`}
       width={480}
       footer={
         <>
@@ -504,31 +530,34 @@ function PeriodModal({ open, onClose, kind, existing, onConfirm }: { open: boole
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-2">
-          <Chip selected={preset === "1w"} onClick={() => apply("1w")}>
-            오늘부터 1주
-          </Chip>
-          <Chip selected={preset === "2w"} onClick={() => apply("2w")}>
-            2주
-          </Chip>
-          <Chip selected={preset === "1m"} onClick={() => apply("1m")}>
-            1달
-          </Chip>
-          <Chip selected={preset === "custom"} onClick={() => apply("custom")}>
-            직접 선택
-          </Chip>
-        </div>
-        <MiniCalendar periods={[...existing.map((e) => ({ from: e.startDate, to: e.endDate, kind: "REST" as const })), { from, to, kind: "OPEN" }]} />
+        {started && <p className="rounded-[8px] bg-bg-50 px-3 py-2 text-[12px] text-ink-500">이미 시작한 기간이라 종료일만 바꿀 수 있어요</p>}
+        {!editing && (
+          <div className="flex flex-wrap gap-2">
+            <Chip selected={preset === "1w"} onClick={() => apply("1w")}>
+              오늘부터 1주
+            </Chip>
+            <Chip selected={preset === "2w"} onClick={() => apply("2w")}>
+              2주
+            </Chip>
+            <Chip selected={preset === "1m"} onClick={() => apply("1m")}>
+              1달
+            </Chip>
+            <Chip selected={preset === "custom"} onClick={() => apply("custom")}>
+              직접 선택
+            </Chip>
+          </div>
+        )}
+        <MiniCalendar periods={[...others.map((e) => ({ from: e.startDate, to: e.endDate, kind: "REST" as const })), { from, to, kind: "OPEN" }]} />
         <div className="grid grid-cols-2 gap-3">
-          <Select label="시작일" value={from} onChange={(e) => { setPreset("custom"); setFrom(e.target.value); }}>
-            {Array.from({ length: 60 }, (_, i) => plus(i)).map((d) => (
+          <Select label="시작일" value={from} disabled={started} onChange={(e) => { setPreset("custom"); setFrom(e.target.value); }}>
+            {days(60, from).map((d) => (
               <option key={d} value={d}>
                 {formatDate(d)}({DAY(d)})
               </option>
             ))}
           </Select>
           <Select label="종료일" value={to} onChange={(e) => { setPreset("custom"); setTo(e.target.value); }} error={error}>
-            {Array.from({ length: 90 }, (_, i) => plus(i)).map((d) => (
+            {days(editing ? 180 : 90, to).map((d) => (
               <option key={d} value={d}>
                 {formatDate(d)}({DAY(d)})
               </option>
