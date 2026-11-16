@@ -211,7 +211,6 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           <div className="flex gap-4">
             <ToolButton icon="image" label="사진" onClick={attachments.pickImage} />
             <ToolButton icon="clip" label="파일" onClick={attachments.pickFile} />
-            <ToolButton icon="link" label="링크" onClick={() => links.length < 3 && setLinks((x) => (x[x.length - 1] === "" ? x : [...x, ""]))} />
           </div>
           {cat === "FREE" && !editing && (
             <label className="flex cursor-pointer items-center gap-2 t-label2 font-medium text-ink-700">
@@ -231,6 +230,10 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         </div>
         {anonymous && cat === "FREE" && <p className="rounded-[6px] bg-bg-100 px-3 py-2 t-caption1 text-ink-500">익명으로 올라가요. 내 이름 대신 ‘익명 사자’로 보여요.</p>}
 
+      {/* 이미지·첨부 미리보기 (FILE-01) */}
+      {attachments.inputs}
+      {attachments.view}
+      {attachments.uploading && <p className="-mt-3 t-caption2 text-ink-500">파일을 올리는 중이에요. 다 올라가면 등록할 수 있어요.</p>}
       {/* B-06 번개 */}
       {cat === "MEETUP" && (
         <div className="flex flex-col gap-4 rounded-[12px] border border-line-200 bg-bg-50 p-5">
@@ -292,18 +295,24 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
         </div>
       )}
 
-      {/* 이미지·첨부 미리보기 (FILE-01) */}
-      {attachments.inputs}
-      {attachments.view}
-      {attachments.uploading && <p className="-mt-3 t-caption2 text-ink-500">파일을 올리는 중이에요. 다 올라가면 등록할 수 있어요.</p>}
+      {/* 링크 입력칸 오른쪽 [+]로 칸을 하나씩 늘린다 (최대 3개) */}
       {links.map((l, i) => (
-        <div key={i} className={cn("flex items-center gap-3 rounded-[8px] border px-4 py-3", l.trim() && !isHttpUrl(normalizeLink(l) ?? "") ? "border-orange" : "border-line-200")}>
-          <Icon name="link" size={18} className="text-ink-700" />
-          <input aria-label={`링크 ${i + 1}`} value={l} placeholder="https:// 링크를 붙여넣으세요 (선택)" onChange={(e) => setLinks((x) => x.map((y, j) => (j === i ? e.target.value : y)))} className="min-w-0 flex-1 bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400" />
-          {links.length > 1 && (
-            <button type="button" aria-label="링크 지우기" onClick={() => setLinks((x) => x.filter((_, j) => j !== i))} className="rounded p-1 text-ink-700 hover:bg-bg-100">
-              <Icon name="close" size={16} />
+        <div key={i} className="flex items-center gap-2">
+          <div className={cn("flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border px-4 py-3", l.trim() && !isHttpUrl(normalizeLink(l) ?? "") ? "border-orange" : "border-line-200")}>
+            <Icon name="link" size={18} className="text-ink-700" />
+            <input aria-label={`링크 ${i + 1}`} value={l} placeholder="https:// 링크를 붙여넣으세요 (선택)" onChange={(e) => setLinks((x) => x.map((y, j) => (j === i ? e.target.value : y)))} className="min-w-0 flex-1 bg-transparent text-[14px] text-ink-900 outline-none placeholder:text-ink-400" />
+            {links.length > 1 && (
+              <button type="button" aria-label="링크 지우기" onClick={() => setLinks((x) => x.filter((_, j) => j !== i))} className="rounded p-1 text-ink-700 hover:bg-bg-100">
+                <Icon name="close" size={16} />
+              </button>
+            )}
+          </div>
+          {i === links.length - 1 ? (
+            <button type="button" aria-label="링크 칸 추가" disabled={links.length >= 3 || !l.trim()} onClick={() => setLinks((x) => [...x, ""])} className="grid size-[46px] shrink-0 place-items-center rounded-[8px] border border-line-200 text-ink-700 hover:bg-bg-50 disabled:cursor-not-allowed disabled:text-ink-400 disabled:hover:bg-white">
+              <Icon name="plus" size={18} />
             </button>
+          ) : (
+            <span className="size-[46px] shrink-0" aria-hidden />
           )}
         </div>
       ))}
