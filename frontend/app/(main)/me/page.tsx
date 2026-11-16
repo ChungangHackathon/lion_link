@@ -7,7 +7,7 @@ import { INTEREST_OPTIONS, INTEREST_CODE, LION_PART_LABEL, PROFILE_STATUS_LABEL,
 import { errorMessage } from "@/lib/api/client";
 import { receiveBadge, type LinkType } from "@/lib/api/alumni";
 import { detailFromMine } from "@/lib/api/alumniView";
-import { completionOf, isEmail, isPhone, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, type BasicInfoRequest, type MyProfile, type Scope } from "@/lib/api/myProfile";
+import { completionOf, isEmail, isPhone, isWorking, LINK_TYPES, PHOTO_RULE, photoError, SCOPE_LABEL, workLine, workOf, type BasicInfoRequest, type MyProfile, type Scope } from "@/lib/api/myProfile";
 import { isHttpUrl, normalizeLink, type ApiLionPart } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
 import { useCoffeeSettingsService } from "@/lib/api/useCoffeeSettingsService";
@@ -70,8 +70,7 @@ function MyProfileView({ profile: p, update }: { profile: MyProfile; update: (pa
   const completion = completionOf(p);
   const nextStep = !p.bio ? { text: `자기소개를 쓰면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.careers.length ? { text: `경력을 추가하면 ${Math.min(100, completion + 14)}%가 돼요` } : !p.projects.length ? { text: `프로젝트를 추가하면 ${Math.min(100, completion + 7)}%가 돼요` } : null;
   const badge = coffee ? receiveBadge(coffee.status) : null;
-  const current = p.careers.find((c) => c.isCurrent);
-  const subline = current ? [current.company, current.jobTitle].filter(Boolean).join(" · ") : PROFILE_STATUS_LABEL[p.status];
+  const subline = workLine(workOf(p), p.status);
 
   const done = (label: string) => {
     setEdit(null);
@@ -379,11 +378,11 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
   const [interests, setInterests] = useState<InterestCode[]>(p.interests);
   const [headline, setHeadline] = useState(p.headline ?? "");
   const [region, setRegion] = useState(p.region ?? "");
-  const [company, setCompany] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
+  // 회사·직무는 경력과 따로 적는다. 재직·창업을 고르면 바로 입력 상자가 열린다
+  const [company, setCompany] = useState(p.company ?? "");
+  const [jobTitle, setJobTitle] = useState(p.jobTitle ?? "");
   const { busy, run } = useSaving();
-  // 재직으로 바꾸는데 재직 중인 경력이 없으면 회사·직무를 받아 경력을 만든다 (이미 있으면 서버가 무시한다)
-  const needsCompany = status === "EMPLOYED" && !p.careers.some((c) => c.isCurrent);
+  const needsCompany = isWorking(status);
   const companyError = company.trim().length > 30 ? "30자 이내로 적어주세요" : undefined;
   const jobTitleError = jobTitle.trim().length > 30 ? "30자 이내로 적어주세요" : undefined;
   const companyOk = !needsCompany || (!!company.trim() && !!jobTitle.trim() && !companyError && !jobTitleError);
@@ -441,7 +440,7 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
           <Input label="이름" value={p.name} readOnly help="이름·기수는 운영진에게 고쳐달라고 해주세요" />
           <Input label="기수" value={`${p.generation}기`} readOnly />
         </div>
-        {/* 가입 때 정보 입력 화면(온보딩)과 같은 모양: 상태 칩 → 재직이면 아래에 회사 입력 상자 */}
+        {/* 가입 때 정보 입력 화면(온보딩)과 같은 모양: 상태 칩 → 재직·창업이면 아래에 회사 입력 상자 */}
         <div className="flex flex-col gap-2">
           <p className="t-body-bold text-ink-700">
             현재 상태 <span className="text-[12px] font-normal text-ink-400">(1개)</span>
@@ -457,10 +456,10 @@ function BasicEditModal({ profile: p, onClose, onPhoto, onSave }: { profile: MyP
         {needsCompany && (
           <div className="flex flex-col gap-3 rounded-[8px] border border-line-200 bg-bg-50 p-4">
             <div className="flex gap-3">
-              <Input label="회사명" placeholder="예) 핀테크 스타트업" value={company} onChange={(e) => setCompany(e.target.value)} required error={companyError} />
+              <Input label={status === "FOUNDER" ? "회사·팀 이름" : "회사명"} placeholder="예) 핀테크 스타트업" value={company} onChange={(e) => setCompany(e.target.value)} required error={companyError} />
               <Input label="직무" placeholder="예) 백엔드 개발자" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} required error={jobTitleError} />
             </div>
-            <p className="t-caption1 text-ink-500">저장하면 경력에 재직 중인 회사로 추가돼요. 회사명 공개 범위는 경력 편집에서 바꿀 수 있어요.</p>
+            <p className="t-caption1 text-ink-500">프로필 이름 아래에 보여요. 경력은 따로 적어주세요. 회사명 공개 범위는 경력 편집에서 바꿀 수 있어요.</p>
           </div>
         )}
         <div className="flex flex-col gap-2">

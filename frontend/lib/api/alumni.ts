@@ -29,7 +29,7 @@ export interface AlumniSummary {
   photoUrl: string | null;
   /** 회사 공개 범위로 가려지면 null */
   company: string | null;
-  /** 현재 재직 중인 경력의 직무 */
+  /** 직무 (재직·창업이 아니면 null). 회사가 비공개여도 온다 */
   jobTitle: string | null;
   interests: InterestCode[];
   skills: string[];
