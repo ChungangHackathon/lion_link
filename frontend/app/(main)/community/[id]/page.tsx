@@ -240,10 +240,11 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           <p className="whitespace-pre-line text-[16px] leading-[26px] text-ink-900">{post.content}</p>
 
           {images.map((f) => (
-            <button key={f.id} type="button" onClick={() => setImg(f.url)} className="mt-6 grid h-[260px] w-full place-items-center overflow-hidden rounded-[8px] border border-line-200 bg-bg-100 text-[13px] text-ink-400 hover:bg-line-200">
+            // 사진은 원래 비율 그대로 본문 폭에 맞춰 다 보이게 한다 (너무 긴 사진만 높이를 제한). 누르면 크게 보기
+            <button key={f.id} type="button" onClick={() => setImg(f.url)} className={cn("mt-6 block w-full overflow-hidden rounded-[8px] text-[13px] text-ink-400", !isImageUrl(f.url) && "grid h-[260px] place-items-center border border-line-200 bg-bg-100 hover:bg-line-200")}>
               {isImageUrl(f.url) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.url} alt={f.name} className="h-full w-full object-contain" />
+                <img src={f.url} alt={f.name} className="mx-auto block h-auto max-h-[800px] w-auto max-w-full rounded-[8px] border border-line-200" />
               ) : (
                 <span className="flex flex-col items-center gap-1">
                   <Icon name="image" size={22} /> Image
@@ -352,7 +353,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
       <Modal open={!!img} onClose={() => setImg(null)} width={960}>
         {isImageUrl(img) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt="" className="max-h-[70vh] w-full rounded-[8px] object-contain" />
+          <img src={img} alt="" className="mx-auto max-h-[80vh] w-auto max-w-full rounded-[8px] object-contain" />
         ) : (
           <div className="grid h-[520px] place-items-center rounded-[8px] bg-bg-100 text-ink-400">
             <span className="flex flex-col items-center gap-2">
