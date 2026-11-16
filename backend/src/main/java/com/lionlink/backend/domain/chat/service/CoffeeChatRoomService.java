@@ -36,6 +36,11 @@ public class CoffeeChatRoomService {
 		chatRoomRepository.findByCoffeeChatId(coffeeChatId).ifPresent(room -> chatMessageWriter.writeSystem(room, content, now));
 	}
 
+	public void postMessage(Long coffeeChatId, Long senderId, String content, LocalDateTime now) {
+		chatRoomRepository.findByCoffeeChatId(coffeeChatId)
+				.ifPresent(room -> chatMessageWriter.writeText(room, senderId, content, null, now));
+	}
+
 	public void leave(Long coffeeChatId, Long userId, LocalDateTime now) {
 		chatRoomRepository.findByCoffeeChatId(coffeeChatId)
 				.filter(room -> room.getType() == ChatRoomType.GROUP)

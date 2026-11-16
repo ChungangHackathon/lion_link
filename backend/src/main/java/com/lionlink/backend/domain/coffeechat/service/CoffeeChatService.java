@@ -152,6 +152,9 @@ public class CoffeeChatService {
 		List<Long> memberIds = activeMemberIds(chat);
 		coffeeChatRoomService.open(chat, memberIds, now);
 		coffeeChatRoomService.postSystemMessage(chat.getId(), "커피챗이 수락됐어요. 채팅으로 일정을 정해보세요.", now);
+		if (chat.getResponseMessage() != null) {
+			coffeeChatRoomService.postMessage(chat.getId(), chat.getReceiverId(), chat.getResponseMessage(), now);
+		}
 		notify(applicants(chat, memberIds), CoffeeChatNotificationType.COFFEE_CHAT_ACCEPTED, chat.getId(), chat.getReceiverId(),
 				"님이 커피챗을 수락했어요. 채팅방에서 일정을 정해보세요.");
 		return coffeeChatQueryService.toDetail(userId, chat);
