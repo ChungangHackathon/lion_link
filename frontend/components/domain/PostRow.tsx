@@ -53,7 +53,7 @@ export function PostRow({ post, className }: { post: PostSummary; className?: st
               {post.commentCount > 0 && <span className="shrink-0 text-red">[{post.commentCount}]</span>}
             </p>
             {!thumb && !sub && (
-              <span className="flex shrink-0 items-center gap-[30px] t-caption1 text-ink-500">
+              <span className="flex shrink-0 translate-y-[3px] items-center gap-[30px] t-caption1 text-ink-500">
                 <span>{who}</span>
                 <span>{monthDay(post.createdAt)}</span>
               </span>
@@ -61,7 +61,7 @@ export function PostRow({ post, className }: { post: PostSummary; className?: st
           </div>
           {sub && <p className="t-caption1 text-ink-700">{sub}</p>}
           {(thumb || sub) && (
-            <p className="t-caption1 text-ink-500">
+            <p className="mt-0.5 t-caption1 text-ink-500">
               {who} · {monthDay(post.createdAt)} · 댓글 {post.commentCount} · 조회 {post.viewCount}
             </p>
           )}
