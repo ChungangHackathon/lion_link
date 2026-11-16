@@ -62,4 +62,10 @@ public class CoffeeChatMember {
 	public void leave(LocalDateTime now) {
 		this.leftAt = now;
 	}
+
+	public void rejoin() {
+		if (role == CoffeeChatMemberRole.MEMBER) {
+			this.leftAt = null;
+		}
+	}
 }

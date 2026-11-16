@@ -28,6 +28,10 @@ import com.lionlink.backend.domain.chat.repository.ChatMessageRepository;
 import com.lionlink.backend.domain.chat.repository.ChatQueryRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomMemberRepository;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChat;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMember;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMemberRole;
+import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatMemberRepository;
 import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatRepository;
 import com.lionlink.backend.domain.community.meetup.entity.Meetup;
 import com.lionlink.backend.domain.community.meetup.entity.MeetupMember;
@@ -38,7 +42,10 @@ import com.lionlink.backend.domain.community.meetup.repository.MeetupRepository;
 import com.lionlink.backend.domain.community.post.entity.Post;
 import com.lionlink.backend.domain.community.post.repository.PostRepository;
 import com.lionlink.backend.domain.community.recruit.entity.CoffeeChatRecruit;
+import com.lionlink.backend.domain.community.recruit.entity.RecruitMember;
+import com.lionlink.backend.domain.community.recruit.entity.RecruitMemberId;
 import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
+import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.user.entity.UserStatus;
@@ -63,6 +70,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -87,6 +95,8 @@ public class ChatRoomService {
 	private final MeetupMemberRepository meetupMemberRepository;
 	private final PostRepository postRepository;
 	private final CoffeeChatRecruitRepository coffeeChatRecruitRepository;
+	private final CoffeeChatMemberRepository coffeeChatMemberRepository;
+	private final RecruitMemberRepository recruitMemberRepository;
 	private final UserRepository userRepository;
 	private final UserSummaryReader userSummaryReader;
 	private final ApplicationEventPublisher eventPublisher;
@@ -220,6 +230,7 @@ public class ChatRoomService {
 		return chatMessageWriter.publishUpdated(member.getRoom(), message);
 	}
 
+	@Transactional(isolation = Isolation.READ_COMMITTED)
 	public ChatRoomInviteResponse invite(Long userId, Long roomId, ChatRoomInviteRequest request) {
 		LocalDateTime now = LocalDateTime.now();
 		ChatRoom room = findActiveMember(userId, roomId).getRoom();
@@ -230,6 +241,9 @@ public class ChatRoomService {
 			throw new BusinessException(ChatErrorCode.INVALID_ROOM_STATUS);
 		}
 		requireInviter(userId, room);
+		// 같은 커피챗에 동시에 초대해도 정원을 넘지 않도록 인원을 세기 전에 잠근다
+		CoffeeChat coffeeChat = room.isMeetupRoom() ? null
+				: coffeeChatRepository.findByIdForUpdate(room.getCoffeeChatId()).orElse(null);
 
 		Set<Long> joined = chatRoomMemberRepository.findByRoomId(roomId).stream()
 				.filter(ChatRoomMember::isActive)
@@ -246,6 +260,8 @@ public class ChatRoomService {
 			addMember(room, inviteeId);
 			if (room.isMeetupRoom()) {
 				joinMeetup(room.getMeetupId(), inviteeId);
+			} else if (coffeeChat != null) {
+				joinCoffeeChat(coffeeChat, inviteeId);
 			}
 			eventPublisher.publishEvent(new ChatNotificationEvent(inviteeId, CHAT_INVITED, roomId, userId,
 					"님이 채팅방에 초대했어요."));
@@ -425,6 +441,21 @@ public class ChatRoomService {
 		}
 		meetupRepository.findById(postId).ifPresent(meetup ->
 				meetupMemberRepository.save(MeetupMember.builder().meetup(meetup).userId(inviteeId).build()));
+	}
+
+	private void joinCoffeeChat(CoffeeChat coffeeChat, Long inviteeId) {
+		if (coffeeChat.isReceiver(inviteeId) || coffeeChat.isRequester(inviteeId)) {
+			return;
+		}
+		Long coffeeChatId = coffeeChat.getId();
+		coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(coffeeChatId, inviteeId)
+				.ifPresentOrElse(CoffeeChatMember::rejoin, () -> coffeeChatMemberRepository.save(CoffeeChatMember.builder()
+						.coffeeChat(coffeeChat).userId(inviteeId).role(CoffeeChatMemberRole.MEMBER).build()));
+		coffeeChatRecruitRepository.findByCoffeeChatId(coffeeChatId).ifPresent(recruit -> {
+			if (!recruitMemberRepository.existsById(new RecruitMemberId(recruit.getPostId(), inviteeId))) {
+				recruitMemberRepository.save(RecruitMember.builder().recruit(recruit).userId(inviteeId).build());
+			}
+		});
 	}
 
 	private String names(List<Long> userIds) {
