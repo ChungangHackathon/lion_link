@@ -11,6 +11,7 @@ import { profileDetail } from "@/lib/mock/profile";
 import { ME_ID } from "@/lib/mock/users";
 import { cannotRequestReason, receiveBadge, type AlumniDetail, type CoffeeTopic, type LinkType, type TimeSlot, type Weekday } from "./alumni";
 import type { Id } from "./posts";
+import type { MyProfile } from "./myProfile";
 
 export interface AlumniProfileView {
   id: Id;
@@ -219,6 +220,29 @@ export function viewFromMock(person: Alumni, me: Alumni, bookmarks: string[], co
     educations: detail.educations,
     detail,
     connected,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 내 프로필 → 화면 (마이페이지는 다른 동문에게 보이는 모습 그대로 그린다)
+// ---------------------------------------------------------------------------
+
+const SCOPE_VISIBILITY: Record<MyProfile["visibility"]["email"], "ALL" | "CONNECTED" | "ME"> = { PUBLIC: "ALL", CONNECTED: "CONNECTED", PRIVATE: "ME" };
+
+export function detailFromMine(p: MyProfile): ProfileDetail {
+  return {
+    ...sectionsToDetail(p),
+    educations: educationRows(p),
+    location: p.region ?? undefined,
+    about: p.bio ?? "",
+    repSkills: p.skills,
+    links: p.links.map((l) => ({ label: LINK_LABEL[l.type] ?? "링크", url: stripScheme(l.url), visibility: SCOPE_VISIBILITY[p.visibility.links] })),
+    email: p.contact.email ? { value: p.contact.email, visibility: SCOPE_VISIBILITY[p.visibility.email] } : undefined,
+    phone: p.contact.phone ? { value: p.contact.phone, visibility: SCOPE_VISIBILITY[p.visibility.phone] } : undefined,
+    coffeeTopics: [],
+    coffeeTimes: "-",
+    coffeeModes: "-",
+    coffeeRegions: "-",
   };
 }
 

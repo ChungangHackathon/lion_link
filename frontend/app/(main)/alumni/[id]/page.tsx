@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Suspense, use, useEffect, useState } from "react";
 import { useSession } from "@/lib/session";
 import { ME_ID } from "@/lib/mock/users";
@@ -27,10 +27,10 @@ import { useBookmarkToggle } from "@/components/domain/AlumniCard";
 function AlumniProfileInner({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const preview = useSearchParams().get("preview") === "1";
   const { me } = useSession();
   const service = useAlumniService();
-  const isMe = !preview && (API_ENABLED ? !!me && String(me.id) === id : id === ME_ID);
+  // 내 프로필은 마이페이지가 다른 동문에게 보이는 모습 그대로 보여준다
+  const isMe = API_ENABLED ? !!me && String(me.id) === id : id === ME_ID;
 
   useEffect(() => {
     if (isMe) router.replace("/me");
