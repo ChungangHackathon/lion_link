@@ -372,7 +372,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
           onSent={() => reload()}
           target={{ id: post.recruit.senior.id, name: post.recruit.senior.name ?? "사자" }}
           // 모집 참여자(작성자 제외)가 함께 신청자가 된다. 서버도 같은 기준으로 정한다 (COFFEE-01 fromRecruitId)
-          preMembers={post.recruit.members.filter((m) => !m.isHost && !m.isDeleted && m.id !== null).map((m) => ({ id: m.id!, name: m.name ?? "", generation: m.generation ?? 0, lionParts: m.lionParts ?? [] }))}
+          preMembers={post.recruit.members.filter((m) => !m.isHost && !m.isDeleted && m.id !== null).map((m) => ({ id: m.id!, name: m.name ?? "", generation: m.generation ?? 0, lionParts: m.lionParts ?? [], photoUrl: m.photoUrl }))}
           fromRecruitId={post.id}
         />
       )}
