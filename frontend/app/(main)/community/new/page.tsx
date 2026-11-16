@@ -7,6 +7,7 @@ import { Suspense, useState } from "react";
 import { LION_PART_LABEL, POST_CATEGORIES, POST_CATEGORY_HINT, POST_CATEGORY_LABEL, type PostCategory } from "@/lib/types";
 import { API_ENABLED, errorMessage, isApiError } from "@/lib/api/client";
 import type { AlumniSummary } from "@/lib/api/alumni";
+import { DatePicker, TimeSelect } from "@/components/ui/DateTime";
 import { fromKstDateTime, toKstDateTime, type Id, type PostDetail, type PostUpdateRequest, type PostWriteRequest } from "@/lib/api/posts";
 import { isHttpUrl, normalizeLink } from "@/lib/api/profile";
 import { useApi } from "@/lib/api/useApi";
@@ -236,8 +237,8 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
           <p className="t-body-bold text-ink-900">모집 정보</p>
           {lockedAll && <p className="rounded-[6px] bg-bg-100 px-3 py-2 text-[13px] text-ink-500">신청한 뒤에는 모집 정보를 바꿀 수 없어요</p>}
           <div className="grid grid-cols-2 gap-3">
-            <Input label="모임 날짜" required type="date" value={meetDate} onChange={(e) => setMeetDate(e.target.value)} />
-            <Input label="시각" required type="time" step={1800} value={meetTime} onChange={(e) => setMeetTime(e.target.value)} />
+            <DatePicker label="모임 날짜" required value={meetDate} onChange={setMeetDate} min={todayKst()} />
+            <TimeSelect label="시각" required value={meetTime} onChange={setMeetTime} />
           </div>
           {timeError && <p className="-mt-2 t-caption2 text-orange">{timeError}</p>}
           <Input label="장소" required placeholder="예) 흑석역 2번 출구" value={place} onChange={(e) => setPlace(e.target.value)} />
@@ -277,7 +278,7 @@ function PostEditor({ editing, initialCategory }: { editing?: PostDetail; initia
             </Button>
           </div>
           <Counter label="모집 인원" hint="2~5명, 작성자 포함" value={cap} min={minCap} max={5} onChange={setCap} disabled={lockedAll} />
-          <Input label="모집 마감일" required type="date" min={todayKst()} value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={lockedAll} error={deadline && deadline < todayKst() ? "오늘 이후로 정해주세요" : undefined} />
+          <DatePicker label="모집 마감일" required min={todayKst()} value={deadline} onChange={setDeadline} disabled={lockedAll} error={deadline && deadline < todayKst() ? "오늘 이후로 정해주세요" : undefined} />
           {!editing && (
             <CompanionField
               label="함께 신청할 동문 (선택)"
