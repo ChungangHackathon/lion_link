@@ -22,7 +22,6 @@ import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.entity.ProfileLink;
 import com.lionlink.backend.domain.profile.basic.entity.Visibility;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
-import com.lionlink.backend.domain.profile.section.career.Career;
 import com.lionlink.backend.domain.profile.section.career.CareerRepository;
 import com.lionlink.backend.domain.profile.section.education.Education;
 import com.lionlink.backend.domain.profile.section.education.EducationRepository;
@@ -84,13 +83,10 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		assertEquals(Visibility.PUBLIC, profile.getCompanyVisibility());
 		assertTrue(entityManager.find(User.class, lion.userId()).isProfileCompleted());
 
-		List<Career> careers = careerRepository.findByUserIdOrderByStartYmDescIdDesc(lion.userId());
-		assertEquals(1, careers.size());
-		assertEquals("핀테크A", careers.get(0).getCompany());
-		assertEquals("백엔드 개발자", careers.get(0).getTitle());
-		assertTrue(careers.get(0).isCurrent());
-		assertNull(careers.get(0).getEmploymentType());
-		assertNull(careers.get(0).getStartYm());
+		assertEquals("핀테크A", profile.getCompany());
+		assertEquals("백엔드 개발자", profile.getJobTitle());
+		// 회사·직무는 프로필에만 저장하고 경력은 자동으로 만들지 않는다.
+		assertTrue(careerRepository.findByUserIdOrderByStartYmDescIdDesc(lion.userId()).isEmpty());
 
 		List<Education> educations = educationRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(lion.userId());
 		assertEquals(1, educations.size());
@@ -110,6 +106,35 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 		NotificationSetting notification = notificationSettingRepository.findById(lion.userId()).orElseThrow();
 		assertTrue(notification.isEmailCoffeeChat());
 		assertTrue(notification.isEmailMessageRequest());
+	}
+
+	@Test
+	void 창업_회원도_회사와_직무를_프로필에_저장한다() throws Exception {
+		Session lion = signup("lion");
+
+		onboard(lion, "{'lionParts':['BACKEND'],'status':'FOUNDER','interests':['STARTUP'],'company':' 라이온랩 ','jobTitle':'대표'}")
+				.andExpect(status().isOk());
+		entityManager.flush();
+		entityManager.clear();
+
+		Profile profile = profileRepository.findById(lion.userId()).orElseThrow();
+		assertEquals(ProfileStatus.FOUNDER, profile.getStatus());
+		assertEquals("라이온랩", profile.getCompany());
+		assertEquals("대표", profile.getJobTitle());
+	}
+
+	@Test
+	void 재직이_아니면_보낸_회사와_직무는_무시하고_null로_저장한다() throws Exception {
+		Session lion = signup("lion");
+
+		onboard(lion, "{'lionParts':['BACKEND'],'status':'STUDENT','interests':['BACKEND'],'company':'무시될회사','jobTitle':'무시될직무'}")
+				.andExpect(status().isOk());
+		entityManager.flush();
+		entityManager.clear();
+
+		Profile profile = profileRepository.findById(lion.userId()).orElseThrow();
+		assertNull(profile.getCompany());
+		assertNull(profile.getJobTitle());
 	}
 
 	@Test
@@ -283,12 +308,17 @@ class ProfileOnboardingControllerTest extends AuthIntegrationTest {
 	}
 
 	@Test
-	void 재직인데_회사명이나_직무가_없으면_400() throws Exception {
+	void 재직이나_창업인데_회사명이나_직무가_없으면_400() throws Exception {
 		Session lion = signup("lion");
 
 		onboard(lion, "{'lionParts':['BACKEND'],'status':'EMPLOYED','interests':['BACKEND'],'company':'핀테크A'}")
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		onboard(lion, "{'lionParts':['BACKEND'],'status':'FOUNDER','interests':['BACKEND'],'jobTitle':'대표'}")
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+		onboard(lion, "{'lionParts':['BACKEND'],'status':'FOUNDER','interests':['BACKEND']}")
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test

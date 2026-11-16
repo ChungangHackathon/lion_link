@@ -63,6 +63,18 @@ class HomeControllerTest {
 	}
 
 	@Test
+	void 홈_me에_내_회사와_직무가_나온다_회사가_비공개여도_보인다() throws Exception {
+		TestProfiles.company(entityManager, me, "핀테크A", "백엔드 개발자");
+		TestProfiles.visibility(entityManager, me, "company_visibility", "PRIVATE");
+		completeProfile(me);
+
+		mockMvc.perform(get("/api/v1/home").header(USER_HEADER, me))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.me.company").value("핀테크A"))
+				.andExpect(jsonPath("$.me.jobTitle").value("백엔드 개발자"));
+	}
+
+	@Test
 	void 기본_프로필을_완성하지_않으면_403() throws Exception {
 		mockMvc.perform(get("/api/v1/home").header(USER_HEADER, me))
 				.andExpect(status().isForbidden())

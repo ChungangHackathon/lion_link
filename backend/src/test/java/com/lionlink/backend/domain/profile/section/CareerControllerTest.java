@@ -114,22 +114,6 @@ class CareerControllerTest extends ProfileSectionApiTest {
 	}
 
 	@Test
-	void 온보딩이_만든_경력은_시작_년월과_고용_형태를_채워야_수정된다() throws Exception {
-		Session lion = onboarded(EMPLOYED);
-		Number id = fromProfile(lion, "$.careers[0].id");
-
-		putItem(lion, PATH, id.longValue(), "{'company':'핀테크A','jobTitle':'백엔드 개발자','isCurrent':true}")
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.fieldErrors[*].field", hasItem("startYm")))
-				.andExpect(jsonPath("$.fieldErrors[*].field", hasItem("employmentType")));
-
-		putItem(lion, PATH, id.longValue(), VALID)
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.employmentType").value("FULL_TIME"))
-				.andExpect(jsonPath("$.startYm").value("2024-03"));
-	}
-
-	@Test
 	void 경력을_삭제하면_204이고_프로필에서_사라진다() throws Exception {
 		Session lion = onboarded(STUDENT);
 		long id = create(lion, PATH, VALID);

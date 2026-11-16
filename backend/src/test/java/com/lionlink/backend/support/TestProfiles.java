@@ -49,6 +49,17 @@ public final class TestProfiles {
 		entityManager.clear();
 	}
 
+	/** 프로필에 저장되는 재직·창업 회사와 직무(경력과 별개). */
+	public static void company(EntityManager entityManager, Long userId, String company, String jobTitle) {
+		entityManager.flush();
+		entityManager.createNativeQuery("update profiles set company = :company, job_title = :jobTitle where user_id = :userId")
+				.setParameter("company", company)
+				.setParameter("jobTitle", jobTitle)
+				.setParameter("userId", userId)
+				.executeUpdate();
+		entityManager.clear();
+	}
+
 	public static void visibility(EntityManager entityManager, Long userId, String column, String visibility) {
 		entityManager.flush();
 		entityManager.createNativeQuery("update profiles set " + column + " = :visibility where user_id = :userId")

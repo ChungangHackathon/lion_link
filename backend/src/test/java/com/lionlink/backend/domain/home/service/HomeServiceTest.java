@@ -78,8 +78,8 @@ class HomeServiceTest {
 	}
 
 	@Test
-	void 내_카드에_지금_다니는_회사와_직무를_담는다() {
-		TestProfiles.currentCareer(entityManager, me, "라이온컴퍼니", "백엔드 개발자");
+	void 내_카드에_프로필의_회사와_직무를_담는다() {
+		TestProfiles.company(entityManager, me, "라이온컴퍼니", "백엔드 개발자");
 		entityManager.flush();
 
 		HomeResponse.Me card = homeService.getHome(me).me();
