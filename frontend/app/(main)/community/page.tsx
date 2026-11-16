@@ -37,7 +37,7 @@ function useDebounced<T>(value: T, ms = 300): T {
   return v;
 }
 
-/** ★ B-01 커뮤니티 / 게시글 목록 — 왼쪽 세로 카테고리 · 가운데 목록 · 오른쪽 모집 중·많이 본 글·인기 키워드. B-02/B-03 상태. */
+/** ★ B-01 커뮤니티 / 게시글 목록 — 왼쪽 세로 카테고리 · 가운데 목록 · 오른쪽 모집 중·많이 본 글. B-02/B-03 상태. */
 function Community() {
   const params = useSearchParams();
   const router = useRouter();
@@ -54,7 +54,6 @@ function Community() {
   const counts = useApi(() => service.categoryCounts(), [service]).data;
   const recruits = useApi((signal) => service.list({ recruiting: true, size: 3 }, signal), [service]).data?.items ?? [];
   const popular = useApi((signal) => service.list({ period: "WEEK", sort: "VIEWS", size: 3 }, signal), [service]).data?.items ?? [];
-  const keywords = useApi(() => service.popularKeywords(10), [service]).data?.items ?? [];
 
   const list = listState.data;
   const total = list?.totalElements ?? 0;
@@ -193,20 +192,6 @@ function Community() {
             </button>
           </Card>
         )}
-        <Card className="flex flex-col gap-4 rounded-[10px] p-5">
-          <h2 className="t-title3 text-ink-900">인기 키워드</h2>
-          {keywords.length === 0 ? (
-            <p className="text-[13px] text-ink-500">아직 인기 키워드가 없어요</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {keywords.map(({ keyword }) => (
-                <button key={keyword} type="button" onClick={() => { setCat("ALL"); search(keyword); router.replace("/community"); }} className="rounded-full border border-line-300 bg-white px-3 py-1.5 text-[12px] font-semibold text-ink-700 hover:bg-bg-100">
-                  #{keyword}
-                </button>
-              ))}
-            </div>
-          )}
-        </Card>
         <p className="text-[11px] text-ink-400">이용약관 · 개인정보처리방침 · 피드백 보내기</p>
       </aside>
     </div>
