@@ -39,7 +39,7 @@ export default function OnboardingPage() {
   }, [ready, session.loggedIn, me, router]);
 
   const togglePart = (p: ApiLionPart) => {
-    setParts((s) => (s.includes(p) ? s.filter((x) => x !== p) : s.length >= 2 ? (toast("멋사 파트는 최대 2개까지 선택할 수 있어요", { kind: "error" }), s) : [...s, p]));
+    setParts([p]);
   };
   const toggleInterest = (v: InterestLabel) => {
     setInterests((s) => (s.includes(v) ? s.filter((x) => x !== v) : s.length >= 3 ? (toast("관심 분야는 최대 3개까지 선택할 수 있어요", { kind: "error" }), s) : [...s, v]));
@@ -49,7 +49,7 @@ export default function OnboardingPage() {
   const companyOk = company.trim().length <= 30 && role.trim().length <= 30;
   const linkValue = normalizeLink(link);
   const linkOk = !linkValue || isHttpUrl(linkValue);
-  const valid = parts.length > 0 && !!status && interests.length > 0 && (!needsCompany || (company.trim() && role.trim())) && companyOk && linkOk && intro.length <= 100;
+  const valid = parts.length === 1 && !!status && interests.length > 0 && (!needsCompany || (company.trim() && role.trim())) && companyOk && linkOk && intro.length <= 100;
 
   const submit = async () => {
     if (!valid || !status) return;
@@ -97,7 +97,7 @@ export default function OnboardingPage() {
         <Input label="기수" value={`${user?.generation ?? 13}기`} readOnly />
       </div>
 
-      <Field label="멋사 활동 파트" hint="1~2개">
+      <Field label="멋사 활동 파트" hint="1개">
         {PARTS.map((p) => (
           <Chip key={p} selected={parts.includes(p)} onClick={() => togglePart(p)}>
             {LION_PART_LABEL[p]}

@@ -52,6 +52,7 @@ export const PART_STYLE: Record<LionPart, { bg: string; text: string; ring: stri
   BACKEND: { bg: "bg-part-be-bg", text: "text-part-be-text", ring: "bg-part-be-line" },
   DESIGN: { bg: "bg-part-design-bg", text: "text-part-design-text", ring: "bg-part-design-line" },
   PLANNING: { bg: "bg-part-plan-bg", text: "text-part-plan-text", ring: "bg-part-plan-line" },
+  PLANNING_DESIGN: { bg: "bg-part-pd-bg", text: "text-part-pd-text", ring: "bg-part-pd-line" },
   ETC: { bg: "bg-bg-100", text: "text-ink-700", ring: "bg-light-layout" },
 };
 
