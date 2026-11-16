@@ -20,8 +20,6 @@ import java.util.HashSet;
 import org.springframework.context.ApplicationEventPublisher;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
-import com.lionlink.backend.domain.profile.section.career.Career;
-import com.lionlink.backend.domain.profile.section.career.CareerRepository;
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.domain.user.repository.UserIdentity;
@@ -47,12 +45,11 @@ public class AdminSignupService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final CareerRepository careerRepository;
 	private final DefaultLionActivitySyncer defaultLionActivitySyncer;
 	private final ApplicationEventPublisher eventPublisher;
 
 	/**
-	 * ADMIN-01. 목록 한 페이지를 읽은 뒤, 그 페이지에 필요한 부가 정보(프로필·재직 회사·처리 관리자·같은 이름 기수)를
+	 * ADMIN-01. 목록 한 페이지를 읽은 뒤, 그 페이지에 필요한 부가 정보(프로필·처리 관리자·같은 이름 기수)를
 	 * 회원 id를 모아 한 번씩만 조회해서 붙인다. 쿼리 수는 페이지 크기와 상관없이 일정하다.
 	 */
 	public PageResponse<SignupListItemResponse> getSignups(UserStatus status, int page, int size) {
@@ -65,10 +62,6 @@ public class AdminSignupService {
 		List<Long> userIds = content.stream().map(User::getId).toList();
 		Map<Long, Profile> profiles = profileRepository.findAllById(userIds).stream()
 				.collect(Collectors.toMap(Profile::getUserId, Function.identity()));
-		// 현재 재직 중 경력은 시작이 최신인 순으로 오므로 사용자마다 첫 건만 쓴다.
-		Map<Long, String> companies = careerRepository.findByUserIdInAndIsCurrentTrueOrderByStartYmDescIdDesc(userIds)
-				.stream()
-				.collect(Collectors.toMap(Career::getUserId, Career::getCompany, (first, ignored) -> first));
 		Map<Long, String> reviewerNames = findReviewerNames(content);
 		List<UserIdentity> approved = userRepository.findApprovedIdentities(
 				content.stream().map(User::getName).collect(Collectors.toSet()),
@@ -80,7 +73,7 @@ public class AdminSignupService {
 					user,
 					profile == null ? List.of() : profile.getLionParts(),
 					profile == null ? null : profile.getStatus(),
-					companies.get(user.getId()),
+					profile == null ? null : profile.getCompany(),
 					hasSameNameGeneration(user, approved),
 					user.getReviewedBy() == null ? null : reviewerNames.get(user.getReviewedBy()));
 		});

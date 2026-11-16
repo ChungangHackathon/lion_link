@@ -25,8 +25,8 @@ public record AlumniResponse(
 		CoffeeAvailability coffeeChat
 ) {
 
-	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, String jobTitle, boolean bookmarked,
-			CoffeeAvailability coffeeChat) {
+	public static AlumniResponse of(AlumniSearchRepository.Row row, String company, String jobTitle,
+			boolean bookmarked, CoffeeAvailability coffeeChat) {
 		Profile profile = row.profile();
 		return new AlumniResponse(
 				row.id(),

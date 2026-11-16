@@ -18,7 +18,7 @@ import jakarta.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.List;
 
-/** PROFILE-01. 이름·기수는 받지 않고 가입 정보를 그대로 쓴다. */
+/** PROFILE-01. 이름·기수는 받지 않고 가입 정보를 그대로 쓴다. 재직·창업이 아니면 company·jobTitle은 무시한다. */
 public record OnboardingRequest(
 		@LionPartSelection List<@NotNull(message = "멋사 파트를 선택해 주세요.") LionPart> lionParts,
 		@NotNull(message = "현재 상태를 선택해 주세요.") ProfileStatus status,
@@ -41,9 +41,9 @@ public record OnboardingRequest(
 	}
 
 	@JsonIgnore
-	@AssertTrue(message = "재직 중이면 회사명과 직무를 입력해 주세요.")
-	public boolean isEmployedInfoPresent() {
-		return status != ProfileStatus.EMPLOYED
+	@AssertTrue(message = "재직·창업 중이면 회사명과 직무를 입력해 주세요.")
+	public boolean isWorkingInfoPresent() {
+		return status == null || !status.isWorking()
 				|| (company != null && !company.isBlank() && jobTitle != null && !jobTitle.isBlank());
 	}
 

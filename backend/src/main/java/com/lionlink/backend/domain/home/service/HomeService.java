@@ -15,8 +15,6 @@ import com.lionlink.backend.domain.profile.UserSummary;
 import com.lionlink.backend.domain.profile.UserSummaryReader;
 import com.lionlink.backend.domain.profile.basic.entity.Profile;
 import com.lionlink.backend.domain.profile.basic.repository.ProfileRepository;
-import com.lionlink.backend.domain.profile.section.career.Career;
-import com.lionlink.backend.domain.profile.section.career.CareerRepository;
 import com.lionlink.backend.domain.user.entity.User;
 import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
@@ -37,7 +35,6 @@ public class HomeService {
 
 	private final UserRepository userRepository;
 	private final ProfileRepository profileRepository;
-	private final CareerRepository careerRepository;
 	private final PostRepository postRepository;
 	private final PostFileRepository postFileRepository;
 	private final HomeQueryRepository homeQueryRepository;
@@ -73,8 +70,6 @@ public class HomeService {
 	}
 
 	private HomeResponse.Me me(User user, Profile profile) {
-		Career career = careerRepository.findByUserIdInAndIsCurrentTrueOrderByStartYmDescIdDesc(List.of(user.getId()))
-				.stream().findFirst().orElse(null);
 		return new HomeResponse.Me(
 				user.getId(),
 				user.getName(),
@@ -83,8 +78,9 @@ public class HomeService {
 				profile == null ? null : profile.getHeadline(),
 				profile == null ? null : profile.getBio(),
 				profile == null ? null : profile.getPhotoUrl(),
-				career == null ? null : career.getCompany(),
-				career == null ? null : career.getTitle()
+				// 내 정보라 회사 공개 범위와 상관없이 보여 준다.
+				profile == null ? null : profile.getCompany(),
+				profile == null ? null : profile.getJobTitle()
 		);
 	}
 

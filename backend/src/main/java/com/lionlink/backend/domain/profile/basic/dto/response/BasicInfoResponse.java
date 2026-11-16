@@ -10,6 +10,8 @@ public record BasicInfoResponse(
 		String minor,
 		String region,
 		String status,
+		String company,
+		String jobTitle,
 		List<String> lionParts,
 		List<String> interests
 ) {
@@ -21,6 +23,8 @@ public record BasicInfoResponse(
 				profile.getMinor(),
 				profile.getRegion(),
 				profile.getStatus().name(),
+				profile.getCompany(),
+				profile.getJobTitle(),
 				profile.getLionParts().stream().map(Enum::name).toList(),
 				profile.getInterests());
 	}
