@@ -6,7 +6,7 @@ import { LION_PART_LABEL } from "@/lib/types";
 import { errorMessage } from "@/lib/api/client";
 import type { MyProfile, Visibility } from "@/lib/api/myProfile";
 import type { MyProfileService } from "@/lib/api/useMyProfileService";
-import { emptyValues, LION_PARTS, MAX_GENERATION, SECTION_SCHEMA, thisMonth, toBody, validate, valuesFromItem, type Field, type FormValues, type SectionItem, type SectionKey } from "@/lib/api/profileSections";
+import { emptyValues, LION_PARTS, MAX_GENERATION, SECTION_SCHEMA, tagsOf, thisMonth, toBody, validate, valuesFromItem, type Field, type FormValues, type SectionItem, type SectionKey } from "@/lib/api/profileSections";
 import { Button, Chip } from "@/components/ui/Button";
 import { Checkbox, Input, Select, Textarea } from "@/components/ui/Input";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
@@ -350,6 +350,58 @@ function FieldInput({ field: f, values, error, set, lockGeneration }: { field: F
       );
     }
     case "tags":
-      return <Input label={`${f.label} (선택)`} value={str} placeholder="쉼표로 구분 · 예) React, Spring" onChange={(e) => set(f.key, e.target.value)} help={`최대 ${f.max}개`} error={error} />;
+      return <TagsField label={f.label} max={f.max} value={str} onChange={(v) => set(f.key, v)} error={error} />;
   }
+}
+
+/** 사용 기술: 대표 기술 편집처럼 입력칸 오른쪽 [추가]·Enter로 하나씩 넣고 ✕로 뺀다. 값은 쉼표로 이은 문자열로 둔다 */
+function TagsField({ label, max, value, onChange, error }: { label: string; max: number; value: string; onChange: (v: string) => void; error?: string }) {
+  const tags = tagsOf(value);
+  const [input, setInput] = useState("");
+  const v = input.trim();
+  const full = tags.length >= max;
+  const inputError = v.includes(",") ? "쉼표 없이 하나씩 추가해주세요" : v.length > 20 ? "20자 이내로 적어주세요" : full && v ? `${max}개까지 추가할 수 있어요` : v && tags.includes(v) ? "이미 추가한 기술이에요" : undefined;
+  const canAdd = !!v && !inputError;
+  const add = () => {
+    if (!canAdd) return;
+    onChange([...tags, v].join(", "));
+    setInput("");
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="t-body-bold text-ink-700">{label} (선택)</p>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <span key={t} className="inline-flex items-center gap-1 rounded-[4px] bg-part-be-bg px-2 py-1 text-[13px] font-semibold text-primary">
+              {t}
+              <button type="button" aria-label={`${t} 삭제`} onClick={() => onChange(tags.filter((x) => x !== t).join(", "))} className="ml-1 text-ink-400 hover:text-ink-900">
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-start gap-2">
+        <Input
+          className="flex-1"
+          placeholder={`기술 입력 (최대 ${max}개)`}
+          value={input}
+          disabled={full}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            // 한글 조합 중 Enter는 무시한다 (조합 중이던 글자가 칸에 남는 문제)
+            if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return;
+            e.preventDefault();
+            add();
+          }}
+          counter={{ value: tags.length, max }}
+          error={inputError ?? error}
+        />
+        <Button variant="secondary" disabled={!canAdd} onClick={add}>
+          추가
+        </Button>
+      </div>
+    </div>
+  );
 }
