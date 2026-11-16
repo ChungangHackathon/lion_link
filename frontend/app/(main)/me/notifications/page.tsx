@@ -76,8 +76,8 @@ export default function NotificationSettingsPage() {
         width={640}
       >
         <div className="rounded-[8px] border border-line-200 bg-bg-50 p-5 text-[14px] text-ink-900">
-          <p className="text-[12px] text-ink-500">제목: [LION:LINK] 최흑석(14기)님이 커피챗을 신청했어요</p>
-          <p className="text-[12px] text-ink-500">보낸 사람: LION:LINK · 받는 사람: {email}</p>
+          <p className="text-[12px] text-ink-500">제목: [멋사동네] 최흑석(14기)님이 커피챗을 신청했어요</p>
+          <p className="text-[12px] text-ink-500">보낸 사람: 멋사동네 · 받는 사람: {email}</p>
           <div className="mt-4 rounded-[8px] border border-line-200 bg-white p-6">
             {unsubscribed ? (
               <>
@@ -86,7 +86,7 @@ export default function NotificationSettingsPage() {
               </>
             ) : (
               <>
-                <p className="t-title3 text-primary">LION:LINK</p>
+                <p className="t-title3 text-primary">멋사동네</p>
                 <p className="mt-4 leading-6">
                   <b>최흑석(14기)</b>님이 커피챗을 신청했어요. 주제: <b>프로젝트·개발</b>
                 </p>
