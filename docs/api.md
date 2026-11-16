@@ -942,7 +942,8 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 {
   "items": [{
     "id": 25, "name": "김사자", "generation": 13, "lionParts": ["BACKEND"], "status": "EMPLOYED",
-    "headline": "백엔드 개발자", "bio": "서버 개발 이야기를 좋아해요", "photoUrl": null, "company": "예시회사",
+    "headline": "백엔드 개발자", "bio": "서버 개발 이야기를 좋아해요", "photoUrl": null,
+    "company": "예시회사", "jobTitle": "백엔드 개발자",
     "interests": ["BACKEND"], "skills": ["Spring"], "bookmarked": false,
     "coffeeChat": { "availability": "AVAILABLE", "nextAvailableDate": null, "acceptGroup": true }
   }],
@@ -953,6 +954,7 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | 필드 | 설명 |
 | --- | --- |
 | `company` | 현재 경력의 회사. **재직 중(`EMPLOYED`)이거나 창업(`FOUNDER`)일 때만 보여줘.** 그 밖의 상태(재학·휴학·졸업·대학원·기타)는 현재 경력이 있어도 `null`이야. 회사 공개 범위로 가려져도 `null` |
+| `jobTitle` | 현재 경력의 직무(`careers.title`). `company`와 같은 경력에서 읽어. 재직·창업일 때만 보여주고, 회사가 공개 범위로 가려져도 직무는 그대로 보여줘(동문 상세의 경력도 같은 규칙) |
 | `bio` | 카드에 2줄로 보여주는 소개 |
 | `coffeeChat.availability` | PROFILE-12의 `status.availability`와 같은 규칙으로 오늘 기준으로 정해. `AVAILABLE` 받는 중, `RESTING` 쉬는 중, `NOT_ACCEPTING` 안 받는 중. 커피챗 설정이 없으면 `NOT_ACCEPTING` |
 | `coffeeChat.nextAvailableDate` | 다시 받는 날. 카드의 '11/20부터 받아요'에 써. `RESTING`이면 쉬는 기간이 끝난 다음 날(바로 이어지는 쉬는 기간이 있으면 마지막 기간 기준), `NOT_ACCEPTING`이면 곧 시작하는 받는 기간의 시작일, 그 밖에는 `null` |
@@ -1138,13 +1140,14 @@ FE가 앱을 열 때 부르고, `status`와 `profileCompleted`로 어느 화면�
 | `meetup.place` | string | O | 1\~50자 |
 | `meetup.capacity` | number | O | 2\~30명(작성자 포함) |
 | `meetup.companionIds` | number\[\] | X | 함께하는 동문. 등록하면 바로 참여자가 돼. 승인 회원, 본인·중복 불가, `capacity - 1`명 이하 |
-| `recruit` | object | `RECRUIT`이면 O | `{ seniorId, capacity, deadline }` |
-| `recruit.seniorId` | number | O | 신청받을 사자. 본인 불가, 커피챗을 받고 여러 명 신청을 받는 사자만 |
+| `recruit` | object | `RECRUIT`이면 O | `{ seniorId, capacity, deadline, companionIds }` |
+| `recruit.seniorId` | number | O | 커피챗 받는 사자. 본인 불가, 커피챗을 받고 여러 명 신청을 받는 사자만 |
 | `recruit.capacity` | number | O | 2\~5명(작성자 포함) |
 | `recruit.deadline` | date | O | 오늘 이후 |
+| `recruit.companionIds` | number\[\] | X | 함께 신청할 동문. 등록하면 바로 모집 참여자가 돼. 승인 회원, 본인·커피챗 받는 사자·중복 불가, `capacity - 1`명 이하. 초대받은 사람에게 `RECRUIT_INVITED` 알림을 저장해 |
 | `files` | object\[\] | X | FILE-01로 올린 파일 `{ type(IMAGE·ATTACHMENT), url, name, size }`. 이미지 5장, 첨부파일 3개까지. `url`은 내가 발급받은 `fileUrl`만 돼. 보낸 순서대로 저장해 |
 
-`201`에 `{ "id": 101, "category": "MEETUP", "createdAt": "..." }`를 돌려줘. 번개는 작성자와 함께하는 동문을, 커피챗 모집은 작성자를 참여자로 같이 저장해. 번개는 이 사람들이 들어간 단체 채팅방도 같이 열어(10장 "번개 단체방").
+`201`에 `{ "id": 101, "category": "MEETUP", "createdAt": "..." }`를 돌려줘. 번개는 작성자와 함께하는 동문을, 커피챗 모집은 작성자와 함께 신청할 동문을 참여자로 같이 저장해. 번개는 이 사람들이 들어간 단체 채팅방도 같이 열어(10장 "번개 단체방").
 
 | 상태 | code | 언제 |
 | --- | --- | --- |
@@ -1475,6 +1478,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `MEETUP_CANCELED` | 작성자를 뺀 참여자 | `참여한 번개가 취소됐어요. {제목}` |
 | `COMMENT_CREATED` | 글 작성자 (본인 댓글 제외) | `님이 내 글에 댓글을 남겼어요. {제목}` (보낸 사람: 댓글 작성자) |
 | `REPLY_CREATED` | 부모 댓글 작성자 (본인 답글 제외) | `님이 내 댓글에 답글을 남겼어요. {제목}` (보낸 사람: 답글 작성자) |
+| `RECRUIT_INVITED` | 초대받은 회원 | `님이 커피챗 모집에 초대했어요. {제목}` (보낸 사람: 작성자) |
 | `RECRUIT_JOINED` | 커피챗 모집 작성자 | `님이 내 모집글에 참여했어요. {제목}` (보낸 사람: 참여자) |
 | `RECRUIT_CANCELED` | 작성자를 뺀 모집 참여자 | `참여한 커피챗 모집이 취소됐어요. {제목}` |
 | `RECRUIT_CLOSED` | 모집 작성자와 참여자 | `님이 여러 명 커피챗을 받지 않게 되어 모집이 마감됐어요. {제목}` (보낸 사람: 신청받을 사자) |
@@ -1507,7 +1511,10 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 ```json
 {
-  "me": { "id": 12, "name": "김사자", "generation": 14, "lionParts": ["BACKEND"], "headline": "백엔드 지망생", "bio": "...", "photoUrl": null },
+  "me": {
+    "id": 12, "name": "김사자", "generation": 14, "lionParts": ["BACKEND"], "headline": "백엔드 지망생", "bio": "...",
+    "photoUrl": null, "company": "라이온컴퍼니", "jobTitle": "백엔드 개발자"
+  },
   "welcomeBannerVisible": true,
   "counts": { "pendingCoffeeChats": 1, "activeCoffeeChats": 2, "unreadMessages": 3, "messageRequests": 1, "bookmarks": 5 },
   "upcomingCoffeeChat": {
@@ -1521,6 +1528,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 
 | 필드 | 기준 |
 | --- | --- |
+| `me` | 동문 카드(ALUMNI-01)와 같은 정보를 보여줘. `company`·`jobTitle`은 지금 다니는 경력(`careers.is_current`) 하나에서 읽고, 없으면 둘 다 `null`이야. 내 카드라서 회사 공개 범위는 따지지 않아 |
 | `welcomeBannerVisible` | `users.guide_dismissed_at`이 없으면 `true` |
 | `counts.pendingCoffeeChats` | 내가 받은 `PENDING` 커피챗 |
 | `counts.activeCoffeeChats` | 내가 신청자·받는 사자·함께 신청자인 `ACCEPTED`·`SCHEDULED` 커피챗 |
@@ -1697,6 +1705,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | `responseMessage` | string | X | 한마디 0\~200자 |
 
 - 수락하면 채팅방이 열려. 1:1이면 두 사람의 1:1 방(이미 있으면 그 방을 다시 열어), 여러 명이면 받는 사자와 신청자 전원의 단체방이야
+- 방에 '커피챗이 수락됐어요. 채팅으로 일정을 정해보세요.' 안내를 남기고, `responseMessage`를 적었으면 그 뒤에 받는 사자가 보낸 일반 메시지로 한 번 더 보내. 시스템 안내가 아니라서 받는 사자 이름·사진이 붙고 수정·삭제도 돼. 비워 두면 안내만 남아
 - 대표 신청자와 함께 신청자에게 `COFFEE_CHAT_ACCEPTED` 알림을 저장해
 - `200`에 COFFEE-03 형식을 돌려줘
 
@@ -1923,7 +1932,7 @@ FE는 '{N}명에게 초대 알림을 보냈어요'에 고른 인원 수가 아�
 | --- | --- | --- | --- |
 | `SIGNUP_REQUESTED` | `ACCOUNT` | 가입 신청(AUTH-02), 다시 신청(AUTH-07) | 없음 |
 | `SIGNUP_APPROVED` | `ACCOUNT` | 가입 승인(ADMIN-03, 05) | 없음 |
-| `MEETUP_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED`, `REPLY_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글·답글 쓴 회원 |
+| `MEETUP_INVITED`, `RECRUIT_INVITED`, `RECRUIT_JOINED`, `COMMENT_CREATED`, `REPLY_CREATED` | `COMMUNITY` | 커뮤니티 | 초대한 회원, 참여한 회원, 댓글·답글 쓴 회원 |
 | `RECRUIT_CLOSED` | `COMMUNITY` | 커뮤니티 | 여러 명 커피챗을 끈 사자 (사자가 탈퇴했으면 없음) |
 | `MEETUP_CANCELED`, `RECRUIT_CANCELED` | `COMMUNITY` | 커뮤니티 | 없음 |
 | `COFFEE_CHAT_REQUESTED`, `ACCEPTED`, `REJECTED`, `SCHEDULED`, `CANCELED`, `EXPIRED` | `COFFEE_CHAT` | 커피챗(8장 "커피챗이 저장하는 알림") | 신청자, 받는 사자, 일정을 정한 회원, 취소한 회원 (탈퇴로 취소되면 없음) |
@@ -2012,7 +2021,9 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 - 번개 글을 쓰면(POST-03) 작성자와 함께하는 동문이 들어간 방이 열리고 '번개 채팅방이 열렸어요. 모임 전에 인사 나눠보세요.'가 남아
 - 번개에 참여하면 방에 들어오고 '{이름}님이 들어왔어요', 참여를 취소하면 방에서 나가고 '{이름}님이 나갔어요'가 남아. 다시 참여하면 다시 들어와
 - 번개를 만든 사람은 방에 동문을 직접 초대할 수 있어(CHAT-18). 초대받은 사람은 번개 참여자로도 등록돼
-- 번개가 끝나기 전에는 채팅방만 나갈 수 없어(CHAT-14). 번개 참여는 그대로인데 방만 없어지는 걸 막으려고 그래
+- 채팅방에서 나가면(CHAT-14) 번개 참여도 함께 취소돼. 참여 취소(MEETUP-02)와 결과가 같아. 다시 참여하면 방에 다시 들어와
+- 번개를 만든 사람은 방에서 나갈 수 없어(`409 INVALID_ROOM_STATUS`). 번개를 취소하면(POST-06) 방도 닫혀
+- 끝나거나 취소된 번개 방은 참여 기록을 건드리지 않고 방에서만 나가
 - 번개가 취소되면(POST-06) '번개가 취소됐어요'를 남기고 방을 닫아. 목록에는 남지만 `canSend: false`이고 보내면 `409 INVALID_ROOM_STATUS`야
 - 번개 글을 다른 카테고리로 바꾸면(POST-05, 참여자가 작성자뿐일 때만 가능) 방도 지워
 - 이 기능 전에 만든 번개는 방이 없어서, 누가 처음 참여할 때 그때 참여자 전원으로 방을 열어
@@ -2091,13 +2102,13 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 `PATCH /chat-requests/{roomId}/messages/{messageId}` · 보낸 사람, `REQUESTED`
 
-`{ "content": "5~300자" }`를 받고 `200`에 메시지 객체(`editedAt` 채워짐)를 돌려줘.
+`{ "content": "5~300자" }`를 받고 `200`에 메시지 객체(`editedAt` 채워짐)를 돌려줘. 일반 채팅방 수정(CHAT-16)처럼 바뀐 메시지를 실시간으로도 보내(10장 `message.updated`). 아직 수락 전이라 보낸 사람에게만 가.
 
 ### CHAT-07 수락 전 요청 취소
 
 `DELETE /chat-requests/{roomId}/messages/{messageId}` · 보낸 사람, `REQUESTED`
 
-첫 메시지를 지우고 방을 `CANCELED`로 바꿔. `204`야.
+첫 메시지를 지우고 방을 `CANCELED`로 바꿔. `204`야. 지운 메시지도 CHAT-06처럼 실시간으로 알려.
 
 ### CHAT-04~07 공통 에러
 
@@ -2181,7 +2192,7 @@ PRD 9.2의 메일은 커피챗 신청, 메시지 요청, 가입 승인 세 가�
 
 - 1:1 방: 내 목록에서 숨기고 지금까지의 대화를 내 화면에서 지워. 상대가 새 메시지를 보내면 다시 나타나
 - 단체방: 방을 나가고 '{이름}님이 나갔어요' 안내가 남아. 다시 들어올 수 없어
-- 번개 단체방: 번개가 끝나기 전에는 `409 INVALID_ROOM_STATUS`('번개가 끝나기 전에는 나갈 수 없어요. 번개 참여를 취소하면 방에서도 나가요.'). 끝난 뒤에는 단체방처럼 나가고, 취소된 번개 방은 내 목록에서 숨겨
+- 번개 단체방: 나가면 번개 참여도 함께 취소돼(MEETUP-02와 같은 결과). 번개를 만든 사람은 `409 INVALID_ROOM_STATUS`('번개를 만든 사자는 나갈 수 없어요. 번개를 취소하면 방도 닫혀요.')고, 번개를 취소해야 방이 닫혀. 끝나거나 취소된 번개 방은 참여 기록을 두고 방에서만 나가
 - 거절·취소된 요청: 내 목록에서 숨겨
 - 대기 중인 요청은 나가기 대신 취소(CHAT-07)나 거절(CHAT-05)을 써(`409 INVALID_ROOM_STATUS`)
 
