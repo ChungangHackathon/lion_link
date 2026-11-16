@@ -149,7 +149,7 @@ class RecruitServiceTest {
 	}
 
 	@Test
-	void 그_사자에게_함께_신청한_진행_중인_커피챗이_있어도_참여할_수_없다() {
+	void 그_사자에게_함께_신청한_커피챗만_있으면_참여할_수_있다() {
 		Long lee = TestUsers.approved(entityManager, "이사자");
 		Long coffeeChatId = TestProfiles.coffeeChat(entityManager, lee, senior, CoffeeChatStatus.PENDING);
 		entityManager.persist(CoffeeChatMember.builder()
@@ -159,7 +159,7 @@ class RecruitServiceTest {
 				.build());
 		entityManager.flush();
 
-		assertError(() -> recruitService.join(kim, postId), CommunityErrorCode.OPEN_COFFEE_CHAT_EXISTS);
+		assertThat(recruitService.join(kim, postId).joined()).isTrue();
 	}
 
 	private List<Notification> joinedNotifications() {
