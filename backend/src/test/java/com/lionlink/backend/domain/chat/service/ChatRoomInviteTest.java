@@ -13,12 +13,17 @@ import com.lionlink.backend.domain.chat.exception.ChatErrorCode;
 import com.lionlink.backend.domain.chat.repository.ChatRoomRepository;
 import com.lionlink.backend.domain.coffeechat.dto.request.CoffeeChatAcceptRequest;
 import com.lionlink.backend.domain.coffeechat.dto.request.CoffeeChatCreateRequest;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMember;
+import com.lionlink.backend.domain.coffeechat.entity.CoffeeChatMemberRole;
 import com.lionlink.backend.domain.coffeechat.entity.CoffeeSetting;
 import com.lionlink.backend.domain.coffeechat.entity.MeetingMode;
 import com.lionlink.backend.domain.coffeechat.entity.PreferredMode;
+import com.lionlink.backend.domain.coffeechat.repository.CoffeeChatMemberRepository;
 import com.lionlink.backend.domain.coffeechat.service.CoffeeChatService;
 import com.lionlink.backend.domain.community.meetup.repository.MeetupMemberRepository;
 import com.lionlink.backend.domain.community.post.service.PostService;
+import com.lionlink.backend.domain.community.recruit.repository.CoffeeChatRecruitRepository;
+import com.lionlink.backend.domain.community.recruit.repository.RecruitMemberRepository;
 import com.lionlink.backend.domain.community.recruit.service.RecruitService;
 import com.lionlink.backend.domain.user.entity.UserStatus;
 import com.lionlink.backend.global.error.BusinessException;
@@ -60,6 +65,15 @@ class ChatRoomInviteTest {
 
 	@Autowired
 	private MeetupMemberRepository meetupMemberRepository;
+
+	@Autowired
+	private CoffeeChatMemberRepository coffeeChatMemberRepository;
+
+	@Autowired
+	private CoffeeChatRecruitRepository coffeeChatRecruitRepository;
+
+	@Autowired
+	private RecruitMemberRepository recruitMemberRepository;
 
 	@Autowired
 	private EntityManager entityManager;
@@ -183,6 +197,75 @@ class ChatRoomInviteTest {
 	}
 
 	@Test
+	void 커피챗_방에_초대하면_함께_신청자로_등록된다() {
+		Long senior = alumni("선배사자");
+		Long roomId = coffeeChatRoom(senior, List.of(kim));
+		Long chatId = coffeeChatId(roomId);
+		Long park = alumni("박사자");
+
+		chatRoomService.invite(me, roomId, invite(park));
+		flush();
+
+		CoffeeChatMember member = coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(chatId, park).orElseThrow();
+		assertThat(member.getRole()).isEqualTo(CoffeeChatMemberRole.MEMBER);
+		assertThat(member.getLeftAt()).isNull();
+		assertThat(coffeeChatRecruitRepository.findByCoffeeChatId(chatId)).isEmpty();
+		assertThat(recruitMemberRepository.count()).isZero();
+	}
+
+	@Test
+	void 초대받은_함께_신청자가_빠지고_다시_초대되면_복귀한다() {
+		Long senior = alumni("선배사자");
+		Long roomId = coffeeChatRoom(senior, List.of(kim));
+		Long chatId = coffeeChatId(roomId);
+		Long park = alumni("박사자");
+		chatRoomService.invite(me, roomId, invite(park));
+		flush();
+
+		coffeeChatService.leave(park, chatId);
+		flush();
+		assertThat(coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(chatId, park).orElseThrow().getLeftAt()).isNotNull();
+		assertError(() -> chatRoomService.getDetail(park, roomId), ChatErrorCode.ROOM_NOT_FOUND);
+
+		chatRoomService.invite(me, roomId, invite(park));
+		flush();
+
+		assertThat(coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(chatId, park).orElseThrow().getLeftAt()).isNull();
+		assertThat(chatRoomService.getDetail(park, roomId).canSend()).isTrue();
+	}
+
+	@Test
+	void 모집글_커피챗_방에_초대하면_모집_참여자로도_등록된다() {
+		Long senior = alumni("선배사자");
+		Long roomId = recruitCoffeeChatRoom(senior, 4, List.of(kim));
+		Long chatId = coffeeChatId(roomId);
+		Long postId = coffeeChatRecruitRepository.findByCoffeeChatId(chatId).orElseThrow().getPostId();
+		assertThat(recruitMemberRepository.countByRecruitPostId(postId)).isEqualTo(2);
+		Long park = alumni("박사자");
+
+		chatRoomService.invite(me, roomId, invite(park));
+		chatRoomService.invite(me, roomId, invite(park));
+		flush();
+
+		assertThat(recruitMemberRepository.countByRecruitPostId(postId)).isEqualTo(3);
+		assertThat(recruitService.join(park, postId).memberCount()).isEqualTo(3);
+		assertThat(coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(chatId, park)).isPresent();
+	}
+
+	@Test
+	void 정원을_넘는_초대는_커피챗_참여자를_만들지_않는다() {
+		Long senior = alumni("선배사자");
+		Long roomId = recruitCoffeeChatRoom(senior, 2, List.of(kim));
+		Long chatId = coffeeChatId(roomId);
+		Long park = alumni("박사자");
+
+		assertError(() -> chatRoomService.invite(me, roomId, invite(park)), ChatErrorCode.ROOM_FULL);
+		flush();
+
+		assertThat(coffeeChatMemberRepository.findByCoffeeChatIdAndUserId(chatId, park)).isEmpty();
+	}
+
+	@Test
 	void 취소된_번개방에는_초대할_수_없다() {
 		Long postId = postService.create(me, TestPosts.meetup("금요일 저녁 번개", 5, List.of(kim))).id();
 		Long roomId = meetupRoom(postId);
@@ -194,6 +277,11 @@ class ChatRoomInviteTest {
 
 	private ChatRoomInviteRequest invite(Long userId) {
 		return new ChatRoomInviteRequest(List.of(userId));
+	}
+
+	private Long coffeeChatId(Long roomId) {
+		flush();
+		return chatRoomRepository.findById(roomId).orElseThrow().getCoffeeChatId();
 	}
 
 	private Long meetupRoom(Long postId) {
