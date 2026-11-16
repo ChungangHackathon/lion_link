@@ -421,7 +421,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
             roomId={roomId}
             request={request.data}
             onEdited={(m) => {
-              setMessages((ms) => ms.map((x) => (x.id === m.id ? m : x)));
+              replaceMessage(m);
               request.setData((prev) => (prev ? { ...prev, firstMessage: m } : prev));
             }}
           />
@@ -729,6 +729,7 @@ function PendingRequestBanner({ service, roomId, request, onEdited }: { service:
     try {
       const m = await service.editRequestMessage(roomId, first.id, editing.trim());
       onEdited(m);
+      refreshList(); // 왼쪽 대화 목록 미리보기도 새 내용으로
       setEditing(null);
       toast("요청 메시지를 고쳤어요");
     } catch (e) {
