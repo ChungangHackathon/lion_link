@@ -104,8 +104,7 @@ public class CoffeeChatService {
 			throw new BusinessException(CoffeeChatErrorCode.GROUP_COFFEE_CHAT_NOT_ALLOWED);
 		}
 		String topicCustom = validateTopic(receiverId, request.topic(), request.topicCustom());
-		List<Long> applicantIds = Stream.concat(Stream.of(userId), memberIds.stream()).toList();
-		if (coffeeChatRepository.existsOpenChatWithAny(receiverId, applicantIds)) {
+		if (coffeeChatRepository.existsOpenChat(userId, receiverId)) {
 			throw new BusinessException(CoffeeChatErrorCode.OPEN_COFFEE_CHAT_EXISTS);
 		}
 		cooldownPolicy.availableFrom(userId, receiverId, now.toLocalDate()).ifPresent(date -> {
