@@ -188,9 +188,11 @@ class AlumniDetailServiceTest {
 		assertThat(resting.nextAvailableDate()).isEqualTo(today.plusDays(3));
 
 		Long representative = TestUsers.approved(entityManager, "대표사자");
-		Long groupChat = TestProfiles.coffeeChat(entityManager, representative, lee, CoffeeChatStatus.PENDING);
+		Long park = alumni("박사자");
+		TestProfiles.coffeeSetting(entityManager, park, ReceiveMode.ON, true);
+		Long groupChat = TestProfiles.coffeeChat(entityManager, representative, park, CoffeeChatStatus.PENDING);
 		member(groupChat, me, false);
-		assertThat(alumniDetailService.getDetail(me, lee).coffeeChat().availability()).isEqualTo(CoffeeChatAvailability.IN_PROGRESS);
+		assertThat(alumniDetailService.getDetail(me, park).coffeeChat().availability()).isEqualTo(CoffeeChatAvailability.AVAILABLE);
 
 		Long noSetting = alumni("설정없는사자");
 		AlumniDetailResponse.CoffeeChat none = alumniDetailService.getDetail(me, noSetting).coffeeChat();

@@ -153,9 +153,16 @@ class CoffeeChatServiceTest {
 		create(me, request(lee, List.of()));
 
 		assertError(() -> create(kim, request(senior, List.of())), CoffeeChatErrorCode.OPEN_COFFEE_CHAT_EXISTS);
-		assertError(() -> create(me, request(senior, List.of(kim))), CoffeeChatErrorCode.OPEN_COFFEE_CHAT_EXISTS);
 		receiving(me, true);
 		assertError(() -> create(lee, request(me, List.of())), CoffeeChatErrorCode.OPEN_COFFEE_CHAT_EXISTS);
+	}
+
+	@Test
+	void 함께_신청자가_그_사자와_진행_중이어도_신청할_수_있다() {
+		create(kim, request(senior, List.of(me)));
+
+		assertThat(create(me, request(senior, List.of())).status()).isEqualTo(CoffeeChatStatus.PENDING);
+		assertThat(create(lee, request(senior, List.of(kim, me))).status()).isEqualTo(CoffeeChatStatus.PENDING);
 	}
 
 	@Test
