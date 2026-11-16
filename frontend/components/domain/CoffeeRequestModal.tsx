@@ -268,7 +268,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
               <Button variant="secondary" onClick={requestClose}>
                 취소
               </Button>
-              <Button disabled={!valid || !detail} loading={sending} onClick={submit} className="text-[16px]">
+              <Button disabled={!valid || !detail} loading={sending} onClick={submit}>
                 신청 보내기
               </Button>
             </div>
