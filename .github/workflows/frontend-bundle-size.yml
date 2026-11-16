@@ -1,0 +1,102 @@
+name: Frontend Bundle Size
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-bundle-size.yml"
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-bundle-size.yml"
+
+permissions:
+  contents: read
+
+env:
+  # 클라이언트 JS(.next/static) gzip 기준 상한값 (KB)
+  # 측정 기준(2026-11-16): 전체 460KB / 최대 청크 69KB → 약 30% 여유
+  MAX_TOTAL_GZIP_KB: 600
+  MAX_CHUNK_GZIP_KB: 90
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high --omit=dev
+
+      - name: Build
+        run: npm run build
+
+      - name: Check bundle size
+        run: |
+          total=0
+          max=0
+          max_file=""
+          rows=""
+
+          while IFS= read -r file; do
+            size=$(gzip -9 -c "$file" | wc -c)
+            total=$((total + size))
+            if [ "$size" -gt "$max" ]; then
+              max=$size
+              max_file=$file
+            fi
+            rows+="$size $file"$'\n'
+          done < <(find .next/static -name '*.js')
+
+          total_kb=$((total / 1024))
+          max_kb=$((max / 1024))
+
+          {
+            echo "## 📦 Frontend Bundle Size (gzip)"
+            echo ""
+            echo "| 항목 | 현재 | 상한 |"
+            echo "|---|---:|---:|"
+            echo "| 전체 JS | ${total_kb} KB | ${MAX_TOTAL_GZIP_KB} KB |"
+            echo "| 최대 청크 | ${max_kb} KB | ${MAX_CHUNK_GZIP_KB} KB |"
+            echo ""
+            echo "<details><summary>큰 청크 Top 5</summary>"
+            echo ""
+            echo "| 파일 | gzip |"
+            echo "|---|---:|"
+            printf '%s' "$rows" | sort -n -r | head -5 | while read -r s f; do
+              echo "| \`${f#.next/static/}\` | $((s / 1024)) KB |"
+            done
+            echo ""
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "전체 JS: ${total_kb} KB / ${MAX_TOTAL_GZIP_KB} KB"
+          echo "최대 청크: ${max_kb} KB / ${MAX_CHUNK_GZIP_KB} KB (${max_file})"
+
+          failed=0
+          if [ "$total_kb" -gt "$MAX_TOTAL_GZIP_KB" ]; then
+            echo "::error::전체 JS 번들이 ${total_kb} KB로 상한(${MAX_TOTAL_GZIP_KB} KB)을 초과했습니다."
+            failed=1
+          fi
+          if [ "$max_kb" -gt "$MAX_CHUNK_GZIP_KB" ]; then
+            echo "::error file=frontend/${max_file}::단일 청크가 ${max_kb} KB로 상한(${MAX_CHUNK_GZIP_KB} KB)을 초과했습니다."
+            failed=1
+          fi
+          exit $failed
