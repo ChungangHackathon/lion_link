@@ -7,7 +7,7 @@ export interface ProfileDetail {
   educations: { school: string; major: string; degree: string; from: string; to: string; gpa?: string }[];
   careers: { company: string; role: string; type: string; from: string; to: string; duration: string }[];
   lion: { generation: number; role: string; part: LionPart; projects: { event: string; name: string; desc: string; role: string; link?: string }[] }[];
-  projects: { name: string; type: string; from: string; to: string; skills: string[] }[];
+  projects: { name: string; type: string; from: string; to: string; skills: string[]; link?: string }[];
   repSkills: string[];
   skills: string[];
   certs: { kind: "자격증" | "수상" | "대외활동" | "언어"; text: string }[];

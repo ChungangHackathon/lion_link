@@ -13,6 +13,9 @@ import { Card } from "@/components/ui/Misc";
  * Section order is unified (v2.5 §4-1): 소개 → 경력 → 멋사 활동 → 프로젝트 → 자격증·수상·대외활동·언어 → 외부 링크·연락처 (대표 기술은 상단 카드).
  * `onEdit(section)` turns on the 바로 고치기 pencil (P-02).
  */
+/** 저장된 링크에 http(s)://가 없으면 붙인다 */
+const toHref = (url: string) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+
 export function ProfileSections({ detail, connected, onEdit }: { detail: ProfileDetail; person?: Alumni; connected?: boolean; onEdit?: (section: string) => void }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [careersOpen, setCareersOpen] = useState(false);
@@ -105,9 +108,15 @@ export function ProfileSections({ detail, connected, onEdit }: { detail: Profile
           <ul className="flex flex-col gap-4">
             {detail.projects.map((p, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-part-be-bg text-primary">
-                  <Glyph name="link" size={16} />
-                </span>
+                {p.link ? (
+                  <a href={toHref(p.link)} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} 사이트 열기`} title={p.link} className="grid size-10 shrink-0 place-items-center rounded-full bg-part-be-bg text-primary transition-colors hover:bg-primary hover:text-white">
+                    <Glyph name="link" size={16} />
+                  </a>
+                ) : (
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-bg-100 text-ink-400" title="등록된 링크가 없어요">
+                    <Glyph name="link" size={16} />
+                  </span>
+                )}
                 <div className="flex flex-1 flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-semibold text-ink-900">{p.name}</span>
