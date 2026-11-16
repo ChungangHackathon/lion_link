@@ -8,7 +8,7 @@ public interface CareerRepository extends SectionItemRepository<Career> {
 
 	boolean existsByUserIdAndIsCurrentTrue(Long userId);
 
-	List<Career> findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(Long userId);
+	List<Career> findByUserIdOrderByStartYmDescIdDesc(Long userId);
 
 	List<Career> findByUserIdInAndIsCurrentTrueOrderByStartYmDescIdDesc(Collection<Long> userIds);
 }

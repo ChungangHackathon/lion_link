@@ -30,7 +30,6 @@ import com.lionlink.backend.domain.profile.section.certification.CertificationRe
 import com.lionlink.backend.domain.profile.section.education.EducationRepository;
 import com.lionlink.backend.domain.profile.section.language.LanguageRepository;
 import com.lionlink.backend.domain.profile.section.lionactivity.LionActivityRepository;
-import com.lionlink.backend.domain.profile.section.lionactivity.LionRole;
 import com.lionlink.backend.domain.profile.section.lionproject.LionProject;
 import com.lionlink.backend.domain.profile.section.lionproject.LionProjectRepository;
 import com.lionlink.backend.domain.profile.section.project.ProjectRepository;
@@ -40,7 +39,6 @@ import com.lionlink.backend.domain.user.repository.UserRepository;
 import com.lionlink.backend.global.error.BusinessException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,7 +57,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AlumniDetailService {
 
-	private static final Set<LionRole> STAFF_ROLES = EnumSet.of(LionRole.STAFF, LionRole.PRESIDENT, LionRole.PART_LEAD);
 	private static final int CHAT_REQUEST_WAIT_DAYS = 7;
 	private static final Map<LionPart, String> PART_LABELS = Map.of(
 			LionPart.PLANNING, "기획",
@@ -116,7 +113,7 @@ public class AlumniDetailService {
 		Sections sections = sections(targetUserId);
 
 		AlumniDetailResponse.Relation relation = new AlumniDetailResponse.Relation(
-				sections.lionActivities().stream().anyMatch(activity -> STAFF_ROLES.contains(activity.getRole())),
+				sections.lionActivities().stream().anyMatch(activity -> activity.getRole().isStaff()),
 				coffeeChat(userId, targetUserId, owner),
 				owner ? new Chat(ChatStatus.NONE, null) : chat(userId, targetUserId),
 				owner ? List.of() : commonalities(userId, target, profile, sections, visibility.company()),
@@ -128,7 +125,7 @@ public class AlumniDetailService {
 
 	private Sections sections(Long userId) {
 		return new Sections(
-				careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(userId),
+				careerRepository.findByUserIdOrderByStartYmDescIdDesc(userId),
 				educationRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(userId),
 				lionActivityRepository.findByUserIdOrderByGenerationDesc(userId),
 				lionProjectRepository.findByUserIdOrderByGenerationDescIdDesc(userId),
@@ -198,7 +195,7 @@ public class AlumniDetailService {
 				.forEach(label -> result.add(new Commonality(CommonalityType.SAME_LION_PROJECT, label)));
 
 		if (companyVisible) {
-			Set<String> myCompanies = currentCompanies(careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(userId)).stream()
+			Set<String> myCompanies = currentCompanies(careerRepository.findByUserIdOrderByStartYmDescIdDesc(userId)).stream()
 					.map(this::normalize)
 					.collect(Collectors.toSet());
 			currentCompanies(targetSections.careers()).stream()

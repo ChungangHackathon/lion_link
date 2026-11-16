@@ -47,7 +47,7 @@ public class MyProfileService {
 				.orElseThrow(() -> new BusinessException(CommonErrorCode.PROFILE_NOT_COMPLETED));
 
 		Sections sections = new Sections(
-				careerRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(userId),
+				careerRepository.findByUserIdOrderByStartYmDescIdDesc(userId),
 				educationRepository.findByUserIdOrderByIsCurrentDescStartYmDescIdDesc(userId),
 				lionActivityRepository.findByUserIdOrderByGenerationDesc(userId),
 				lionProjectRepository.findByUserIdOrderByGenerationDescIdDesc(userId),
