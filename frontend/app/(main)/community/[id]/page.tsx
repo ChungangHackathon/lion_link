@@ -672,19 +672,21 @@ function MeetupCard({ post, mine, busy, blocked, onJoin, onLeave, onInvite, onCa
           <Button size="L" full variant="secondary" onClick={onInvite} disabled={past || canceled}>
             초대 알림 보내기
           </Button>
-          {m.status === "OPEN" && (
-            <Button size="L" full variant="secondary" loading={busy} onClick={() => onClose(true)}>
-              모집 마감
+          {/* 번개 취소 자리를 둘로 나눠 왼쪽에 모집 마감(파랑). 정원 전에 직접 마감한 번개는 마감 해제 */}
+          <div className="flex gap-2">
+            {closedEarly ? (
+              <Button size="L" variant="secondary" className="flex-1" loading={busy} onClick={() => onClose(false)}>
+                마감 해제
+              </Button>
+            ) : (
+              <Button size="L" className="flex-1" loading={busy} onClick={() => onClose(true)} disabled={m.status !== "OPEN"}>
+                모집 마감
+              </Button>
+            )}
+            <Button size="L" variant="danger" className="flex-1" onClick={onCancel} disabled={past || canceled}>
+              번개 취소
             </Button>
-          )}
-          {closedEarly && (
-            <Button size="L" full variant="secondary" loading={busy} onClick={() => onClose(false)}>
-              마감 해제
-            </Button>
-          )}
-          <Button size="L" full variant="danger" onClick={onCancel} disabled={past || canceled}>
-            번개 취소
-          </Button>
+          </div>
         </>
       ) : past || canceled ? (
         <Button size="L" full disabled>
