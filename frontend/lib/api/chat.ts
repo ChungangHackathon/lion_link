@@ -155,6 +155,13 @@ export function editMessage(roomId: Id, messageId: Id, content: string) {
 export function deleteMessage(roomId: Id, messageId: Id) {
   return api<ChatMessage>(`/chat-rooms/${roomId}/messages/${messageId}`, { method: "DELETE" });
 }
+/**
+ * CHAT 단체방 초대. 번개방은 번개 작성자만(번개 정원까지, 초대되면 번개 참여자로도 들어간다),
+ * 커피챗 단체방은 커피챗 대표 신청자만. 이미 있거나 승인 안 된 회원은 skippedUserIds. 409 ROOM_FULL
+ */
+export function inviteToRoom(roomId: Id, userIds: Id[]) {
+  return api<{ invitedCount: number; skippedUserIds: Id[] }>(`/chat-rooms/${roomId}/invites`, { method: "POST", body: { userIds } });
+}
 export function readRoom(roomId: Id, lastMessageId?: Id) {
   return api<{ roomId: Id; lastReadMessageId: Id }>(`/chat-rooms/${roomId}/read`, { method: "PUT", body: lastMessageId != null ? { lastMessageId } : {} });
 }

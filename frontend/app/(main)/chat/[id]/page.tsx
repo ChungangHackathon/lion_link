@@ -16,6 +16,8 @@ import type { Id } from "@/lib/api/posts";
 import { useApi } from "@/lib/api/useApi";
 import { scheduleCoffeeChat } from "@/lib/api/coffee";
 import { useCoffeeService } from "@/lib/api/useCoffeeService";
+import { usePostService } from "@/lib/api/usePostService";
+import { AlumniPicker } from "@/components/domain/AlumniPicker";
 import { useStore } from "@/lib/store";
 import { useChatRealtime, usePersonalEvents } from "@/lib/api/chatRealtime";
 import { useChatRefresh, useChatService, type ChatService } from "@/lib/api/useChatService";
@@ -115,6 +117,29 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       coffeeDetail.reload();
     } finally {
       setScheduling(false);
+    }
+  };
+
+  // 단체방 초대: 번개방은 번개 작성자(남은 정원까지), 커피챗 단체방은 대표 신청자만
+  const postService = usePostService();
+  const meetupPostId = room.meetup?.postId;
+  const meetupPost = useApi(() => postService.get(meetupPostId!), [postService, meetupPostId], meetupPostId != null);
+  const meetupLeft = meetupPost.data?.meetup ? Math.max(0, meetupPost.data.meetup.capacity - meetupPost.data.meetup.participantCount) : 0;
+  const canInvite =
+    room.type === "GROUP" &&
+    room.status === "ACTIVE" &&
+    (room.meetup ? !!meetupPost.data?.isMine && room.meetup.status === "OPEN" && meetupLeft > 0 : coffeeDetail.data?.myRole === "REQUESTER");
+  const inviteMax = room.meetup ? Math.min(20, meetupLeft) : 20;
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const invite = async (ids: Id[]) => {
+    setInviteOpen(false);
+    try {
+      const res = await service.invite(roomId, ids);
+      toast(res.skippedUserIds.length ? `${res.invitedCount}명을 초대했어요 · ${res.skippedUserIds.length}명은 이미 있거나 초대할 수 없어요` : `${res.invitedCount}명을 초대했어요`);
+      refreshList();
+      reloadRoom();
+    } catch (e) {
+      toast(errorMessage(e), { kind: "error" });
     }
   };
 
@@ -481,7 +506,15 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       <aside className="flex flex-col border-l border-line-200">
         {room.type === "GROUP" ? (
           <div className="flex flex-col gap-3 border-b border-line-200 p-5">
-            <p className="t-label1 text-ink-900">참여자 {room.members.length + 1}명</p>
+            <div className="flex items-center justify-between">
+              <p className="t-label1 text-ink-900">참여자 {room.members.length + 1}명</p>
+              {canInvite && (
+                <button type="button" onClick={() => setInviteOpen(true)} className="flex items-center gap-1 rounded-[6px] px-2 py-1 t-label2 text-primary hover:bg-part-be-bg">
+                  <Glyph name="plus" size={14} /> 초대
+                </button>
+              )}
+            </div>
+            {room.meetup && meetupPost.data?.meetup && <p className="-mt-1 text-[12px] text-ink-500">번개 정원 {meetupPost.data.meetup.capacity}명 · 남은 자리 {meetupLeft}명</p>}
             <ul className="flex flex-col gap-3">
               <li className="flex items-center justify-between">
                 <Link href="/me" className="flex items-center gap-2.5 hover:underline">
@@ -576,6 +609,17 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       </aside>
 
       {/* CF-9 / CF-9b 나가기 확인 */}
+      {/* 단체방 초대 */}
+      <AlumniPicker
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        onConfirm={(ids) => void invite(ids)}
+        max={inviteMax}
+        title="채팅방에 초대"
+        description={room.meetup ? `번개 남은 자리 ${meetupLeft}명까지 초대할 수 있어요. 초대하면 번개 참여자로도 들어가요.` : "초대하면 바로 채팅방에 들어와요."}
+        confirmLabel="초대하기"
+        exclude={[myId, ...room.members.map((u) => u.id).filter((x): x is Id => x != null)]}
+      />
       {/* D-15 일정 확정 · 변경 — 채팅 화면에서 바로 */}
       {scheduleOpen && coffeeDetail.data && (
         <ScheduleModal
