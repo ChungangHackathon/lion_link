@@ -3,7 +3,7 @@
 /**
  * 채팅 실시간 연결 (docs/api.md 10장 "실시간 (WebSocket STOMP)").
  * - 연결: ws(s)://{서버}/ws, CONNECT 헤더 Authorization: Bearer {accessToken}
- * - 방 채널 /topic/chat-rooms/{roomId}: MESSAGE · READ
+ * - 방 채널 /topic/chat-rooms/{roomId}: MESSAGE · MESSAGE_UPDATED(수정·삭제) · READ
  * - 개인 채널 /user/queue/chat: ROOM_UPDATED · REQUEST_RECEIVED
  * 보내기는 REST(CHAT-11)로 한다. 연결이 안 되면 화면들은 예전처럼 폴링으로 버틴다.
  */
@@ -14,7 +14,7 @@ import { API_ENABLED, refreshAccessToken, tokenStore } from "./client";
 import type { ChatMessage } from "./chat";
 import type { Id } from "./posts";
 
-export type RoomEvent = { type: "MESSAGE"; roomId: Id; message: ChatMessage } | { type: "READ"; roomId: Id; userId: Id; lastReadMessageId: Id };
+export type RoomEvent = { type: "MESSAGE"; roomId: Id; message: ChatMessage } | { type: "MESSAGE_UPDATED"; roomId: Id; message: ChatMessage } | { type: "READ"; roomId: Id; userId: Id; lastReadMessageId: Id };
 export type PersonalEvent = { type: "ROOM_UPDATED"; roomId: Id; muted: boolean } | { type: "REQUEST_RECEIVED"; roomId: Id };
 
 interface Realtime {
