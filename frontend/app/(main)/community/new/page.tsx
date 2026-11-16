@@ -38,7 +38,11 @@ function PostEditorLoader() {
   const [loadedFor] = useState(service);
   const { data, error } = useApi(() => loadedFor.get(editId!), [loadedFor, editId], !!editId);
 
-  if (!editId) return <PostEditor initialCategory={(params.get("cat") as PostCategory) || "CONTEST"} />;
+  if (!editId) {
+    // 커뮤니티에서 보고 있던 카테고리(?cat=)로 연다
+    const fromList = params.get("cat") as PostCategory | null;
+    return <PostEditor initialCategory={fromList && POST_CATEGORIES.includes(fromList) ? fromList : "CONTEST"} />;
+  }
   if (error) return <EmptyState title={isApiError(error) && error.status === 404 ? "404 · 삭제되었거나 없는 글이에요" : "글을 불러오지 못했어요"} description={isApiError(error) && error.status !== 404 ? errorMessage(error) : undefined} action={{ label: "커뮤니티로", href: "/community" }} />;
   if (!data) return <Skeleton className="h-[600px] w-full" />;
   if (!data.isMine) return <EmptyState title="내가 쓴 글만 고칠 수 있어요" action={{ label: "글로 돌아가기", href: `/community/${data.id}` }} />;
