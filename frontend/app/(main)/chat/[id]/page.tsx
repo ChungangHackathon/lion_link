@@ -369,7 +369,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
       <section className="flex min-w-0 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-line-200 px-6">
           <div className="flex min-w-0 items-center gap-3">
-            {room.type === "GROUP" ? <AvatarGroup people={[...avatarPeople(room.members), { name: myName }]} size={32} /> : <Avatar name={userName(partner)} part={partOf(partner)} size={40} />}
+            {room.type === "GROUP" ? <AvatarGroup people={[...avatarPeople(room.members), { name: myName }]} size={32} /> : <Avatar name={userName(partner)} part={partOf(partner)} photoUrl={partner?.photoUrl} size={40} />}
             <div className="flex min-w-0 flex-col">
               <span className="truncate t-body-bold text-ink-900">{title}</span>
               <span className="text-[12px] text-ink-500">{room.type === "GROUP" ? `${room.members.length + 1}명` : partner && !partner.isDeleted ? `${partner.generation}기 · ${LION_PART_LABEL[partOf(partner)]}` : ""}</span>
@@ -460,7 +460,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                 const editable = mine && !m.state && !m.deleted && room.status === "ACTIVE" && room.canSend;
                 return (
                   <div key={String(m.id)} className={cn("group/msg flex gap-2.5", mine ? "justify-end" : "items-start")}>
-                    {!mine && <Avatar name={userName(sender)} part={partOf(sender)} size={40} />}
+                    {!mine && <Avatar name={userName(sender)} part={partOf(sender)} photoUrl={sender?.photoUrl} size={40} />}
                     <div className={cn("flex max-w-[70%] flex-col gap-1", mine && "items-end")}>
                       {!mine && <span className="text-[13px] text-ink-700">{userName(sender)}</span>}
                       <div className={cn("flex items-end gap-1.5", mine && "flex-row-reverse")}>
@@ -531,7 +531,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
               <li className="flex items-center justify-between">
                 <Link href="/me" className="flex items-center gap-2.5 hover:underline">
                   <span className="relative">
-                    <Avatar name={myName} size={32} />
+                    <Avatar name={myName} part={user?.part} photoUrl={me?.photoUrl} size={32} />
                     <span className="absolute -left-1 -top-1 rounded-full bg-ink-700 px-1 text-[9px] text-white">나</span>
                   </span>
                   <span className="text-[14px] font-semibold text-ink-900">{myName}</span>
@@ -545,7 +545,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
                     </span>
                   ) : (
                     <Link href={`/alumni/${u.id}`} className="flex items-center gap-2.5 hover:underline">
-                      <Avatar name={userName(u)} part={partOf(u)} size={32} />
+                      <Avatar name={userName(u)} part={partOf(u)} photoUrl={u.photoUrl} size={32} />
                       <span className="text-[14px] font-semibold text-ink-900">{userName(u)}</span>
                     </Link>
                   )}
@@ -564,7 +564,7 @@ function RoomView({ service, initialRoom, initialMessages, initialHasMore, reloa
             <div className="flex flex-col gap-3 border-b border-line-200 p-5">
               <p className="text-[13px] text-ink-500">상대 프로필</p>
               <div className="flex items-center gap-3">
-                <Avatar name={userName(partner)} part={partOf(partner)} size={64} />
+                <Avatar name={userName(partner)} part={partOf(partner)} photoUrl={partner?.photoUrl} size={64} />
                 <p className="flex items-center gap-2">
                   <span className="text-[16px] font-bold text-ink-900">{userName(partner)}</span>
                   {!partner.isDeleted && partner.generation && <PartTag part={partOf(partner)} generation={partner.generation} className="px-1.5 py-0.5 text-[11px]" />}

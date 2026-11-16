@@ -573,7 +573,7 @@ function FirstCoffeeGuide({ completion, myParts, people, onRequest, onClose }: {
               return (
                 <div key={p.id} className="flex gap-5 rounded-[10px] border border-line-200 px-6 py-5">
                   <Link href={`/alumni/${p.id}`} className="shrink-0">
-                    <Avatar name={p.name} part={part} size={48} />
+                    <Avatar name={p.name} part={part} photoUrl={p.photoUrl} size={48} />
                   </Link>
                   <div className="flex min-w-0 flex-col gap-2">
                     <div className="flex items-center gap-2">

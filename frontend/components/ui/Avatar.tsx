@@ -64,11 +64,11 @@ export function Avatar({
   );
 }
 
-export function AvatarGroup({ people, size = 32 }: { people: { name: string; part?: LionPart }[]; size?: 28 | 32 | 40 }) {
+export function AvatarGroup({ people, size = 32 }: { people: { name: string; part?: LionPart; photoUrl?: string | null }[]; size?: 28 | 32 | 40 }) {
   return (
     <span className="flex items-center">
       {people.slice(0, 4).map((p, i) => (
-        <Avatar key={i} name={p.name} part={p.part} size={size} className={cn("ring-2 ring-white", i > 0 && "-ml-2")} />
+        <Avatar key={i} name={p.name} part={p.part} photoUrl={p.photoUrl} size={size} className={cn("ring-2 ring-white", i > 0 && "-ml-2")} />
       ))}
       {people.length > 4 && (
         <span className="-ml-2 grid place-items-center rounded-full bg-bg-100 text-[11px] font-bold text-ink-500 ring-2 ring-white" style={{ width: size, height: size }}>

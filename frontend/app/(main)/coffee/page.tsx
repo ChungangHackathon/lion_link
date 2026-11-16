@@ -196,9 +196,9 @@ function ListRow({ chat, tab, active, onClick }: { chat: CoffeeChatItem; tab: Ta
     <li className="border-b border-line-200 last:border-b-0">
       <button type="button" onClick={onClick} className={cn("flex w-full items-start gap-4 px-4 py-4 text-left hover:bg-bg-50", active && "bg-light-card")}>
         {group && tab === "received" ? (
-          <AvatarGroup people={[other, ...members].map((p) => ({ name: p.name ?? "", part: p.lionParts?.[0] ?? "ETC" }))} size={32} />
+          <AvatarGroup people={[other, ...members].map((p) => ({ name: p.name ?? "", part: p.lionParts?.[0] ?? "ETC", photoUrl: p.photoUrl }))} size={32} />
         ) : (
-          <Avatar name={other.isDeleted ? undefined : other.name ?? undefined} part={part} size={40} withdrawn={other.isDeleted} />
+          <Avatar name={other.isDeleted ? undefined : other.name ?? undefined} part={part} photoUrl={other.photoUrl} size={40} withdrawn={other.isDeleted} />
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-2">

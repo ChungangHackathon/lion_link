@@ -27,7 +27,7 @@ const REASON_PRESETS = ["취업 준비 중인데 …", "프로젝트를 하다�
 const ETC = "ETC" as const;
 
 /** 함께 신청할 동문 표시용 */
-export type RequestMember = Pick<AlumniSummary, "id" | "name" | "generation" | "lionParts">;
+export type RequestMember = Pick<AlumniSummary, "id" | "name" | "generation" | "lionParts"> & { photoUrl?: string | null };
 
 /**
  * ★[O] R-01 커피챗 신청 모달 / 1:1 · ◇ R-01b 여러 명 · R-02 동문 추가 · R-05 미리보기. (COFFEE-01)
@@ -39,7 +39,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
   const router = useRouter();
   const toast = useToast();
   const service = useCoffeeService();
-  const { user } = useSession();
+  const { user, me } = useSession();
   const info = useApi(() => service.target(target.id), [service, target.id], open);
   const detail = info.data;
 
@@ -151,7 +151,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
                 <div className="flex flex-wrap gap-2">
                   {members.map((a) => (
                     <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold text-ink-900">
-                      <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" />
+                      <Avatar name={a.name} part={a.lionParts[0]} photoUrl={a.photoUrl} size={32} className="!size-6 !text-[11px]" />
                       {a.name} · {a.generation}기
                       {!fromRecruitId && (
                         <button type="button" aria-label={`${a.name} 제외`} onClick={() => setMembers((m) => m.filter((x) => x.id !== a.id))} className="text-ink-400 hover:text-ink-900">
@@ -239,7 +239,7 @@ export function CoffeeRequestModal({ open, onClose, target, preMembers, fromRecr
             <div className="flex flex-col gap-3 rounded-[8px] border border-primary/30 bg-part-be-bg/40 p-4 text-[14px] leading-6 text-ink-900">
               <p className="t-label2 text-primary">사자에게 이렇게 보여요</p>
               <div className="flex items-center gap-2">
-                <Avatar name={user?.name} part={user?.part} size={32} />
+                <Avatar name={user?.name} part={user?.part} photoUrl={me?.photoUrl} size={32} />
                 <span className="font-semibold">
                   {user?.name} · {user?.generation}기{user?.part && user.part !== "ETC" ? ` · ${LION_PART_LABEL[user.part]}` : ""}
                 </span>

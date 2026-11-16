@@ -382,7 +382,7 @@ function CompanionField({ label, hint, addLabel, people, onAdd, onRemove }: { la
         <div className="flex flex-wrap gap-2">
           {people.map((a) => (
             <span key={a.id} className="inline-flex items-center gap-1.5 rounded-full border border-line-300 py-1 pl-1 pr-2.5 text-[13px] font-semibold">
-              <Avatar name={a.name} part={a.lionParts[0]} size={32} className="!size-6 !text-[11px]" /> {a.name}
+              <Avatar name={a.name} part={a.lionParts[0]} photoUrl={a.photoUrl} size={32} className="!size-6 !text-[11px]" /> {a.name}
               <button type="button" aria-label={`${a.name} 빼기`} onClick={() => onRemove(a.id)} className="text-ink-400">
                 ✕
               </button>

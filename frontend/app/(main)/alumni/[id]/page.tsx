@@ -74,7 +74,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
         <Card className="rounded-[10px] p-[30px]">
           <div className="flex gap-[19px]">
             <div className="flex w-[150px] flex-col items-center gap-2">
-              <Avatar name={person.name} part={person.part} size={96} className="!size-[150px] !text-[56px]" />
+              <Avatar name={person.name} part={person.part} photoUrl={person.photoUrl} size={96} className="!size-[150px] !text-[56px]" />
               <AvailabilityBadge mode={person.receive.mode} note={person.receive.note} className="-mt-5 bg-white" />
             </div>
             <div className="flex flex-1 flex-col gap-4 pt-6">
@@ -207,7 +207,7 @@ function RailRow({ person: a }: { person: AlumniSummary }) {
   return (
     <div className="flex items-start gap-4 rounded-[10px] border border-line-200 bg-white px-5 py-3">
       <Link href={`/alumni/${a.id}`} className="flex shrink-0 flex-col items-center">
-        <Avatar name={a.name} part={part} size={96} />
+        <Avatar name={a.name} part={part} photoUrl={a.photoUrl} size={96} />
         <AvailabilityBadge mode={badge.mode} note={badge.note} small className="-mt-3 bg-white" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 pt-5">

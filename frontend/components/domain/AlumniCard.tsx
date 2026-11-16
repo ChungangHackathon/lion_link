@@ -90,7 +90,7 @@ export function AlumniCard({ person, onRequest, onMessage, onBookmark, className
         {/* 카드에 overflow-hidden을 두지 않는다: 커피챗 신청 버튼 툴팁이 카드 밖으로 나와야 잘리지 않는다 */}
         <div className={cn("h-[60px] w-full rounded-t-[10px]", style.ring)} />
         <div className="absolute left-[7px] top-[18px]">
-          <Avatar name={person.name} part={part} size={90} online={canRequest} className="border-[6px] border-bg-50" />
+          <Avatar name={person.name} part={part} photoUrl={person.photoUrl} size={90} online={canRequest} className="border-[6px] border-bg-50" />
         </div>
         <div className="flex flex-col gap-2.5 px-5 pb-[14px] pt-[55px]">
           <div className="flex h-[26px] items-center gap-2">
