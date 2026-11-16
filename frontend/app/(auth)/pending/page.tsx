@@ -29,11 +29,11 @@ export default function PendingPage() {
   // 자기소개를 채웠을 때의 진행률. 가중치를 여기에 또 적지 않도록 같은 함수로 구한다
   const withBio = profile.data ? completionOf({ ...profile.data, bio: "x" }) : 0;
 
-  // 로그인 전이거나 승인 대기가 아니면 맞는 화면으로
+  // 로그인 전이거나 승인 대기가 아니면 맞는 화면으로. 이미 승인됐으면(새로고침·다른 탭에서 돌아옴) 바로 홈으로 간다
   useEffect(() => {
     if (!API_ENABLED || !ready) return;
     if (!session.loggedIn) router.replace("/login");
-    else if (me?.status === "REJECTED") router.replace(landingPath(me));
+    else if (me?.status === "REJECTED" || me?.status === "APPROVED") router.replace(landingPath(me));
   }, [ready, session.loggedIn, me, router]);
 
   // 다른 탭에서 돌아오면 승인됐는지 다시 확인한다
