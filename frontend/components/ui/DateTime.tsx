@@ -9,11 +9,13 @@ import { Select } from "./Input";
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
+/** 오늘 날짜 (한국 시간) */
+const kstToday = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
 
 /** "2026-11-20" → "2026년 11월 20일 (금)" */
 export function dateLabel(value: string) {
   const [y, m, d] = value.split("-").map(Number);
-  return `${y}년 ${m}월 ${d}일 (${DAYS[new Date(y, m - 1, d).getDay()]})`;
+  return `${y}년 ${m}월 ${d}일 (${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]})`;
 }
 
 /**
@@ -26,7 +28,7 @@ export function DatePicker({ label, required, value, onChange, min, max, disable
   const panel = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<React.CSSProperties>({});
-  const start = value || min || iso(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const start = value || min || kstToday();
   const [view, setView] = useState(() => ({ y: Number(start.slice(0, 4)), m: Number(start.slice(5, 7)) - 1 }));
 
   const place = useCallback(() => {
@@ -64,12 +66,9 @@ export function DatePicker({ label, required, value, onChange, min, max, disable
   };
   const move = (delta: number) => setView((v) => ({ y: v.y + Math.floor((v.m + delta) / 12), m: (((v.m + delta) % 12) + 12) % 12 }));
 
-  const first = new Date(view.y, view.m, 1).getDay();
-  const days = new Date(view.y, view.m + 1, 0).getDate();
-  const today = (() => {
-    const n = new Date();
-    return iso(n.getFullYear(), n.getMonth(), n.getDate());
-  })();
+  const first = new Date(Date.UTC(view.y, view.m, 1)).getUTCDay();
+  const days = new Date(Date.UTC(view.y, view.m + 1, 0)).getUTCDate();
+  const today = kstToday();
 
   return (
     <div className="flex min-w-0 w-full flex-col gap-1.5">
