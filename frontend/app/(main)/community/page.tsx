@@ -187,7 +187,18 @@ function Community() {
                 </li>
               ))}
             </ol>
-            <button type="button" onClick={() => { setSort("VIEWS"); setPage(1); }} className="w-fit pt-2 t-label2 text-ink-900 hover:underline">
+            <button
+              type="button"
+              // 많이 본 글은 전체 카테고리 기준이라, 보던 카테고리·검색을 풀고 전체 탭을 조회순으로 연다
+              onClick={() => {
+                setCat("ALL");
+                setQ("");
+                setSort("VIEWS");
+                setPage(1);
+                router.replace("/community");
+              }}
+              className="w-fit pt-2 t-label2 text-ink-900 hover:underline"
+            >
               더보기
             </button>
           </Card>
