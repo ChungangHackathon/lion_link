@@ -97,7 +97,7 @@ function Community() {
         <div className="flex items-center justify-between gap-4 px-5 pb-2 pt-5">
           <label className="flex h-10 w-[380px] items-center gap-2 rounded-[8px] border border-line-300 px-3 focus-within:border-ink-700">
             <Icon name="search" size={18} className="text-ink-400" />
-            <input value={q} onChange={(e) => search(e.target.value)} placeholder={`${cat === "ALL" ? "전체" : POST_CATEGORY_LABEL[cat]} 카테고리에서 제목·본문 검색`} className="min-w-0 flex-1 text-[14px] outline-none placeholder:text-ink-400" />
+            <input value={q} onChange={(e) => search(e.target.value)} aria-label="제목·본문 검색" className="min-w-0 flex-1 text-[14px] outline-none placeholder:text-ink-400" />
           </label>
           <Select aria-label="정렬" value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }} className="w-auto" triggerClassName="h-9 w-auto gap-1.5 border-0 bg-transparent pl-2 pr-8 t-label2 hover:bg-bg-50">
             <option value="LATEST">최신순</option>
