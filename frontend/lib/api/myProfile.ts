@@ -53,7 +53,16 @@ export function getMyProfile() {
 }
 
 /** PROFILE-04 기본 정보 (통째로 바꾼다. 안 바꾼 칸도 현재 값을 보낸다) */
-export function updateBasic(body: BasicInfo) {
+/**
+ * PROFILE-04 요청. company·jobTitle은 재직으로 바꾸는데 재직 중인 경력이 없을 때만 필수다(경력이 자동으로 생긴다).
+ * 그 외에는 서버가 무시한다. 빈 문자열은 400이라 안 쓸 때는 빼고 보낸다. 경력이 이미 10개면 409 LIMIT_EXCEEDED
+ */
+export interface BasicInfoRequest extends BasicInfo {
+  company?: string;
+  jobTitle?: string;
+}
+
+export function updateBasic(body: BasicInfoRequest) {
   return api<BasicInfo>("/me/profile/basic", { method: "PUT", body });
 }
 

@@ -12,7 +12,7 @@ import * as my from "./myProfile";
 import { ApiError } from "./client";
 import { addSectionItem, deleteSectionItem, SECTION_SCHEMA, sortItems, updateSectionItem, type SectionBody, type SectionItem, type SectionKey } from "./profileSections";
 import type { Id } from "./posts";
-import type { BasicInfo, MyProfile, Visibility } from "./myProfile";
+import type { BasicInfo, BasicInfoRequest, MyProfile, Visibility } from "./myProfile";
 
 /**
  * 내 프로필 화면이 쓰는 API 묶음.
@@ -20,7 +20,7 @@ import type { BasicInfo, MyProfile, Visibility } from "./myProfile";
  */
 export interface MyProfileService {
   get: () => Promise<MyProfile>;
-  updateBasic: (body: BasicInfo) => Promise<BasicInfo>;
+  updateBasic: (body: BasicInfoRequest) => Promise<BasicInfo>;
   uploadPhoto: (file: File) => Promise<{ photoUrl: string }>;
   deletePhoto: () => Promise<void>;
   updateBio: (bio: string | null) => Promise<{ bio: string | null }>;
