@@ -167,7 +167,7 @@ function Community() {
           </ul>
         </Card>
         {popular.length > 0 && (
-          <Card className="flex flex-col gap-1 rounded-[10px] p-5 shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
+          <Card className="flex flex-col gap-1 rounded-[10px] p-5">
             <h2 className="pb-2 t-title3 text-ink-900">이번 주 많이 본 글</h2>
             <ol>
               {popular.map((p, i) => (
