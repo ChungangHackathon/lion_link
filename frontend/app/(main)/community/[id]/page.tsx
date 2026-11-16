@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/Toast";
 import { AlumniPicker } from "@/components/domain/AlumniPicker";
 import { CoffeeRequestModal } from "@/components/domain/CoffeeRequestModal";
 import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
+import { useOpenMessage } from "@/components/domain/useAlumniActions";
 import { authorLabel, isImageUrl } from "@/components/domain/PostRow";
 
 /**
@@ -50,6 +51,8 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
   const [img, setImg] = useState<string | null>(null);
   const [request, setRequest] = useState(false);
   const [message, setMessage] = useState(false);
+  // 이미 대화 중인 동문이면 요청 창 없이 그 채팅방으로 바로 간다
+  const openMessage = useOpenMessage(() => setMessage(true));
   const [inviteOpen, setInvite] = useState(false);
   const [liking, setLiking] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -313,7 +316,7 @@ function PostDetailInner({ params }: { params: Promise<{ id: string }> }) {
                   프로필 보기
                 </Button>
                 {author.id != null && !author.isDeleted && (
-                  <Button variant="secondary" className="flex-1" onClick={() => setMessage(true)}>
+                  <Button variant="secondary" className="flex-1" onClick={() => author?.id != null && void openMessage({ id: author.id, name: author.name ?? "" })}>
                     메시지
                   </Button>
                 )}
