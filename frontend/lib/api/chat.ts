@@ -137,6 +137,10 @@ export async function cancelRequest(roomId: Id, messageId: Id): Promise<void> {
 export function listRooms(page = 0, size = 20, signal?: AbortSignal) {
   return api<SliceOf<RoomSummary>>("/chat-rooms", { query: { page, size }, signal });
 }
+/** 그 동문과 이미 쓰고 있는 1:1 방 (없으면 404 → 메시지 요청으로) */
+export function getDirectRoom(userId: Id) {
+  return api<{ roomId: Id; status: RoomStatus; requestedByMe: boolean }>("/chat-rooms/direct", { query: { userId } });
+}
 export function getRoom(roomId: Id, signal?: AbortSignal) {
   return api<RoomDetail>(`/chat-rooms/${roomId}`, { signal });
 }

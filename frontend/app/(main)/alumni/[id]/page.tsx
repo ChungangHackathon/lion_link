@@ -21,6 +21,7 @@ import { CoffeeRequestModal } from "@/components/domain/CoffeeRequestModal";
 import { MessageRequestModal } from "@/components/domain/MessageRequestModal";
 import { EducationList, ProfileSections } from "@/components/domain/ProfileSections";
 import { useBookmarkToggle } from "@/components/domain/AlumniCard";
+import { useOpenMessage } from "@/components/domain/useAlumniActions";
 
 
 /** ★ P-01 동문 프로필 / 다른 동문 — 763 본문 + 387 ActionCard rail. ⊕R-01, →T-04 */
@@ -53,6 +54,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
   const { saved, toggle } = useBookmarkToggle({ id: person.id, bookmarked: person.bookmarked });
   const [request, setRequest] = useState(false);
   const [message, setMessage] = useState(false);
+  const openMessage = useOpenMessage(() => setMessage(true));
   const detail = person.detail;
 
   const openList = useApi((signal) => service.list({ available: true, size: 6 }, signal), [service]).data?.items.filter((a) => String(a.id) !== String(person.id)).slice(0, 5) ?? [];
@@ -143,7 +145,7 @@ function AlumniProfile({ person }: { person: AlumniProfileView }) {
               <span className="flex h-10 w-full items-center justify-center rounded-[8px] bg-line-200 text-[13px] font-bold text-ink-400">커피챗 신청하기</span>
             </Tooltip>
           )}
-          <Button size="M" variant="secondary" full onClick={() => setMessage(true)} leading={<Icon name="chat" size={18} />}>
+          <Button size="M" variant="secondary" full onClick={() => void openMessage({ id: person.id, name: person.name, generation: person.generation, part: person.part, headline: person.headline })} leading={<Icon name="chat" size={18} />}>
             메시지 보내기
           </Button>
           <div className="mt-3 flex flex-col gap-2 text-[12px]">
