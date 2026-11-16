@@ -28,6 +28,7 @@ export interface ChatService {
   send: (roomId: Id, content: string, clientMsgId?: string) => Promise<ChatMessage>;
   editMessage: (roomId: Id, messageId: Id, content: string) => Promise<ChatMessage>;
   deleteMessage: (roomId: Id, messageId: Id) => Promise<ChatMessage>;
+  invite: (roomId: Id, userIds: Id[]) => Promise<{ invitedCount: number; skippedUserIds: Id[] }>;
   read: (roomId: Id, lastMessageId?: Id) => Promise<void>;
   setPreferences: (roomId: Id, patch: { pinned?: boolean; muted?: boolean }) => Promise<{ pinned: boolean; muted: boolean }>;
   leave: (roomId: Id) => Promise<void>;
@@ -52,6 +53,7 @@ const apiService: ChatService = {
   send: chat.sendMessage,
   editMessage: chat.editMessage,
   deleteMessage: chat.deleteMessage,
+  invite: chat.inviteToRoom,
   read: async (roomId, lastMessageId) => {
     await chat.readRoom(roomId, lastMessageId);
   },
@@ -231,6 +233,8 @@ export function useChatService(): ChatService {
         if (!r || !m) return notFound();
         return delay({ ...messageOf(m, r), content: "", deleted: true });
       },
+      // 프로토타입: 초대는 결과만 돌려준다 (mock 방 인원은 그대로)
+      invite: (_roomId, userIds) => delay({ invitedCount: userIds.length, skippedUserIds: [] }),
       read: (roomId) => {
         // 이미 읽은 방이면 store를 건드리지 않는다 (불필요한 다시 그리기 방지)
         if (find(roomId)?.unread) store.markRoomRead(String(roomId));
