@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import type { LionPart } from "@/lib/types";
 import { Icon } from "./Icon";
 
-/** Avatar/Part (906:32571): 파트 색 배경 + 이름 첫 글자. 프론트=청록, 백엔드=파랑, 디자인=핑크, 기획=보라, 기획디자인=주황. */
+/** Avatar/Part (906:32571): 파트 색 배경 + 이름 첫 글자. 프론트=청록, 백엔드=파랑, 디자인=핑크, 기획=보라, 기획디자인=노랑. */
 const PART_AVATAR: Record<LionPart, string> = {
   FRONTEND: "bg-part-fe-bg text-part-fe-text",
   BACKEND: "bg-part-be-bg text-part-be-text",
