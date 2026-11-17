@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { EntranceCurtain } from "@/components/brand/EntranceCurtain";
 import { VillageHero } from "@/components/brand/VillageHero";
 import { Button } from "@/components/ui/Button";
 import { ConfirmModal } from "@/components/ui/Modal";
@@ -50,6 +51,8 @@ export default function LoginPage() {
 
   return (
     <VillageHero generation={null}>
+      {/* 서비스에 들어와 처음 보는 화면이라, 커튼이 양쪽으로 걷히며 나온다 (화면 전체를 덮는 fixed 요소라 자리를 차지하지 않는다) */}
+      <EntranceCurtain />
       <div className="flex w-full flex-col gap-6 rounded-[16px] border border-white/70 bg-white/10 p-10 shadow-[0_8px_40px_rgba(0,36,94,0.12)] backdrop-blur-md [@media(max-height:900px)]:gap-4 [@media(max-height:900px)]:p-7">
         <p className="text-center t-title3 text-light-card">
           1기부터 지금까지,
