@@ -1,0 +1,79 @@
+spring:
+  application:
+    name: backend
+  config:
+    import: optional:classpath:application-secret.yml # 로컬 시크릿(git 제외). 형식은 application-secret.example.yml. 없으면 환경변수 → 아래 기본값
+  datasource:
+    url: jdbc:mysql://localhost:3306/lionlink?serverTimezone=Asia/Seoul&characterEncoding=UTF-8 # docker-compose.yml의 MySQL
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:lionlink} # 환경변수가 없으면 로컬 기본값 사용
+    password: ${DB_PASSWORD:lionlink}
+  jpa:
+    hibernate:
+      ddl-auto: validate # 테이블은 Flyway(db/migration)가 만들고, 엔티티와 다르면 서버가 뜨지 않는다
+    open-in-view: false # DB 커넥션을 트랜잭션 범위에서만 사용
+  flyway:
+    baseline-on-migrate: true # 이미 테이블이 있는 DB는 V1을 적용한 것으로 보고 시작
+    baseline-version: 1
+  servlet:
+    multipart:
+      max-file-size: 5MB # 프로필 사진(PROFILE-05) 한도. 넘으면 400 FILE_TOO_LARGE
+      max-request-size: 6MB
+  mail: # 이메일 알림 SMTP (Gmail, AWS SES 등). app.email.enabled가 true일 때만 실제로 보낸다
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:} # 절대 커밋하지 않음
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+  security:
+    oauth2:
+      client:
+        registration:
+          google: # 리디렉션 URI: {서버 주소}/login/oauth2/code/google
+            client-id: ${GOOGLE_CLIENT_ID:local-google-client-id} # 실제 값은 환경변수로만 주입
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-google-client-secret} # 절대 커밋하지 않음
+            scope: openid, profile, email
+            redirect-uri: ${OAUTH_REDIRECT_BASE_URL:{baseUrl}}/login/oauth2/code/{registrationId} # 운영은 프론트 주소(프록시). 없으면 요청 주소 기준(로컬)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # 서버 상태 확인(/actuator/health)만 연다
+  endpoint:
+    health:
+      show-details: never
+  health:
+    mail:
+      enabled: false # 상태 확인 때마다 SMTP에 접속하지 않는다
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
+app:
+  auth:
+    jwt-secret: ${JWT_SECRET:lionlink-local-dev-only-secret-change-me-0123456789} # 32바이트 이상. 운영은 반드시 환경변수로 주입
+    frontend-url: ${FRONTEND_URL:http://localhost:3000} # 로그인 후 돌아갈 프론트 주소 (CORS 허용 주소)
+    cookie-secure: ${COOKIE_SECURE:false} # HTTPS 배포에서는 true
+    cookie-same-site: ${COOKIE_SAME_SITE:Lax} # 프론트가 /api를 프록시하면 Lax. 브라우저가 백엔드를 직접 부르는 도메인 분리 구조면 None (cookie-secure: true 필요)
+  admin:
+    emails: ${ADMIN_EMAILS:} # 서버가 뜰 때 관리자로 올릴 이메일. 쉼표로 여러 개. 가입을 끝낸 계정이어야 한다
+  email:
+    enabled: ${MAIL_ENABLED:false} # false면 보내지 않고 로그만 남긴다 (로컬 기본값)
+    from: '${MAIL_FROM:멋사동네 <no-reply@lionlink.local>}'
+    link-base-url: ${FRONTEND_URL:http://localhost:3000} # 메일 안 버튼과 수신 거부 링크가 가리킬 프론트 주소
+  storage:
+    bucket: ${S3_BUCKET:lionlink-uploads}
+    region: ${S3_REGION:ap-northeast-2}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    endpoint: ${S3_ENDPOINT:}
+    public-url: ${S3_PUBLIC_URL:}

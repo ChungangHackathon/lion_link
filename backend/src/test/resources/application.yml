@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1 # 테스트는 MySQL 없이 메모리 H2로 실행
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false # 테스트는 H2에 엔티티로 바로 만든다
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: openid, profile, email
+            redirect-uri: ${OAUTH_REDIRECT_BASE_URL:{baseUrl}}/login/oauth2/code/{registrationId} # main application.yml과 같은 줄
+
+app:
+  auth:
+    jwt-secret: test-only-secret-for-jwt-0123456789-abcdefghij
+    frontend-url: http://localhost:3000
+  email:
+    poll-interval-ms: 3600000 # 테스트가 직접 sendDue를 부르므로 스케줄러는 사실상 멈춰 둔다
+  storage:
+    bucket: test-bucket
+    region: ap-northeast-2
+    access-key: test-access-key
+    secret-key: test-secret-key
