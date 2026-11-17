@@ -142,6 +142,67 @@ body {
   padding-inline: 16px;
 }
 
+/*
+ * 입장 커튼 (components/brand/EntranceCurtain.tsx)
+ * 닫힌 커튼은 CSS 그라데이션으로 먼저 보이고, 스크립트가 준비되면 캔버스가 이어받아 걷는다.
+ * --ec-fold / --ec-trim 은 curtainFabric.ts 의 measure() 와 같은 식이어야 한다.
+ * 로그인 화면(VillageHero의 main, z-10) 안에 있어서 마을 그림까지 덮고, 토스트는 그 위에 뜬다.
+ */
+.entrance-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow: hidden;
+  container-type: size;
+  --ec-fold: clamp(44px, 5.2cqw, 76px);
+  --ec-trim: clamp(5px, 0.7cqw, 9px);
+  /* 스크립트가 돌지 않아도 화면을 계속 가리지 않게 한다 */
+  animation: entrance-curtain-failsafe 600ms ease-out 8s forwards;
+}
+.entrance-curtain-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(50% + 1px);
+}
+.entrance-curtain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.entrance-curtain[data-live] {
+  animation: none;
+}
+.entrance-curtain[data-live] .entrance-curtain-canvas {
+  opacity: 1;
+}
+.entrance-curtain[data-state="opening"] .entrance-curtain-panel {
+  visibility: hidden;
+}
+.entrance-curtain[data-state="opening"] .entrance-curtain-canvas {
+  transition: none;
+}
+/* 걷지 않고 사라질 때: 구글 로그인 실패로 돌아온 경우(skip), 움직임 줄이기를 켠 기기(fade) */
+.entrance-curtain[data-state="skip"],
+.entrance-curtain[data-state="fade"] {
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+  transition: opacity 200ms ease-out;
+}
+.entrance-curtain[data-state="fade"] {
+  transition-duration: 450ms;
+}
+@keyframes entrance-curtain-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 /* Hide scrollbar for horizontal chip rows */
 @utility no-scrollbar {
   scrollbar-width: none;
