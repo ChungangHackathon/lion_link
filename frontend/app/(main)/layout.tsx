@@ -35,7 +35,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <ChatRealtimeProvider enabled={allowed && !pendingProfile}>
-      <div className={`flex flex-1 flex-col ${white ? "bg-white" : "bg-bg-50"}`}>
+      {/* PC 화면 기준 디자인이라 창이 1200px보다 좁아져도 배치를 바꾸지 않고 가로 스크롤로 보여 준다 */}
+      <div className={`flex min-w-[1200px] flex-1 flex-col ${white ? "bg-white" : "bg-bg-50"}`}>
         <Gnb />
         <main className="container-page flex flex-1 flex-col py-8">{children}</main>
       </div>
